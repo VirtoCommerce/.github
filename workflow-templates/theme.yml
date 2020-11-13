@@ -49,18 +49,18 @@ jobs:
       uses: VirtoCommerce/vc-github-actions/sonar-theme@master
 
     - name: Build
-      if: ${{ github.ref == 'refs/heads/master' || github.ref == 'refs/heads/dev' || github.event == 'workflow_dispatch' }}
+      if: ${{ github.ref == 'refs/heads/master' || github.ref == 'refs/heads/dev' || github.event_name == 'workflow_dispatch' }}
       uses: VirtoCommerce/vc-github-actions/build-theme@master
       with:
         versionSuffix: ${{ steps.image.outputs.suffix }}
 
     - name: Publish
-      if: ${{ github.ref == 'refs/heads/master' || github.ref == 'refs/heads/dev' || github.event == 'workflow_dispatch' }}
+      if: ${{ github.ref == 'refs/heads/master' || github.ref == 'refs/heads/dev' || (github.event_name == 'workflow_dispatch' && github.ref != 'refs/heads/master')}}
       id: publish
       uses: VirtoCommerce/vc-github-actions/publish-theme@master
 
     - name: Create Release
-      if: ${{  github.ref == 'refs/heads/master' }}
+      if: ${{ github.ref == 'refs/heads/master' }}
       id: create_release
       uses: actions/create-release@v1
       with:
