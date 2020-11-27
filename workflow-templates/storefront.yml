@@ -1,8 +1,6 @@
-# v1.1.1
+# v1.1.2
 name: Storefront CI
 
-# Controls when the action will run. Triggers the workflow on push or pull request
-# events but only for the master branch
 on:
   workflow_dispatch:
   push:
@@ -32,6 +30,7 @@ jobs:
       BLOB_SAS: ${{ secrets.BLOB_TOKEN }}
       PUBLISH_TO_DOCKER: "true"
       UPDATE_LATEST_TAG: "true"
+      VERSION_SUFFIX: ""
 
     steps:
     - name: Set variables
@@ -39,6 +38,11 @@ jobs:
       run: |
         echo "PUBLISH_TO_DOCKER=false" >> $GITHUB_ENV
         echo "UPDATE_LATEST_TAG=false" >> $GITHUB_ENV 
+
+    - name: Set up JDK 11 for dotnet-sonarscanner #Sonar stop accepting Java versions less than 11
+      uses: actions/setup-java@v1
+      with:
+        java-version: 1.11
 
     - uses: actions/checkout@v2
       with:
@@ -58,11 +62,20 @@ jobs:
       id: changelog
       uses: VirtoCommerce/vc-github-actions/changelog-generator@master
 
+    - name: Set release variables
+      run: |
+        echo "VERSION_SUFFIX=${{ steps.image.outputs.suffix }}" >> $GITHUB_ENV
+
+    - name: Set release-alpha for custom branch variables 
+      if: ${{ github.event_name == 'workflow_dispatch' }}
+      run: |
+        echo "VERSION_SUFFIX=${{ steps.image.outputs.fullSuffix }}" >> $GITHUB_ENV
+
     - name: Add version suffix
       if: ${{ github.ref != 'refs/heads/master' }}
       uses: VirtoCommerce/vc-github-actions/add-version-suffix@master
       with:
-        versionSuffix: ${{ steps.image.outputs.suffix }}
+        versionSuffix: ${{ env.VERSION_SUFFIX }}
 
     - name: SonarCloud Begin
       uses: VirtoCommerce/vc-github-actions/sonar-scanner-begin@master
