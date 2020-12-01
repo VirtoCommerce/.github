@@ -42,14 +42,13 @@ jobs:
       uses: VirtoCommerce/vc-github-actions/get-image-version@master
       id: image
 
-    - name: Set release variables
+    - name: Set VERSION_SUFFIX variable
       run: |
-        echo "VERSION_SUFFIX=${{ steps.image.outputs.suffix }}" >> $GITHUB_ENV
-
-    - name: Set release-alpha for custom branch variables 
-      if: ${{ github.event_name == 'workflow_dispatch' }}
-      run: |
-        echo "VERSION_SUFFIX=${{ steps.image.outputs.fullSuffix }}" >> $GITHUB_ENV
+        if [ '${{ github.event_name }}' = 'workflow_dispatch' ]; then
+          echo "VERSION_SUFFIX=${{ steps.image.outputs.fullSuffix }}" >> $GITHUB_ENV
+        else
+          echo "VERSION_SUFFIX=${{ steps.image.outputs.suffix }}" >> $GITHUB_ENV
+        fi;
 
     - name: Get changelog
       id: changelog
