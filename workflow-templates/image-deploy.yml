@@ -1,4 +1,5 @@
-# v0.1
+# v0.2
+
 name: VC image deployment
 on:
   workflow_dispatch:
@@ -6,23 +7,17 @@ on:
       baseImageName:
         description: 'Base kustomize image name'
         required: true
-      imageName:
-        description: 'Deploying image name'
-        required: true
-      artifactVersion: 
-        description: 'Full artifact build number'
+      artifactLink: 
+        description: 'Full link to artifact docker image'
         required: true
       appDescriptionRepo:
         description: 'ArgoCd repository'
         required: true
-        default: 'VirtoCommerce/vc-deploy-apps'
+        default: 'VirtoCommerce/vc-webstore-deploy'
       appDescriptionBranch:
         description: 'ArgoCd branch'
         required: true
-        default: 'master'
-      appFolder:
-        appDescription: 'ArgoCd full path to folder containing app description code'
-        required: true
+        default: 'dev'
 
 jobs:
   cd:
@@ -48,18 +43,19 @@ jobs:
     - name: Update kustomize
       shell: pwsh
       run: |
-        $REPOSITORY = "docker.pkg.github.com/$('${{ github.repository }}'.ToLower())"
         cd ${{ github.workspace }}
-        cd .${{ github.event.inputs.appFolder }}
-        kustomize edit set image ${{ github.event.inputs.baseImageName }}=$REPOSITORY/${{ github.event.inputs.imageName }}:${{ github.event.inputs.artifactVersion }}
+        cd ./webstore-app/resources
+        kustomize edit set image ${{ github.event.inputs.baseImageName }}=${{ github.event.inputs.artifactLink }}
+
+    - uses: VirtoCommerce/vc-github-actions/setup-git-credentials-github@master
+      with:
+        githubToken: ${{ secrets.REPO_TOKEN }}
 
     - name: Commit kustomize change
       shell: pwsh
       run: |
         if(git status --porcelain |Where {$_ -notmatch '^\?\?'}) # uncommitted changes exist
         {
-          git config --global user.name 'GitHub Actions'
-          git config user.email --global  'github.actions@virtoway.com'
           git commit -am 'Automated update ${{ github.repository }} to ${{ github.event.inputs.artifactVersion }}'
           git push
         }
@@ -74,7 +70,7 @@ jobs:
       run: | 
         do {
           Start-Sleep -s 15
-          $statusBage = (Invoke-WebRequest -Uri "https://cd.govirto.com/api/badge?name=webstore-app-dev").Content
+          $statusBage = (Invoke-WebRequest -Uri "https://argo.govirto.com/api/badge?name=webstore-dev").Content
           
           $syncedAndHealthy = $statusBage.Contains('>Healthy<') -and $statusBage.Contains('>Synced<')
           if (-not $syncedAndHealthy) {
