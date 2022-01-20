@@ -6,7 +6,7 @@ on:
 jobs:
   release:
     runs-on: ubuntu-latest
-    environments: "Release Approve"
+    environment: "Release Approve"
     env:
       GITHUB_TOKEN: ${{ secrets.REPO_TOKEN }}
     steps:
