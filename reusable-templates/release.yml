@@ -1,0 +1,31 @@
+name: Release workflow
+
+on:
+  workflow_call:
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    env:
+      GITHUB_TOKEN: ${{ secrets.REPO_TOKEN }}
+    steps:
+
+      - uses: actions/setup-dotnet@v1
+        with:
+          dotnet-version: '6.0.x'
+
+      - uses: actions/checkout@v2
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.REPO_TOKEN }}
+
+      - name: Install VirtoCommerce.GlobalTool
+        run: dotnet tool install --global VirtoCommerce.GlobalTool --version 2.1.0-alpha.17
+
+      - name: Setup Git Credentials
+        uses: VirtoCommerce/vc-github-actions/setup-git-credentials-github@master
+        with: 
+          githubToken: ${{ secrets.REPO_TOKEN }}
+      
+      - name: Run vc-build QuickRelease
+        run: vc-build QuickRelease -Force
