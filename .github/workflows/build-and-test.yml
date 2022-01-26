@@ -1,0 +1,115 @@
+# v1.0.0
+name: VC build and test
+
+on:
+  workflow_call:
+    outputs:
+      cacheKey:
+        value: ${{ jobs.build-and-test.outputs.cacheKey }}
+    inputs:
+      eventName:
+        required: true
+        type: string
+    secrets:
+      envPAT:
+        required: true
+      sonarToken:
+        required: true
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+    env:
+      ARTIFACT_NAME: 'platform'
+      CACHE_KEY: ''
+      GITHUB_TOKEN: ${{ secrets.envPAT }}
+      SONAR_TOKEN: ${{ secrets.sonarToken }}
+      VERSION_SUFFIX: ''
+      MSBuildEnableWorkloadResolver: 'false'
+    outputs:
+      cacheKey: ${{ env.CACHE_KEY }}
+
+    steps: 
+    - name: Set up dotnet6 
+      uses: actions/setup-dotnet@v1
+      with:
+        dotnet-version: '6.0.x'
+
+    - name: Install VirtoCommerce.GlobalTool
+      run: dotnet tool install --global VirtoCommerce.GlobalTool --version 2.1.0-alpha.17
+
+    - name: Install dotnet-sonarscanner
+      run: dotnet tool install --global dotnet-sonarscanner
+
+    - uses: actions/checkout@v2
+      with:
+        fetch-depth: 0
+
+    - name: Get Artifact Version
+      uses: VirtoCommerce/vc-github-actions/get-image-version@master
+      id: artifactVer
+
+    - name: Set ARTIFACT_NAME, VERSION_SUFFIX, CACHE_KEY variables
+      run: |
+        if [ '${{ steps.artifactVer.outputs.moduleId }}' != '' ]; then
+          echo "ARTIFACT_NAME=${{ steps.artifactVer.outputs.moduleId }}" >> $GITHUB_ENV
+        fi;
+        
+        if [ '${{ inputs.eventName }}' == 'workflow_dispatch' ]; then
+          echo "VERSION_SUFFIX=${{ steps.artifactVer.outputs.fullSuffix }}" >> $GITHUB_ENV
+        else
+          echo "VERSION_SUFFIX=${{ steps.artifactVer.outputs.suffix }}" >> $GITHUB_ENV
+        fi;
+
+        echo "CACHE_KEY=${{ runner.os }}-${{ env.ARTIFACT_NAME }}-${{ steps.artifactVer.outputs.tag }}" >> $GITHUB_ENV
+
+    - name: Cache build artifacts
+      uses: actions/cache@v2
+      with:
+        key: ${{ env.CACHE_KEY }}
+        path: |
+          ~/artifacts
+          ~/publish
+
+    - name: Get changelog
+      id: changelog
+      uses: VirtoCommerce/vc-github-actions/changelog-generator@master
+
+
+    - name: Add version suffix
+      if: ${{ github.ref != 'refs/heads/master' }}
+      uses: VirtoCommerce/vc-github-actions/add-version-suffix@master
+      with:
+        versionSuffix: ${{ env.VERSION_SUFFIX }}
+
+    - name: SonarCloud Begin
+      uses: VirtoCommerce/vc-github-actions/sonar-scanner-begin@master
+
+    - name: Build
+      run: vc-build Compile
+
+    - name: Unit Tests
+      run: vc-build Test -skip
+
+    - name: BUILD_STATE::successful
+      if: success()
+      run: echo "BUILD_STATE=successful" >> $GITHUB_ENV
+
+    - name: SonarCloud End
+      uses: VirtoCommerce/vc-github-actions/sonar-scanner-end@master
+
+    - name: Quality Gate
+      uses: VirtoCommerce/vc-github-actions/sonar-quality-gate@master
+      with:
+        login: ${{ env.SONAR_TOKEN }}
+
+    - name: Packaging
+      run: vc-build Compress -skip Clean+Restore+Compile+Test
+    
+    - uses: actions/upload-artifact@v2
+      with:
+        name: ${{ env.ARTIFACT_NAME }}
+        path: |
+          ${{ github.workspace }}/artifacts
+          ${{ github.workspace }}/publish
+
