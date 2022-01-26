@@ -40,7 +40,7 @@ jobs:
         id: deployConfig
         with:
           envName: ${{ matrix.envName }}
-          deployConfigPath: ${{ matrix.deployConfigPath }}
+          deployConfigPath: ${{ matrix.confPath }}
 
       - name: Start deployment
         uses: bobheadxi/deployments@master
