@@ -26,6 +26,7 @@ jobs:
     runs-on: ubuntu-latest
     env:
       ARTIFACT_NAME: 'platform'
+      BUILD_DOCKER: 'false'
       IMAGE_ARTIFACT_NAME: 'platform_image'
       GITHUB_TOKEN: ${{ secrets.envPAT }}
       SONAR_TOKEN: ${{ secrets.sonarToken }}
@@ -61,22 +62,20 @@ jobs:
       uses: VirtoCommerce/vc-github-actions/get-image-version@master
       id: artifactVer
 
-    - name: Set ARTIFACT_NAME, VERSION_SUFFIX, CACHE_KEY variables
+    - name: Set ARTIFACT_NAME, VERSION_SUFFIX,  variables
       run: |
         if [ '${{ steps.artifactVer.outputs.moduleId }}' != '' ]; then
           echo "ARTIFACT_NAME=${{ steps.artifactVer.outputs.moduleId }}" >> $GITHUB_ENV
         fi;
-        
+
         if [ '${{ inputs.eventName }}' == 'workflow_dispatch' ]; then
           echo "VERSION_SUFFIX=${{ steps.artifactVer.outputs.fullSuffix }}" >> $GITHUB_ENV
         else
           echo "VERSION_SUFFIX=${{ steps.artifactVer.outputs.suffix }}" >> $GITHUB_ENV
         fi;
 
-    - name: Get changelog
-      id: changelog
-      uses: VirtoCommerce/vc-github-actions/changelog-generator@master
-
+        if[ ${{ contains(github.repository, 'platform') }}]
+          echo "BUILD_DOCKER=true" >> $GITHUB_ENV
 
     - name: Add version suffix
       if: ${{ github.ref != 'refs/heads/master' }}
