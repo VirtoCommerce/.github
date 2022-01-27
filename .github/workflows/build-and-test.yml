@@ -74,7 +74,7 @@ jobs:
           echo "VERSION_SUFFIX=${{ steps.artifactVer.outputs.suffix }}" >> $GITHUB_ENV
         fi;
 
-        if[ ${{ contains(github.repository, 'platform') }}]
+        if[ ${{ contains(github.repository, 'platform') == true }}]
           echo "BUILD_DOCKER=true" >> $GITHUB_ENV
 
     - name: Add version suffix
@@ -128,5 +128,3 @@ jobs:
         name: ${{ env.IMAGE_ARTIFACT_NAME }}
         path: |
           /tmp/platform_image.tar
-
-
