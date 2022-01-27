@@ -121,7 +121,7 @@ jobs:
       id: dockerBuild
       uses: VirtoCommerce/vc-github-actions/build-docker-image@PT-4557
       with:
-        outputs: type=docker,dest=/tmp/platform_image.tar
+        outputs: type=tar,dest=/tmp/platform_image.tar
         tag: ${{ steps.artifactVer.outputs.taggedVersion }}
         imageName: 'platform'
         dockerFiles: 'https://raw.githubusercontent.com/VirtoCommerce/vc-docker/feat/net6/linux/platform/Dockerfile;https://raw.githubusercontent.com/VirtoCommerce/vc-docker/master/linux/platform/wait-for-it.sh'
