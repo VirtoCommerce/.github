@@ -1,18 +1,13 @@
 # v1.0.0
-name: VC build and test
+name: VC Validate Swagger
 
 on:
   workflow_call:
     outputs:
       artifactName:
         value: ${{ jobs.build-and-test.outputs.artifactName }}
-      imageArtifactName:
-        value: ${{ jobs.build-and-test.outputs.imageArtifactName }}
-      imageName:
-        value: ${{ jobs.build-and-test.outputs.imageName }}
-
     inputs:
-      eventName:
+      artifactName:
         required: true
         type: string
     secrets:
@@ -26,15 +21,12 @@ jobs:
     runs-on: ubuntu-latest
     env:
       ARTIFACT_NAME: 'platform'
-      IMAGE_ARTIFACT_NAME: 'platform_image'
       GITHUB_TOKEN: ${{ secrets.envPAT }}
       SONAR_TOKEN: ${{ secrets.sonarToken }}
       VERSION_SUFFIX: ''
       MSBuildEnableWorkloadResolver: 'false'
     outputs:
       artifactName: ${{ env.ARTIFACT_NAME }}
-      imageArtifactName: ${{ env.IMAGE_ARTIFACT_NAME }}
-      imageName: ${{ steps.dockerBuild.outputs.imageName}}
 
     steps: 
     - name: Set up dotnet6 
@@ -68,6 +60,14 @@ jobs:
           echo "VERSION_SUFFIX=${{ steps.artifactVer.outputs.suffix }}" >> $GITHUB_ENV
         fi;
 
+    - name: Cache build artifacts
+      uses: actions/cache@v2
+      with:
+        key: ${{ env.CACHE_KEY }}
+        path: |
+          ~/artifacts
+          ~/publish
+
     - name: Get changelog
       id: changelog
       uses: VirtoCommerce/vc-github-actions/changelog-generator@master
@@ -88,6 +88,10 @@ jobs:
     - name: Unit Tests
       run: vc-build Test -skip
 
+    - name: BUILD_STATE::successful
+      if: success()
+      run: echo "BUILD_STATE=successful" >> $GITHUB_ENV
+
     - name: SonarCloud End
       uses: VirtoCommerce/vc-github-actions/sonar-scanner-end@master
 
@@ -98,31 +102,10 @@ jobs:
 
     - name: Packaging
       run: vc-build Compress -skip Clean+Restore+Compile+Test
-
-    - name: Upload build artifacts
-      uses: actions/upload-artifact@v2
+    
+    - uses: actions/upload-artifact@v2
       with:
         name: ${{ env.ARTIFACT_NAME }}
         path: |
           ${{ github.workspace }}/artifacts
           ${{ github.workspace }}/publish
-
-    - name: Build Docker Image
-      if: ${{ env.BUILD_DOCKER == 'true' }}
-      id: dockerBuild
-      uses: VirtoCommerce/vc-github-actions/build-docker-image@PT-4557
-      with:
-        outputs: type=docker,dest=/tmp/platform_image.tar
-        tag: ${{ steps.image.outputs.taggedVersion }}
-        imageName: 'platform'
-        dockerFiles: 'https://raw.githubusercontent.com/VirtoCommerce/vc-docker/feat/net6/linux/platform/Dockerfile;https://raw.githubusercontent.com/VirtoCommerce/vc-docker/master/linux/platform/wait-for-it.sh'
-
-    - name: Upload Docker image
-      if: ${{ env.BUILD_DOCKER == 'true' }}
-      uses: actions/upload-artifact@v2
-      with:
-        name: ${{ env.IMAGE_ARTIFACT_NAME }}
-        path: |
-          /tmp/platform_image.tar
-
-
