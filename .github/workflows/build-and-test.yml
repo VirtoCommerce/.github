@@ -12,6 +12,14 @@ on:
         value: ${{ jobs.build-and-test.outputs.imageName }}
 
     inputs:
+      uploadPackage:
+        required: false
+        type: string
+        default: 'false'
+      uploadDocker:
+        required: false
+        type: string
+        default: 'false'
       eventName:
         required: true
         type: string
@@ -26,7 +34,6 @@ jobs:
     runs-on: ubuntu-latest
     env:
       ARTIFACT_NAME: 'platform'
-      BUILD_DOCKER: 'false'
       IMAGE_ARTIFACT_NAME: 'platform_image'
       GITHUB_TOKEN: ${{ secrets.envPAT }}
       SONAR_TOKEN: ${{ secrets.sonarToken }}
@@ -74,9 +81,6 @@ jobs:
           echo "VERSION_SUFFIX=${{ steps.artifactVer.outputs.suffix }}" >> $GITHUB_ENV
         fi;
 
-        if [ '${{ contains(github.repository, 'platform') }}' == 'true' ]
-          echo "BUILD_DOCKER=true" >> $GITHUB_ENV
-
     - name: Add version suffix
       if: ${{ github.ref != 'refs/heads/master' }}
       uses: VirtoCommerce/vc-github-actions/add-version-suffix@master
@@ -104,6 +108,7 @@ jobs:
       run: vc-build Compress -skip Clean+Restore+Compile+Test
 
     - name: Upload build artifacts
+      if: ${{ inputs.uploadPackage == 'true' }}
       uses: actions/upload-artifact@v2
       with:
         name: ${{ env.ARTIFACT_NAME }}
@@ -112,7 +117,7 @@ jobs:
           ${{ github.workspace }}/publish
 
     - name: Build Docker Image
-      if: ${{ env.BUILD_DOCKER == 'true' }}
+      if: ${{ inputs.uploadDocker == 'true' }}
       id: dockerBuild
       uses: VirtoCommerce/vc-github-actions/build-docker-image@PT-4557
       with:
@@ -122,7 +127,7 @@ jobs:
         dockerFiles: 'https://raw.githubusercontent.com/VirtoCommerce/vc-docker/feat/net6/linux/platform/Dockerfile;https://raw.githubusercontent.com/VirtoCommerce/vc-docker/master/linux/platform/wait-for-it.sh'
 
     - name: Upload Docker image
-      if: ${{ env.BUILD_DOCKER == 'true' }}
+      if: ${{ inputs.uploadDocker == 'true' }}
       uses: actions/upload-artifact@v2
       with:
         name: ${{ env.IMAGE_ARTIFACT_NAME }}
