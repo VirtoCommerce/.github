@@ -1,17 +1,17 @@
 # v1.0.0
-name: VC build and test
+name: VC build
 
 on:
   workflow_call:
     outputs:
       artifactName:
-        value: ${{ jobs.build-and-test.outputs.artifactName }}
+        value: ${{ jobs.build-artifacts.outputs.artifactName }}
       imageArtifactName:
-        value: ${{ jobs.build-and-test.outputs.imageArtifactName }}
+        value: ${{ jobs.build-artifacts.outputs.imageArtifactName }}
       imageName:
-        value: ${{ jobs.build-and-test.outputs.imageName }}
+        value: ${{ jobs.build-artifacts.outputs.imageName }}
       dockerTar:
-        value: ${{ jobs.build-and-test.outputs.dockerTar }}
+        value: ${{ jobs.build-artifacts.outputs.dockerTar }}
 
     inputs:
       uploadPackage:
