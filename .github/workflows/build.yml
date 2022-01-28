@@ -105,7 +105,6 @@ jobs:
     - name: Cache build artifacts
       if: ${{ inputs.uploadPackage == 'true' }}
       uses: actions/cache@v2
-      id: restore-build
       with:
         key: ${{ env.BUILD_CACHE_KEY }}
         path: |
@@ -139,7 +138,6 @@ jobs:
     - name: Cache Docker image
       if: ${{ inputs.uploadPackage == 'true' }}
       uses: actions/cache@v2
-      id: restore-build
       with:
         key: ${{ env.DOCKER_CACHE_KEY }}
         path: |
