@@ -58,8 +58,8 @@ jobs:
     - name: Install VirtoCommerce.GlobalTool
       run: dotnet tool install --global VirtoCommerce.GlobalTool --version 2.1.0-alpha.17
 
-    - name: Install dotnet-sonarscanner
-      run: dotnet tool install --global dotnet-sonarscanner
+    # - name: Install dotnet-sonarscanner
+    #   run: dotnet tool install --global dotnet-sonarscanner
 
     - uses: actions/checkout@v2
       with:
@@ -87,25 +87,28 @@ jobs:
       with:
         versionSuffix: ${{ env.VERSION_SUFFIX }}
 
-    - name: SonarCloud Begin
-      uses: VirtoCommerce/vc-github-actions/sonar-scanner-begin@master
+    # - name: SonarCloud Begin
+    #   uses: VirtoCommerce/vc-github-actions/sonar-scanner-begin@master
 
-    - name: Build
-      run: vc-build Compile
+    # - name: Build
+    #   run: vc-build Compile
 
-    - name: Unit Tests
-      run: vc-build Test -skip
+    # - name: Unit Tests
+    #   run: vc-build Test -skip
 
-    - name: SonarCloud End
-      uses: VirtoCommerce/vc-github-actions/sonar-scanner-end@master
+    # - name: SonarCloud End
+    #   uses: VirtoCommerce/vc-github-actions/sonar-scanner-end@master
 
-    - name: Quality Gate
-      uses: VirtoCommerce/vc-github-actions/sonar-quality-gate@master
-      with:
-        login: ${{ env.SONAR_TOKEN }}
+    # - name: Quality Gate
+    #   uses: VirtoCommerce/vc-github-actions/sonar-quality-gate@master
+    #   with:
+    #     login: ${{ env.SONAR_TOKEN }}
+
+    # - name: Packaging
+    #   run: vc-build Compress -skip Clean+Restore+Compile+Test
 
     - name: Packaging
-      run: vc-build Compress -skip Clean+Restore+Compile+Test
+      run: vc-build Compress -skip Test
 
     - name: Upload build artifacts
       if: ${{ inputs.uploadPackage == 'true' }}
@@ -129,7 +132,7 @@ jobs:
     - name: Save Docker to tar
       if: ${{ inputs.uploadDocker == 'true' }}
       run: |
-        docker save platform_image.tar ${{ steps.dockerBuild.outputs.imageName }}
+        docker save -o ${{ github.workspace }}/platform_image.tar ${{ steps.dockerBuild.outputs.imageName }}
 
     - name: Upload Docker image
       if: ${{ inputs.uploadDocker == 'true' }}
