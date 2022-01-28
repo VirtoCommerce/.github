@@ -19,7 +19,7 @@ on:
     secrets:
       envPAT:
         required: true
-      dockerUserName:
+      dockerUser:
         required: true
       dockerToken:
         required: true
@@ -56,7 +56,7 @@ jobs:
       with:
           image: ${{ inputs.imageName }}
           tag: ${{ inputs.taggedVersion }}
-          docker_user: ${{ secrets.dockerUserName }}
+          docker_user: ${{ secrets.dockerUser }}
           docker_token: ${{ secrets.dockerToken }}
           docker_hub: ${{ env.PUBLISH_TO_DOCKER }}
           update_latest: ${{ env.UPDATE_LATEST_TAG }}
