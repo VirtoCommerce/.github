@@ -1,0 +1,64 @@
+# v1.0.0
+name: VC Publish docker
+
+on:
+  workflow_call:
+    inputs:
+      taggedVersion:
+        required: true
+        type: string
+      imageName:
+        required: true
+        type: string
+      imageArtifactName:
+        required: true
+        type: string
+      dockerTar:
+        required: true
+        type: string
+    secrets:
+      envPAT:
+        required: true
+      dockerUserName:
+        required: true
+      dockerToken:
+        required: true
+
+jobs:
+  publish-docker:
+    runs-on: ubuntu-latest
+    env:
+      IMAGE_ARTIFACT_NAME: ${{ inputs.imageArtifactName }}
+      GITHUB_TOKEN: ${{ secrets.envPAT }}
+      PACKAGE_SERVER: 'ghcr.io'
+      PUBLISH_TO_DOCKER: 'false'
+      UPDATE_LATEST_TAG: 'false'
+    steps: 
+
+    - name: Download Docker image
+      uses: actions/download-artifact@v2
+      with:
+        name: ${{ env.IMAGE_ARTIFACT_NAME }}
+
+    - name: Load Docker image
+      run: |
+        docker load --input ${{ inputs.dockerTar}}
+
+    - name: Docker Login
+      uses: azure/docker-login@v1
+      with:
+        login-server: ${{ env.PACKAGE_SERVER }}
+        username: $GITHUB_ACTOR
+        password: ${{ env.GITHUB_TOKEN }}
+
+    - name: Publish Docker Image
+      uses: VirtoCommerce/vc-github-actions/publish-docker-image@master
+      with:
+          image: ${{ inputs.imageName }}
+          tag: ${{ inputs.taggedVersion }}
+          docker_user: ${{ secrets.dockerUserName }}
+          docker_token: ${{ secrets.dockerToken }}
+          docker_hub: ${{ env.PUBLISH_TO_DOCKER }}
+          update_latest: ${{ env.UPDATE_LATEST_TAG }}
+
+

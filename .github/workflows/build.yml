@@ -12,6 +12,8 @@ on:
         value: ${{ jobs.build-artifacts.outputs.imageName }}
       dockerTar:
         value: ${{ jobs.build-artifacts.outputs.dockerTar }}
+      taggedVersion:
+        value: ${{ jobs.build-artifacts.outputs.taggedVersion }}
 
     inputs:
       uploadPackage:
@@ -44,6 +46,7 @@ jobs:
       imageArtifactName: ${{ env.IMAGE_ARTIFACT_NAME }}
       imageName: ${{ steps.dockerBuild.outputs.imageName }}
       dockerTar: ${{ env.DOCKER_TAR }}
+      taggedVersion: ${{ steps.artifactVer.outputs.taggedVersion }}
 
     steps: 
     - name: Set up dotnet6 
