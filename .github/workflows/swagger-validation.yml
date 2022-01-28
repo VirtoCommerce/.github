@@ -27,5 +27,6 @@ jobs:
 
     - name: Load Docker image
       run: |
+        ls -l
         docker load --input ${{ inputs.dockerTar}}
         docker image ls -a
