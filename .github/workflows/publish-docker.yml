@@ -7,7 +7,7 @@ on:
       taggedVersion:
         required: true
         type: string
-      imageName:
+      imageFullName:
         required: true
         type: string
       imageArtifactName:
