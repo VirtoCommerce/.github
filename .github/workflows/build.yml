@@ -28,8 +28,6 @@ on:
     secrets:
       envPAT:
         required: true
-      sonarToken:
-        required: true
 
 jobs:
   build-artifacts:
@@ -39,7 +37,6 @@ jobs:
       ARTIFACT_NAME: 'platform'
       IMAGE_ARTIFACT_NAME: 'platform_image'
       GITHUB_TOKEN: ${{ secrets.envPAT }}
-      SONAR_TOKEN: ${{ secrets.sonarToken }}
       VERSION_SUFFIX: ''
       MSBuildEnableWorkloadResolver: 'false'
     outputs:
