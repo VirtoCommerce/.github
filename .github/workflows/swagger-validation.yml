@@ -7,6 +7,9 @@ on:
       imageArtifactName:
         required: true
         type: string
+      dockerTar:
+        required: true
+        type: string
 
 jobs:
   swagger-validation:
@@ -20,9 +23,9 @@ jobs:
       with:
         name: ${{ env.IMAGE_ARTIFACT_NAME }}
         path: |
-          /tmp/platform_image.tar
+          ${{ inputs.dockerTar}}
 
     - name: Load Docker image
       run: |
-        docker load --input /tmp/myimage.tar
+        docker load --input ${{ inputs.dockerTar}}
         docker image ls -a
