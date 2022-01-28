@@ -136,7 +136,7 @@ jobs:
         docker save -o ${{ env.DOCKER_TAR }} ${{ steps.dockerBuild.outputs.imageName }}
 
     - name: Cache Docker image
-      if: ${{ inputs.uploadPackage == 'true' }}
+      if: ${{ inputs.uploadDocker == 'true' }}
       uses: actions/cache@v2
       with:
         key: ${{ env.DOCKER_CACHE_KEY }}
