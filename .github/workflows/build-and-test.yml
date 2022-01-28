@@ -42,7 +42,7 @@ jobs:
     outputs:
       artifactName: ${{ env.ARTIFACT_NAME }}
       imageArtifactName: ${{ env.IMAGE_ARTIFACT_NAME }}
-      imageName: ${{ steps.dockerBuild.outputs.imageName}}
+      imageName: ${{ steps.dockerBuild.outputs.imageName }}
 
     steps: 
     - name: Set up dotnet6 
@@ -125,6 +125,11 @@ jobs:
         tag: ${{ steps.artifactVer.outputs.taggedVersion }}
         imageName: 'platform'
         dockerFiles: 'https://raw.githubusercontent.com/VirtoCommerce/vc-docker/feat/net6/linux/platform/Dockerfile;https://raw.githubusercontent.com/VirtoCommerce/vc-docker/master/linux/platform/wait-for-it.sh'
+
+    - name: Save Docker to tar
+      if: ${{ inputs.uploadDocker == 'true' }}
+      run: |
+        docker save platform_image.tar ${{ steps.dockerBuild.outputs.imageName }}
 
     - name: Upload Docker image
       if: ${{ inputs.uploadDocker == 'true' }}
