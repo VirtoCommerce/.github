@@ -54,7 +54,7 @@ jobs:
     - name: Publish Docker Image
       uses: VirtoCommerce/vc-github-actions/publish-docker-image@master
       with:
-          image: ${{ inputs.imageName }}
+          image: ${{ inputs.imageFullName }}
           tag: ${{ inputs.taggedVersion }}
           docker_user: ${{ secrets.dockerUser }}
           docker_token: ${{ secrets.dockerToken }}
