@@ -3,6 +3,8 @@ name: VC Publish docker
 
 on:
   workflow_call:
+    outputs:
+      imagePath: '${{ inputs.imageFullName }}:${{ inputs.taggedVersion }}'
     inputs:
       taggedVersion:
         required: true
@@ -33,8 +35,8 @@ jobs:
       PACKAGE_SERVER: 'ghcr.io'
       PUBLISH_TO_DOCKER: 'false'
       UPDATE_LATEST_TAG: 'false'
-    steps: 
 
+    steps: 
     - name: Get Docker image from cache
       uses: actions/cache@v2
       id: restore-build
@@ -42,12 +44,6 @@ jobs:
         key: ${{ env.DOCKER_CACHE_KEY }}
         path: |
           ${{ inputs.dockerTar }}
-
-
-    # - name: Download Docker image
-    #   uses: actions/download-artifact@v2
-    #   with:
-    #     name: ${{ env.IMAGE_ARTIFACT_NAME }}
 
     - name: Load Docker image
       run: |
@@ -69,5 +65,3 @@ jobs:
           docker_token: ${{ secrets.dockerToken }}
           docker_hub: ${{ env.PUBLISH_TO_DOCKER }}
           update_latest: ${{ env.UPDATE_LATEST_TAG }}
-
-
