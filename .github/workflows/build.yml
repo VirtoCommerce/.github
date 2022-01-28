@@ -8,8 +8,8 @@ on:
         value: ${{ jobs.build-artifacts.outputs.artifactName }}
       imageArtifactName:
         value: ${{ jobs.build-artifacts.outputs.imageArtifactName }}
-      imageName:
-        value: ${{ jobs.build-artifacts.outputs.imageName }}
+      imageFullName:
+        value: ${{ jobs.build-artifacts.outputs.imageFullName }}
       dockerTar:
         value: ${{ jobs.build-artifacts.outputs.dockerTar }}
       taggedVersion:
@@ -24,6 +24,10 @@ on:
         required: false
         type: string
         default: 'false'
+      imageName:
+        required: false
+        type: string
+        default: 'platform'
       eventName:
         required: true
         type: string
@@ -38,13 +42,14 @@ jobs:
       DOCKER_TAR: 'platform_image.tar'
       ARTIFACT_NAME: 'platform'
       IMAGE_ARTIFACT_NAME: 'platform_image'
+      IMAGE_NAME: ${{ inputs.imageName }}
       GITHUB_TOKEN: ${{ secrets.envPAT }}
       VERSION_SUFFIX: ''
       MSBuildEnableWorkloadResolver: 'false'
     outputs:
       artifactName: ${{ env.ARTIFACT_NAME }}
       imageArtifactName: ${{ env.IMAGE_ARTIFACT_NAME }}
-      imageName: ${{ steps.dockerBuild.outputs.imageName }}
+      imageFullName: ${{ steps.dockerBuild.outputs.imageName }}
       dockerTar: ${{ env.DOCKER_TAR }}
       taggedVersion: ${{ steps.artifactVer.outputs.taggedVersion }}
 
@@ -107,7 +112,7 @@ jobs:
       with:
         outputs: type=tar,dest=${{ github.workspace }}/platform_image.tar
         tag: ${{ steps.artifactVer.outputs.taggedVersion }}
-        imageName: 'platform'
+        imageName: ${{ env.IMAGE_NAME }}
         dockerFiles: 'https://raw.githubusercontent.com/VirtoCommerce/vc-docker/feat/net6/linux/platform/Dockerfile;https://raw.githubusercontent.com/VirtoCommerce/vc-docker/master/linux/platform/wait-for-it.sh'
 
     - name: Save Docker to tar
