@@ -10,7 +10,7 @@ on:
       imageFullName:
         required: true
         type: string
-      imageArtifactName:
+      dockerCacheKey:
         required: true
         type: string
       dockerTar:
@@ -28,21 +28,30 @@ jobs:
   publish-docker:
     runs-on: ubuntu-latest
     env:
-      IMAGE_ARTIFACT_NAME: ${{ inputs.imageArtifactName }}
+      DOCKER_CACHE_KEY: ${{ inputs.dockerCacheKey }}
       GITHUB_TOKEN: ${{ secrets.envPAT }}
       PACKAGE_SERVER: 'ghcr.io'
       PUBLISH_TO_DOCKER: 'false'
       UPDATE_LATEST_TAG: 'false'
     steps: 
 
-    - name: Download Docker image
-      uses: actions/download-artifact@v2
+    - name: Get Docker image from cache
+      uses: actions/cache@v2
+      id: restore-build
       with:
-        name: ${{ env.IMAGE_ARTIFACT_NAME }}
+        key: ${{ env.DOCKER_CACHE_KEY }}
+        path: |
+          ${{ inputs.dockerTar }}
+
+
+    # - name: Download Docker image
+    #   uses: actions/download-artifact@v2
+    #   with:
+    #     name: ${{ env.IMAGE_ARTIFACT_NAME }}
 
     - name: Load Docker image
       run: |
-        docker load --input ${{ inputs.dockerTar}}
+        docker load --input ${{ inputs.dockerTar }}
 
     - name: Docker Login
       uses: azure/docker-login@v1

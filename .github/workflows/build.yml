@@ -4,10 +4,10 @@ name: VC build
 on:
   workflow_call:
     outputs:
-      artifactName:
-        value: ${{ jobs.build-artifacts.outputs.artifactName }}
-      imageArtifactName:
-        value: ${{ jobs.build-artifacts.outputs.imageArtifactName }}
+      buildCacheKey:
+        value: ${{ jobs.build-artifacts.outputs.buildCacheKey }}
+      dockerCacheKey:
+        value: ${{ jobs.build-artifacts.outputs.dockerCacheKey }}
       imageFullName:
         value: ${{ jobs.build-artifacts.outputs.imageFullName }}
       dockerTar:
@@ -42,13 +42,15 @@ jobs:
       DOCKER_TAR: 'platform_image.tar'
       ARTIFACT_NAME: 'platform'
       IMAGE_ARTIFACT_NAME: 'platform_image'
+      BUILD_CACHE_KEY: ''
+      DOCKER_CACHE_KEY: ''
       IMAGE_NAME: ${{ inputs.imageName }}
       GITHUB_TOKEN: ${{ secrets.envPAT }}
       VERSION_SUFFIX: ''
       MSBuildEnableWorkloadResolver: 'false'
     outputs:
-      artifactName: ${{ env.ARTIFACT_NAME }}
-      imageArtifactName: ${{ env.IMAGE_ARTIFACT_NAME }}
+      buildCacheKey: ${{ env.BUILD_CACHE_KEY }}
+      dockerCacheKey: ${{ env.DOCKER_CACHE_KEY }}
       imageFullName: ${{ steps.dockerBuild.outputs.imageName }}
       dockerTar: ${{ env.DOCKER_TAR }}
       taggedVersion: ${{ steps.artifactVer.outputs.taggedVersion }}
@@ -86,6 +88,9 @@ jobs:
         else
           echo "VERSION_SUFFIX=${{ steps.artifactVer.outputs.suffix }}" >> $GITHUB_ENV
         fi;
+        
+        echo "BUILD_CACHE_KEY=${{ runner.os }}-${{ env.ARTIFACT_NAME }}-${{ steps.artifactVer.outputs.tag }}" >> $GITHUB_ENV
+        echo "DOCKER_CACHE_KEY=${{ runner.os }}-${{ env.IMAGE_ARTIFACT_NAME }}-${{ steps.artifactVer.outputs.tag }}" >> $GITHUB_ENV
 
     - name: Add version suffix
       if: ${{ github.ref != 'refs/heads/master' }}
@@ -96,14 +101,25 @@ jobs:
     - name: Packaging
       run: vc-build Compress -skip Test
 
-    - name: Upload build artifacts
+
+    - name: Cache build artifacts
       if: ${{ inputs.uploadPackage == 'true' }}
-      uses: actions/upload-artifact@v2
+      uses: actions/cache@v2
+      id: restore-build
       with:
-        name: ${{ env.ARTIFACT_NAME }}
+        key: ${{ env.BUILD_CACHE_KEY }}
         path: |
           ${{ github.workspace }}/artifacts
           ${{ github.workspace }}/publish
+
+    # - name: Upload build artifacts
+    #   if: ${{ inputs.uploadPackage == 'true' }}
+    #   uses: actions/upload-artifact@v2
+    #   with:
+    #     name: ${{ env.ARTIFACT_NAME }}
+    #     path: |
+    #       ${{ github.workspace }}/artifacts
+    #       ${{ github.workspace }}/publish
 
     - name: Build Docker Image
       if: ${{ inputs.uploadDocker == 'true' }}
@@ -120,10 +136,20 @@ jobs:
       run: |
         docker save -o ${{ env.DOCKER_TAR }} ${{ steps.dockerBuild.outputs.imageName }}
 
-    - name: Upload Docker image
-      if: ${{ inputs.uploadDocker == 'true' }}
-      uses: actions/upload-artifact@v2
+    - name: Cache Docker image
+      if: ${{ inputs.uploadPackage == 'true' }}
+      uses: actions/cache@v2
+      id: restore-build
       with:
-        name: ${{ env.IMAGE_ARTIFACT_NAME }}
+        key: ${{ env.DOCKER_CACHE_KEY }}
         path: |
           ${{ env.DOCKER_TAR }}
+        
+
+    # - name: Upload Docker image
+    #   if: ${{ inputs.uploadDocker == 'true' }}
+    #   uses: actions/upload-artifact@v2
+    #   with:
+    #     name: ${{ env.IMAGE_ARTIFACT_NAME }}
+    #     path: |
+    #       ${{ env.DOCKER_TAR }}
