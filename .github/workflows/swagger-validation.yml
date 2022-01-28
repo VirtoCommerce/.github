@@ -22,8 +22,6 @@ jobs:
       uses: actions/download-artifact@v2
       with:
         name: ${{ env.IMAGE_ARTIFACT_NAME }}
-        path: |
-          ${{ inputs.dockerTar}}
 
     - name: Load Docker image
       run: |
