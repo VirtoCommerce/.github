@@ -77,7 +77,7 @@ jobs:
       uses: VirtoCommerce/vc-github-actions/get-image-version@master
       id: artifactVer
 
-    - name: Set ARTIFACT_NAME, VERSION_SUFFIX,  variables
+    - name: Set ARTIFACT_NAME, VERSION_SUFFIX, *_CACHE_KEY variables
       run: |
         if [ '${{ steps.artifactVer.outputs.moduleId }}' != '' ]; then
           echo "ARTIFACT_NAME=${{ steps.artifactVer.outputs.moduleId }}" >> $GITHUB_ENV

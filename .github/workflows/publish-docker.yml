@@ -4,14 +4,8 @@ name: VC Publish docker
 on:
   workflow_call:
     outputs:
-      imagePath: '${{ inputs.imageFullName }}:${{ inputs.taggedVersion }}'
+      imagePath: '${{ jobs.publish-docker.outputs.imagePath }}'
     inputs:
-      taggedVersion:
-        required: true
-        type: string
-      imageFullName:
-        required: true
-        type: string
       dockerCacheKey:
         required: true
         type: string
@@ -35,6 +29,8 @@ jobs:
       PACKAGE_SERVER: 'ghcr.io'
       PUBLISH_TO_DOCKER: 'false'
       UPDATE_LATEST_TAG: 'false'
+    outputs:
+      imagePath: '${{ steps.load-docker.outputs.image }}:${{ steps.load-docker.outputs.tag }}'
 
     steps: 
     - name: Get Docker image from cache
@@ -45,9 +41,11 @@ jobs:
         path: |
           ${{ inputs.dockerTar }}
 
-    - name: Load Docker image
-      run: |
-        docker load --input ${{ inputs.dockerTar }}
+    - name: Load Docker image 
+      id: load-docker
+      uses: VirtoCommerce/vc-github-actions/docker-load-image@PT-4557
+      with:
+        dockerTar: ${{ env.DOCKER_TAR }}
 
     - name: Docker Login
       uses: azure/docker-login@v1
@@ -59,8 +57,8 @@ jobs:
     - name: Publish Docker Image
       uses: VirtoCommerce/vc-github-actions/publish-docker-image@master
       with:
-          image: ${{ inputs.imageFullName }}
-          tag: ${{ inputs.taggedVersion }}
+          image: ${{ steps.load-docker.outputs.image }}
+          tag: ${{ steps.load-docker.outputs.tag }}
           docker_user: ${{ secrets.dockerUser }}
           docker_token: ${{ secrets.dockerToken }}
           docker_hub: ${{ env.PUBLISH_TO_DOCKER }}
