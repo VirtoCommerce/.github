@@ -26,6 +26,7 @@ jobs:
     runs-on: ubuntu-latest
     env:
       DOCKER_CACHE_KEY: ${{ inputs.dockerCacheKey }}
+      DOCKER_TAR: ${{ inputs.dockerTar }}
       GITHUB_TOKEN: ${{ secrets.envPAT }}
       PACKAGE_SERVER: 'ghcr.io'
       PUBLISH_TO_DOCKER: 'false'
@@ -40,7 +41,7 @@ jobs:
       with:
         key: ${{ env.DOCKER_CACHE_KEY }}
         path: |
-          ${{ inputs.dockerTar }}
+          ${{ env.DOCKER_TAR }}
 
     - name: Load Docker image 
       id: load-docker
