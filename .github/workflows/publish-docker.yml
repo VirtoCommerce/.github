@@ -4,7 +4,8 @@ name: VC Publish docker
 on:
   workflow_call:
     outputs:
-      imagePath: '${{ jobs.publish-docker.outputs.imagePath }}'
+      imagePath: 
+        value: '${{ jobs.publish-docker.outputs.imagePath }}'
     inputs:
       dockerCacheKey:
         required: true
