@@ -4,16 +4,12 @@ name: VC build
 on:
   workflow_call:
     outputs:
-      buildCacheKey:
-        value: ${{ jobs.build-artifacts.outputs.buildCacheKey }}
-      dockerCacheKey:
-        value: ${{ jobs.build-artifacts.outputs.dockerCacheKey }}
-      imageFullName:
-        value: ${{ jobs.build-artifacts.outputs.imageFullName }}
+      shortKey:
+        value: ${{ jobs.build-artifacts.outputs.shortKey }}
+      fullKey:
+        value: ${{ jobs.build-artifacts.outputs.fullKey }}
       dockerTar:
         value: ${{ jobs.build-artifacts.outputs.dockerTar }}
-      taggedVersion:
-        value: ${{ jobs.build-artifacts.outputs.taggedVersion }}
 
     inputs:
       uploadPackage:
@@ -42,18 +38,14 @@ jobs:
       DOCKER_TAR: 'platform_image.tar'
       ARTIFACT_NAME: 'platform'
       IMAGE_ARTIFACT_NAME: 'platform_image'
-      BUILD_CACHE_KEY: ''
-      DOCKER_CACHE_KEY: ''
       IMAGE_NAME: ${{ inputs.imageName }}
       GITHUB_TOKEN: ${{ secrets.envPAT }}
       VERSION_SUFFIX: ''
       MSBuildEnableWorkloadResolver: 'false'
     outputs:
-      buildCacheKey: ${{ env.BUILD_CACHE_KEY }}
-      dockerCacheKey: ${{ env.DOCKER_CACHE_KEY }}
-      imageFullName: ${{ steps.dockerBuild.outputs.imageName }}
+      shortKey: ${{ steps.cache-key.outputs.shortKey }}
+      fullKey: ${{ steps.cache-key.outputs.fullKey }}
       dockerTar: ${{ env.DOCKER_TAR }}
-      taggedVersion: ${{ steps.artifactVer.outputs.taggedVersion }}
 
     steps: 
     - name: Set up dotnet6 
@@ -77,7 +69,7 @@ jobs:
       uses: VirtoCommerce/vc-github-actions/get-image-version@master
       id: artifactVer
 
-    - name: Set ARTIFACT_NAME, VERSION_SUFFIX, *_CACHE_KEY variables
+    - name: Set ARTIFACT_NAME, VERSION_SUFFIX variables
       run: |
         if [ '${{ steps.artifactVer.outputs.moduleId }}' != '' ]; then
           echo "ARTIFACT_NAME=${{ steps.artifactVer.outputs.moduleId }}" >> $GITHUB_ENV
@@ -88,9 +80,6 @@ jobs:
         else
           echo "VERSION_SUFFIX=${{ steps.artifactVer.outputs.suffix }}" >> $GITHUB_ENV
         fi;
-        
-        echo "BUILD_CACHE_KEY=${{ runner.os }}-${{ env.ARTIFACT_NAME }}-${{ steps.artifactVer.outputs.tag }}" >> $GITHUB_ENV
-        echo "DOCKER_CACHE_KEY=${{ runner.os }}-${{ env.IMAGE_ARTIFACT_NAME }}-${{ steps.artifactVer.outputs.tag }}" >> $GITHUB_ENV
 
     - name: Add version suffix
       if: ${{ github.ref != 'refs/heads/master' }}
@@ -101,12 +90,18 @@ jobs:
     - name: Packaging
       run: vc-build Compress -skip Test
 
+    - name: Get cache key
+      uses: VirtoCommerce/vc-github-actions/cache-get-key@PT-4557
+      id: cache-key
+      with:
+        runnerOs: ${{ runner.os  }}
+        artifactName: ${{ env.ARTIFACT_NAME }}
 
     - name: Cache build artifacts
       if: ${{ inputs.uploadPackage == 'true' }}
       uses: actions/cache@v2
       with:
-        key: ${{ env.BUILD_CACHE_KEY }}
+        key: ${{ steps.cache-key.outputs.fullKey }}
         path: |
           ${{ github.workspace }}/artifacts
           ${{ github.workspace }}/publish
@@ -139,7 +134,7 @@ jobs:
       if: ${{ inputs.uploadDocker == 'true' }}
       uses: actions/cache@v2
       with:
-        key: ${{ env.DOCKER_CACHE_KEY }}
+        key: ${{ steps.cache-key.outputs.fullKey }}
         path: |
           ${{ env.DOCKER_TAR }}
         
