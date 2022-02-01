@@ -7,7 +7,11 @@ on:
       imagePath: 
         value: '${{ jobs.publish-docker.outputs.imagePath }}'
     inputs:
-      dockerCacheKey:
+      shortKey:
+        required: false
+        type: string
+        default: ''
+      fullKey:
         required: true
         type: string
       dockerTar:
@@ -25,7 +29,6 @@ jobs:
   publish-docker:
     runs-on: ubuntu-latest
     env:
-      DOCKER_CACHE_KEY: ${{ inputs.dockerCacheKey }}
       DOCKER_TAR: ${{ inputs.dockerTar }}
       GITHUB_TOKEN: ${{ secrets.envPAT }}
       PACKAGE_SERVER: 'ghcr.io'
@@ -39,9 +42,14 @@ jobs:
       uses: actions/cache@v2
       id: restore-build
       with:
-        key: ${{ env.DOCKER_CACHE_KEY }}
+        key: ${{ inputs.fullKey }}
+        restore-keys: ${{ inputs.shortKey }}
         path: |
           ${{ env.DOCKER_TAR }}
+
+    - name: Check cache status # Fail workflow if cache not present
+      if: steps.restore-build.outputs.cache-hit != 'true'
+      run: exit 1
 
     - name: Load Docker image 
       id: load-docker
