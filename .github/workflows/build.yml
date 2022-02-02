@@ -135,7 +135,6 @@ jobs:
       uses: actions/cache@v2
       with:
         key: ${{ steps.cache-key.outputs.fullKey }}
-        # restore-keys: ${{ steps.cache-key.outputs.shortKey }}
         path: |
           ${{ env.DOCKER_TAR }}
         
