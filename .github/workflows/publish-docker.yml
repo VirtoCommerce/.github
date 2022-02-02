@@ -43,7 +43,7 @@ jobs:
       id: restore-build
       with:
         key: ${{ inputs.fullKey }}
-        restore-keys: ${{ inputs.shortKey }}
+        # restore-keys: ${{ inputs.shortKey }}
         path: |
           ${{ env.DOCKER_TAR }}
 
