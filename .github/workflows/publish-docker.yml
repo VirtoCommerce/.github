@@ -47,9 +47,9 @@ jobs:
         path: |
           ${{ env.DOCKER_TAR }}
 
-    - name: Check cache status # Fail workflow if cache not present
-      if: steps.restore-build.outputs.cache-hit != 'true'
-      run: exit 1
+    # - name: Check cache status # Fail workflow if cache not present
+    #   if: steps.restore-build.outputs.cache-hit != 'true'
+    #   run: exit 1
 
     - name: Load Docker image 
       id: load-docker

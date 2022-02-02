@@ -8,6 +8,8 @@ on:
         value: ${{ jobs.build-artifacts.outputs.shortKey }}
       fullKey:
         value: ${{ jobs.build-artifacts.outputs.fullKey }}
+      artifactName:
+        value: ${{ jobs.build-artifacts.outputs.artifactName }}
       dockerTar:
         value: ${{ jobs.build-artifacts.outputs.dockerTar }}
 
@@ -37,7 +39,6 @@ jobs:
     env:
       DOCKER_TAR: 'platform_image.tar'
       ARTIFACT_NAME: 'platform'
-      IMAGE_ARTIFACT_NAME: 'platform_image'
       IMAGE_NAME: ${{ inputs.imageName }}
       GITHUB_TOKEN: ${{ secrets.envPAT }}
       VERSION_SUFFIX: ''
@@ -46,6 +47,7 @@ jobs:
       shortKey: ${{ steps.cache-key.outputs.shortKey }}
       fullKey: ${{ steps.cache-key.outputs.fullKey }}
       dockerTar: ${{ env.DOCKER_TAR }}
+      artifactName: ${{ env.ARTIFACT_NAME }}
 
     steps: 
     - name: Set up dotnet6 
