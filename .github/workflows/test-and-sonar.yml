@@ -1,0 +1,68 @@
+# v1.0.0
+name: VC unit test and sonar scan
+
+on:
+  workflow_call:
+    secrets:
+      sonarToken:
+        required: true
+
+jobs:
+  test-and-sonar:
+    runs-on: ubuntu-latest
+    env:
+      SONAR_TOKEN: ${{ secrets.sonarToken }}
+      MSBuildEnableWorkloadResolver: 'false'
+  
+    steps: 
+    - name: Set up dotnet6 
+      uses: actions/setup-dotnet@v1
+      with:
+        dotnet-version: '6.0.x'
+
+    - name: Set up Node 14
+      uses: actions/setup-node@v2
+      with:
+        node-version: '14'
+
+    - name: Install VirtoCommerce.GlobalTool
+      uses: VirtoCommerce/vc-github-actions/setup-vcbuild@master
+
+    - name: Install dotnet-sonarscanner
+      run: dotnet tool install --global dotnet-sonarscanner
+
+    - uses: actions/checkout@v2
+      with:
+        fetch-depth: 0
+
+    - name: Get Artifact Version
+      uses: VirtoCommerce/vc-github-actions/get-image-version@master
+      id: artifactVer
+
+    - name: Set VERSION_SUFFIX variables
+      run: |
+          echo "VERSION_SUFFIX=${{ steps.artifactVer.outputs.suffix }}" >> $GITHUB_ENV
+ 
+    - name: Add version suffix
+      if: ${{ github.ref != 'refs/heads/master' }}
+      uses: VirtoCommerce/vc-github-actions/add-version-suffix@master
+      with:
+        versionSuffix: ${{ env.VERSION_SUFFIX }}
+
+
+    - name: SonarCloud Begin
+      uses: VirtoCommerce/vc-github-actions/sonar-scanner-begin@master
+
+    - name: Build
+      run: vc-build Compile
+
+    - name: Unit Tests
+      run: vc-build Test -skip
+
+    - name: SonarCloud End
+      uses: VirtoCommerce/vc-github-actions/sonar-scanner-end@master
+
+    - name: Quality Gate
+      uses: VirtoCommerce/vc-github-actions/sonar-quality-gate@master
+      with:
+        login: ${{ env.SONAR_TOKEN }}

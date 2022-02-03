@@ -1,0 +1,75 @@
+# v1.0.0
+name: VC Publish docker
+
+on:
+  workflow_call:
+    outputs:
+      imagePath: 
+        value: '${{ jobs.publish-docker.outputs.imagePath }}'
+    inputs:
+      shortKey:
+        required: false
+        type: string
+        default: ''
+      fullKey:
+        required: true
+        type: string
+      dockerTar:
+        required: true
+        type: string
+    secrets:
+      envPAT:
+        required: true
+      dockerUser:
+        required: true
+      dockerToken:
+        required: true
+
+jobs:
+  publish-docker:
+    runs-on: ubuntu-latest
+    env:
+      DOCKER_TAR: ${{ inputs.dockerTar }}
+      GITHUB_TOKEN: ${{ secrets.envPAT }}
+      PACKAGE_SERVER: 'ghcr.io'
+      PUBLISH_TO_DOCKER: 'false'
+      UPDATE_LATEST_TAG: 'false'
+    outputs:
+      imagePath: '${{ steps.load-docker.outputs.image }}:${{ steps.load-docker.outputs.tag }}'
+
+    steps: 
+    - name: Get Docker image from cache
+      uses: actions/cache@v2
+      id: restore-build
+      with:
+        key: ${{ inputs.fullKey }}
+        restore-keys: ${{ inputs.shortKey }}
+        path: |
+          ${{ env.DOCKER_TAR }}
+
+    # - name: Check cache status # Fail workflow if cache not present
+    #   if: steps.restore-build.outputs.cache-hit != 'true'
+    #   run: exit 1
+
+    - name: Load Docker image 
+      id: load-docker
+      uses: VirtoCommerce/vc-github-actions/docker-load-image@PT-4557
+      with:
+        dockerTar: ${{ env.DOCKER_TAR }}
+
+    - name: Docker Login
+      uses: azure/docker-login@v1
+      with:
+        login-server: ${{ env.PACKAGE_SERVER }}
+        username: $GITHUB_ACTOR
+        password: ${{ env.GITHUB_TOKEN }}
+
+    - name: Publish Docker Image
+      uses: VirtoCommerce/vc-github-actions/publish-docker-image@master
+      with:
+          image: ${{ steps.load-docker.outputs.image }}
+          tag: ${{ steps.load-docker.outputs.tag }}
+          docker_user: ${{ secrets.dockerUser }}
+          docker_token: ${{ secrets.dockerToken }}
+          docker_hub: ${{ env.PUBLISH_TO_DOCKER }}
+          update_latest: ${{ env.UPDATE_LATEST_TAG }}

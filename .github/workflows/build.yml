@@ -1,0 +1,150 @@
+# v1.0.0
+name: VC build
+
+on:
+  workflow_call:
+    outputs:
+      shortKey:
+        value: ${{ jobs.build-artifacts.outputs.shortKey }}
+      fullKey:
+        value: ${{ jobs.build-artifacts.outputs.fullKey }}
+      artifactName:
+        value: ${{ jobs.build-artifacts.outputs.artifactName }}
+      dockerTar:
+        value: ${{ jobs.build-artifacts.outputs.dockerTar }}
+
+    inputs:
+      uploadPackage:
+        required: false
+        type: string
+        default: 'false'
+      uploadDocker:
+        required: false
+        type: string
+        default: 'false'
+      imageName:
+        required: false
+        type: string
+        default: 'platform'
+      eventName:
+        required: true
+        type: string
+    secrets:
+      envPAT:
+        required: true
+
+jobs:
+  build-artifacts:
+    runs-on: ubuntu-latest
+    env:
+      DOCKER_TAR: 'platform_image.tar'
+      ARTIFACT_NAME: 'platform'
+      IMAGE_NAME: ${{ inputs.imageName }}
+      GITHUB_TOKEN: ${{ secrets.envPAT }}
+      VERSION_SUFFIX: ''
+      MSBuildEnableWorkloadResolver: 'false'
+    outputs:
+      shortKey: ${{ steps.cache-key.outputs.shortKey }}
+      fullKey: ${{ steps.cache-key.outputs.fullKey }}
+      dockerTar: ${{ env.DOCKER_TAR }}
+      artifactName: ${{ env.ARTIFACT_NAME }}
+
+    steps: 
+    - name: Set up dotnet6 
+      uses: actions/setup-dotnet@v1
+      with:
+        dotnet-version: '6.0.x'
+
+    - name: Set up Node 14
+      uses: actions/setup-node@v2
+      with:
+        node-version: '14'
+
+    - name: Install VirtoCommerce.GlobalTool
+      uses: VirtoCommerce/vc-github-actions/setup-vcbuild@master
+
+    - uses: actions/checkout@v2
+      with:
+        fetch-depth: 0
+
+    - name: Get Artifact Version
+      uses: VirtoCommerce/vc-github-actions/get-image-version@master
+      id: artifactVer
+
+    - name: Set ARTIFACT_NAME, VERSION_SUFFIX variables
+      run: |
+        if [ '${{ steps.artifactVer.outputs.moduleId }}' != '' ]; then
+          echo "ARTIFACT_NAME=${{ steps.artifactVer.outputs.moduleId }}" >> $GITHUB_ENV
+        fi;
+
+        if [ '${{ inputs.eventName }}' == 'workflow_dispatch' ]; then
+          echo "VERSION_SUFFIX=${{ steps.artifactVer.outputs.fullSuffix }}" >> $GITHUB_ENV
+        else
+          echo "VERSION_SUFFIX=${{ steps.artifactVer.outputs.suffix }}" >> $GITHUB_ENV
+        fi;
+
+    - name: Add version suffix
+      if: ${{ github.ref != 'refs/heads/master' }}
+      uses: VirtoCommerce/vc-github-actions/add-version-suffix@master
+      with:
+        versionSuffix: ${{ env.VERSION_SUFFIX }}
+
+    - name: Packaging
+      run: vc-build Compress -skip Test
+
+    - name: Get cache key
+      uses: VirtoCommerce/vc-github-actions/cache-get-key@PT-4557
+      id: cache-key
+      with:
+        runnerOs: ${{ runner.os  }}
+        artifactName: ${{ env.ARTIFACT_NAME }}
+
+    - name: Cache build artifacts
+      if: ${{ inputs.uploadPackage == 'true' }}
+      uses: actions/cache@v2
+      with:
+        key: ${{ steps.cache-key.outputs.fullKey }}
+        path: |
+          ${{ github.workspace }}/artifacts
+          ${{ github.workspace }}/publish
+
+    # - name: Upload build artifacts
+    #   if: ${{ inputs.uploadPackage == 'true' }}
+    #   uses: actions/upload-artifact@v2
+    #   with:
+    #     name: ${{ env.ARTIFACT_NAME }}
+    #     path: |
+    #       ${{ github.workspace }}/artifacts
+    #       ${{ github.workspace }}/publish
+
+    - name: Build Docker Image
+      if: ${{ inputs.uploadDocker == 'true' }}
+      id: dockerBuild
+      uses: VirtoCommerce/vc-github-actions/build-docker-image@PT-4557
+      with:
+        outputs: type=tar,dest=${{ github.workspace }}/platform_image.tar
+        tag: ${{ steps.artifactVer.outputs.taggedVersion }}
+        imageName: ${{ env.IMAGE_NAME }}
+        dockerFiles: 'https://raw.githubusercontent.com/VirtoCommerce/vc-docker/feat/net6/linux/platform/Dockerfile;https://raw.githubusercontent.com/VirtoCommerce/vc-docker/master/linux/platform/wait-for-it.sh'
+
+    - name: Save Docker to tar
+      if: ${{ inputs.uploadDocker == 'true' }}
+      run: |
+        docker save -o ${{ env.DOCKER_TAR }} ${{ steps.dockerBuild.outputs.imageName }}
+
+    - name: Cache Docker image
+      if: ${{ inputs.uploadDocker == 'true' }}
+      uses: actions/cache@v2
+      with:
+        key: ${{ steps.cache-key.outputs.fullKey }}
+        path: |
+          ${{ env.DOCKER_TAR }}
+        
+
+    # - name: Upload Docker image
+    #   if: ${{ inputs.uploadDocker == 'true' }}
+    #   uses: actions/upload-artifact@v2
+    #   with:
+    #     name: ${{ env.IMAGE_ARTIFACT_NAME }}
+    #     path: |
+    #       ${{ env.DOCKER_TAR }}
