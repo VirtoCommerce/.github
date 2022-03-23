@@ -13,17 +13,13 @@ jobs:
     environment: "Release Approve"
     steps:
 
-      - uses: actions/setup-dotnet@v1
-        with:
-          dotnet-version: '6.0.x'
-
       - uses: actions/checkout@v2
         with:
           fetch-depth: 0
           token: ${{ secrets.envPAT }}
 
       - name: Install VirtoCommerce.GlobalTool
-        run: dotnet tool install --global VirtoCommerce.GlobalTool --version 2.1.0-alpha.17
+        run: dotnet tool install --global VirtoCommerce.GlobalTool
 
       - name: Setup Git Credentials
         uses: VirtoCommerce/vc-github-actions/setup-git-credentials-github@master
