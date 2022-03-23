@@ -17,6 +17,15 @@ on:
       dockerTar:
         required: true
         type: string
+      publishToDocker:
+        required: false
+        type: string
+        default: 'false'
+      updateLatestTag:
+        required: false
+        type: string
+        default: 'false'
+
     secrets:
       envPAT:
         required: true
@@ -38,6 +47,11 @@ jobs:
       imagePath: '${{ steps.load-docker.outputs.image }}:${{ steps.load-docker.outputs.tag }}'
 
     steps: 
+    - name: Set Env
+      run: |
+        echo "PUBLISH_TO_DOCKER=${{ inputs.publishToDocker }}" >> $GITHUB_ENV
+        echo "UPDATE_LATEST_TAG=${{ inputs.updateLatestTag }}" >> $GITHUB_ENV
+
     - name: Get Docker image from cache
       uses: actions/cache@v2
       id: restore-build
