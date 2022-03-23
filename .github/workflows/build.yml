@@ -109,7 +109,7 @@ jobs:
       if: ${{ inputs.uploadPackage == 'true' }}
       uses: actions/cache@v2
       with:
-        key: ${{ steps.cache-key.outputs.fullKey }}
+        key: ${{ steps.cache-key.outputs.packageFullKey }}
         path: |
           ${{ github.workspace }}/artifacts
           ${{ github.workspace }}/publish
@@ -133,6 +133,6 @@ jobs:
       if: ${{ inputs.uploadDocker == 'true' }}
       uses: actions/cache@v2
       with:
-        key: ${{ steps.cache-key.outputs.fullKey }}
+        key: ${{ steps.cache-key.outputs.dockerFullKey }}
         path: |
           ${{ env.DOCKER_TAR }}
