@@ -113,6 +113,7 @@ jobs:
         path: |
           ${{ github.workspace }}/artifacts
           ${{ github.workspace }}/publish
+          ${{ github.workspace }}/Directory.Build.props
 
     - name: Build Docker Image
       if: ${{ inputs.uploadDocker == 'true' }}
