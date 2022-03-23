@@ -1,0 +1,61 @@
+# v1.0.0
+name: VC Publish Github release
+
+on:
+  workflow_call:
+    outputs:
+      downloadUrl: 
+        value: '${{ jobs.publish-github.outputs.downloadUrl }}'
+    inputs:
+      shortKey:
+        required: false
+        type: string
+        default: ''
+      fullKey:
+        required: true
+        type: string
+      version:
+        required: true
+        type: string
+
+    secrets:
+      envPAT:
+        required: true
+      nugetKey:
+        required: true
+      dockerToken:
+        required: true
+
+jobs:
+  publish-github:
+    runs-on: ubuntu-latest
+    env:
+      NUGET_KEY: ${{ inputs.nugetKey }}
+    outputs:
+      downloadUrl: ${{ steps.githubRelease.outputs.downloadUrl }}
+
+    steps: 
+
+    - name: Get Changelog
+      id: changelog
+      uses: VirtoCommerce/vc-github-actions/changelog-generator@master
+
+    - name: Get package from cache
+      uses: actions/cache@v2
+      id: restore-build
+      with:
+        key: ${{ inputs.fullKey }}
+        restore-keys: ${{ inputs.shortKey }}
+        path: |
+          ${{ github.workspace }}/artifacts
+          ${{ github.workspace }}/publish
+
+    - name: Publish Nuget
+      uses: VirtoCommerce/vc-github-actions/publish-nuget@master
+
+    - name: Publish Github Release
+      id: githubRelease
+      with:
+        changelog: ${{ steps.changelog.outputs.changelog }}
+      uses: VirtoCommerce/vc-github-actions/publish-github-release@master
+
