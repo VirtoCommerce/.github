@@ -31,6 +31,7 @@ jobs:
     runs-on: ubuntu-latest
     env:
       NUGET_KEY: ${{ inputs.nugetKey }}
+      GITHUB_TOKEN: ${{ inputs.envPAT }}
     outputs:
       downloadUrl: ${{ steps.githubRelease.outputs.downloadUrl }}
 
@@ -58,4 +59,3 @@ jobs:
       with:
         changelog: ${{ steps.changelog.outputs.changelog }}
       uses: VirtoCommerce/vc-github-actions/publish-github-release@master
-
