@@ -53,7 +53,7 @@ jobs:
 
     - name: Load Docker image 
       id: load-docker
-      uses: VirtoCommerce/vc-github-actions/docker-load-image@PT-4557
+      uses: VirtoCommerce/vc-github-actions/docker-load-image@master
       with:
         dockerTar: ${{ env.DOCKER_TAR }}
 
