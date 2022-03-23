@@ -23,8 +23,6 @@ on:
         required: true
       nugetKey:
         required: true
-      dockerToken:
-        required: true
 
 jobs:
   publish-github:
