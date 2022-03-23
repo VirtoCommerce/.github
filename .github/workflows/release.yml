@@ -6,7 +6,6 @@ on:
         envPAT:
           required: true
 
-
 jobs:
   release:
     runs-on: ubuntu-latest
