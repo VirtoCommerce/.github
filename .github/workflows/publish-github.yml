@@ -56,4 +56,4 @@ jobs:
       id: githubRelease
       with:
         changelog: ${{ inputs.changelog }}
-      uses: VirtoCommerce/vc-github-actions/publish-github-release@master
+      uses: VirtoCommerce/vc-github-actions/publish-github-release@PT-6460
