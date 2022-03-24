@@ -35,6 +35,9 @@ jobs:
 
     steps: 
 
+    - name: Install VirtoCommerce.GlobalTool
+      uses: VirtoCommerce/vc-github-actions/setup-vcbuild@master
+
     - name: Get package from cache
       uses: actions/cache@v2
       id: restore-build
@@ -46,8 +49,8 @@ jobs:
           ${{ github.workspace }}/publish
           ${{ github.workspace }}/Directory.Build.props
 
-    - name: Publish Nuget
-      uses: VirtoCommerce/vc-github-actions/publish-nuget@master
+    # - name: Publish Nuget
+    #   uses: VirtoCommerce/vc-github-actions/publish-nuget@master
 
     - name: Publish Github Release
       id: githubRelease
