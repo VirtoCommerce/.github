@@ -28,8 +28,8 @@ jobs:
   publish-github:
     runs-on: ubuntu-latest
     env:
-      NUGET_KEY: ${{ inputs.nugetKey }}
-      GITHUB_TOKEN: ${{ inputs.envPAT }}
+      NUGET_KEY: ${{ secrets.nugetKey }}
+      GITHUB_TOKEN: ${{ secrets.envPAT }}
     outputs:
       downloadUrl: ${{ steps.githubRelease.outputs.downloadUrl }}
 
