@@ -45,6 +45,7 @@ jobs:
       DOCKER_TAR: 'platform_image.tar'
       ARTIFACT_NAME: 'platform'
       IMAGE_NAME: ${{ inputs.imageName }}
+      IMAGE_TAG: ''
       GITHUB_TOKEN: ${{ secrets.envPAT }}
       VERSION_SUFFIX: ''
       MSBuildEnableWorkloadResolver: 'false'
@@ -70,18 +71,22 @@ jobs:
       uses: VirtoCommerce/vc-github-actions/get-image-version@master
       id: artifactVer
 
-    - name: Set ARTIFACT_NAME, VERSION_SUFFIX variables
-      if: ${{ inputs.forceVersionSuffix == 'true' }}
+    - name: Set ARTIFACT_NAME, IMAGE_TAG variables
       run: |
         if [ '${{ steps.artifactVer.outputs.moduleId }}' != '' ]; then
           echo "ARTIFACT_NAME=${{ steps.artifactVer.outputs.moduleId }}" >> $GITHUB_ENV
         fi;
+        echo "IMAGE_TAG=${{ steps.artifactVer.outputs.prefix }}" >> $GITHUB_ENV
 
+    - name: Set ARTIFACT_NAME, VERSION_SUFFIX variables
+      if: ${{ inputs.forceVersionSuffix == 'true' }}
+      run: |
         if [ '${{ inputs.eventName }}' == 'workflow_dispatch' ]; then
           echo "VERSION_SUFFIX=${{ steps.artifactVer.outputs.fullSuffix }}" >> $GITHUB_ENV
         else
           echo "VERSION_SUFFIX=${{ steps.artifactVer.outputs.suffix }}" >> $GITHUB_ENV
         fi;
+        echo "IMAGE_TAG=${{ steps.artifactVer.outputs.taggedVersion }}" >> $GITHUB_ENV
 
     - name: Add version suffix
       if: ${{ github.ref != 'refs/heads/master' || inputs.forceVersionSuffix == 'true'}}
@@ -114,8 +119,8 @@ jobs:
       uses: VirtoCommerce/vc-github-actions/build-docker-image@master
       with:
         outputs: type=tar,dest=${{ github.workspace }}/platform_image.tar
-        tag: ${{ steps.artifactVer.outputs.taggedVersion }}
         imageName: ${{ env.IMAGE_NAME }}
+        tag: ${{ env.IMAGE_TAG }}
         dockerFiles: 'https://raw.githubusercontent.com/VirtoCommerce/vc-docker/feat/net6/linux/platform/Dockerfile;https://raw.githubusercontent.com/VirtoCommerce/vc-docker/master/linux/platform/wait-for-it.sh'
 
     - name: Save Docker to tar

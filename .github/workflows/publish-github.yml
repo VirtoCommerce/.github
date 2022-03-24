@@ -58,4 +58,4 @@ jobs:
       with:
         changelog: ${{ inputs.changelog }}
         skipString: 'Clean+Restore+Compile+WebPackBuild+Test+Publish+Compress'
-      uses: VirtoCommerce/vc-github-actions/publish-github-release@PT-6460
+      uses: VirtoCommerce/vc-github-actions/publish-github-release@master
