@@ -50,12 +50,12 @@ jobs:
           ${{ github.workspace }}/artifacts
           ${{ github.workspace }}/publish
 
-    # - name: Publish Nuget
-    #   uses: VirtoCommerce/vc-github-actions/publish-nuget@master
-
     - name: Publish Github Release
       id: githubRelease
       with:
         changelog: ${{ inputs.changelog }}
         skipString: 'Clean+Restore+Compile+WebPackBuild+Test+Publish+Compress'
       uses: VirtoCommerce/vc-github-actions/publish-github-release@master
+
+    - name: Publish Nuget
+      uses: VirtoCommerce/vc-github-actions/publish-nuget@master
