@@ -63,7 +63,7 @@ jobs:
           cmPath: ${{ steps.deployConfig.outputs.cmPath }}
 
       - name: Wait for environment is up
-        if: ${{ matrix.envName }} == 'dev'
+        timeout-minutes: 5
         uses: VirtoCommerce/vc-github-actions/vc-argocd-cli@master
         id: argocd-cli
         with:
