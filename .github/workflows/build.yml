@@ -1,13 +1,17 @@
-# v1.0.0
+# v3.200.3
 name: VC build
 
 on:
   workflow_call:
     outputs:
-      shortKey:
-        value: ${{ jobs.build-artifacts.outputs.shortKey }}
-      fullKey:
-        value: ${{ jobs.build-artifacts.outputs.fullKey }}
+      dockerShortKey:
+        value: ${{ jobs.build-artifacts.outputs.dockerShortKey }}
+      dockerFullKey:
+        value: ${{ jobs.build-artifacts.outputs.dockerFullKey }}
+      packageShortKey:
+        value: ${{ jobs.build-artifacts.outputs.packageShortKey }}
+      packageFullKey:
+        value: ${{ jobs.build-artifacts.outputs.packageFullKey }}
       artifactName:
         value: ${{ jobs.build-artifacts.outputs.artifactName }}
       dockerTar:
@@ -22,6 +26,10 @@ on:
         required: false
         type: string
         default: 'false'
+      dockerFiles:
+        required: false
+        type: string
+        default: 'https://raw.githubusercontent.com/VirtoCommerce/vc-docker/feat/net6/linux/platform/Dockerfile;https://raw.githubusercontent.com/VirtoCommerce/vc-docker/master/linux/platform/wait-for-it.sh'
       imageName:
         required: false
         type: string
@@ -42,16 +50,18 @@ jobs:
   build-artifacts:
     runs-on: ubuntu-latest
     env:
-      DOCKER_TAR: 'platform_image.tar'
-      ARTIFACT_NAME: 'platform'
+      DOCKER_TAR: 'image.tar'
+      ARTIFACT_NAME: ${{ github.event.repository.name }}
       IMAGE_NAME: ${{ inputs.imageName }}
       IMAGE_TAG: ''
       GITHUB_TOKEN: ${{ secrets.envPAT }}
       VERSION_SUFFIX: ''
       MSBuildEnableWorkloadResolver: 'false'
     outputs:
-      shortKey: ${{ steps.cache-key.outputs.shortKey }}
-      fullKey: ${{ steps.cache-key.outputs.fullKey }}
+      dockerShortKey: ${{ steps.cache-key.outputs.dockerShortKey }}
+      dockerFullKey: ${{ steps.cache-key.outputs.dockerFullKey }}
+      packageShortKey: ${{ steps.cache-key.outputs.packageShortKey }}
+      packageFullKey: ${{ steps.cache-key.outputs.packageFullKey }}
       dockerTar: ${{ env.DOCKER_TAR }}
       artifactName: ${{ env.ARTIFACT_NAME }}
 
@@ -71,14 +81,11 @@ jobs:
       uses: VirtoCommerce/vc-github-actions/get-image-version@master
       id: artifactVer
 
-    - name: Set ARTIFACT_NAME, IMAGE_TAG variables
+    - name: Set IMAGE_TAG variables
       run: |
-        if [ '${{ steps.artifactVer.outputs.moduleId }}' != '' ]; then
-          echo "ARTIFACT_NAME=${{ steps.artifactVer.outputs.moduleId }}" >> $GITHUB_ENV
-        fi;
         echo "IMAGE_TAG=${{ steps.artifactVer.outputs.prefix }}" >> $GITHUB_ENV
 
-    - name: Set ARTIFACT_NAME, VERSION_SUFFIX variables
+    - name: Set VERSION_SUFFIX variables
       if: ${{ inputs.forceVersionSuffix == 'true' }}
       run: |
         if [ '${{ inputs.eventName }}' == 'workflow_dispatch' ]; then
@@ -118,10 +125,10 @@ jobs:
       id: dockerBuild
       uses: VirtoCommerce/vc-github-actions/build-docker-image@master
       with:
-        outputs: type=tar,dest=${{ github.workspace }}/platform_image.tar
+        outputs: type=tar,dest=${{ github.workspace }}/${{ env.DOCKER_TAR }}
         imageName: ${{ env.IMAGE_NAME }}
         tag: ${{ env.IMAGE_TAG }}
-        dockerFiles: 'https://raw.githubusercontent.com/VirtoCommerce/vc-docker/feat/net6/linux/platform/Dockerfile;https://raw.githubusercontent.com/VirtoCommerce/vc-docker/master/linux/platform/wait-for-it.sh'
+        dockerFiles: ${{ inputs.dockerFiles }}
 
     - name: Save Docker to tar
       if: ${{ inputs.uploadDocker == 'true' }}
