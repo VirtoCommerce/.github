@@ -17,12 +17,16 @@ on:
       changelog:
         required: true
         type: string
+      forceNuget:
+        required: false
+        type: boolean
+        default: true
 
     secrets:
       envPAT:
         required: true
       nugetKey:
-        required: true
+        required: false
 
 jobs:
   publish-github:
@@ -58,4 +62,5 @@ jobs:
       uses: VirtoCommerce/vc-github-actions/publish-github-release@master
 
     - name: Publish Nuget
+      if: ${{ inputs.forceNuget }}
       uses: VirtoCommerce/vc-github-actions/publish-nuget@master
