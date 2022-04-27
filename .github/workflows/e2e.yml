@@ -23,12 +23,12 @@ on:
       installModules:
         description: 'Enable or disable "Install Modules" step'
         required: false
-        type: boolean
+        type: string
         default: true
       installCustomModule:
         description: 'Enable or disable "Install Custom Modules" step'
         required: false
-        type: boolean
+        type: string
         default: false
       customModuleId:
         description: 'Custom Module id'
