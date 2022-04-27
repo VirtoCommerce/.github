@@ -80,7 +80,7 @@ jobs:
         platformImage: ghcr.io/virtocommerce/platform
         storefrontImage: ghcr.io/virtocommerce/storefront
         validateSwagger: 'false'
-        installModules: ${{ inputs.installModule }}
+        installModules: ${{ inputs.installModules }}
         installCustomModule: ${{ inputs.installCustomModule }}
         customModuleId: ${{ inputs.customModuleId }}
         customModuleUrl: ${{ inputs.customModuleUrl }}
