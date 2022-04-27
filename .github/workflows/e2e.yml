@@ -16,7 +16,7 @@ on:
         type: string
         default: 'dev'
       testSuite:
-        description: "Test Suite"
+        description: 'Test Suite'
         required: false
         type: string
         default: 'Test Suites/Modules/Platform_collection'
