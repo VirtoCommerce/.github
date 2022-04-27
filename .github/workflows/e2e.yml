@@ -26,7 +26,7 @@ on:
         type: boolean
         default: true
       installCustomModule:
-        description: 'Boolean param. true - to install custom module ver.'
+        description: 'Enable or disable "Install Custom Modules" step'
         required: false
         type: boolean
         default: false
@@ -81,7 +81,7 @@ jobs:
         storefrontImage: ghcr.io/virtocommerce/storefront
         validateSwagger: 'false'
         installModules: ${{ inputs.installModule }}
-        installCustomModule: ${{ install.installCustomModule }}
+        installCustomModule: ${{ inputs.installCustomModule }}
         customModuleId: ${{ inputs.customModuleId }}
         customModuleUrl: ${{ inputs.customModuleUrl }}
 
