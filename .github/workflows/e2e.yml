@@ -1,0 +1,99 @@
+# v3.200.1
+
+name: Common katalon tests
+
+on:
+  workflow_call:
+    inputs:
+      katalonRepo:
+        description: 'Katalon tests repository'
+        required: false
+        type: string
+        default: 'VirtoCommerce/vc-quality-gate-katalon'
+      katalonRepoBranch:
+        description: 'Katalon tests repository branch'
+        required: false
+        type: string
+        default: 'dev'
+      testSuite:
+        description: "Test Suite"
+        required: false
+        type: string
+        default: 'Test Suites/Modules/Platform_collection'
+      installModules:
+        description: 'Enable or disable "Install Modules" step'
+        required: false
+        type: boolean
+        default: true
+      installCustomModule:
+        description: 'Boolean param. true - to install custom module ver.'
+        required: false
+        type: boolean
+        default: false
+      customModuleId:
+        description: 'Custom Module id'
+        required: false
+        type: string
+        default: ''
+      customModuleUrl:
+        description: 'Custom module Module url'
+        required: false
+        type: string
+        default: ''
+
+    secrets:
+      envPAT:
+        required: true
+      katalonApiKey:
+        required: true
+
+jobs:
+  e2e-tests:
+    runs-on: ubuntu-18.04 # katalon action runs correctly on ubuntu-18.04
+
+    env:
+      GITHUB_TOKEN: ${{ secrets.envPAT }}
+      DEFAULT_TEST_SUITE: ${{ inputs.testSuite }}
+      KATALON_REPO: ${{ inputs.katalonRepo}}
+      KATALON_REPO_BRANCH: ${{ inputs.katalonRepoBranch }}
+      KATALON_PATH: 'vc-quality-gate-katalon'
+
+    steps:
+
+    - name: Install VirtoCommerce.GlobalTool
+      uses: VirtoCommerce/vc-github-actions/setup-vcbuild@master
+
+    - name: Getting tests
+      uses: actions/checkout@v3
+      with:
+        repository: ${{ env.KATALON_REPO }}
+        ref: ${{ env.KATALON_REPO_BRANCH }}
+        path: ${{ env.KATALON_PATH }}
+
+    - name: Docker Env
+      uses: VirtoCommerce/vc-github-actions/docker-env@PT-7271
+      with:
+        githubUser: ${{ env.GITHUB_ACTOR }}
+        githubToken: ${{ env.GITHUB_TOKEN }}
+        platformDockerTag: 'dev-linux-latest'
+        storefrontDockerTag: 'dev-linux-latest'
+        platformImage: ghcr.io/virtocommerce/platform
+        storefrontImage: ghcr.io/virtocommerce/storefront
+        validateSwagger: 'false'
+        installModules: ${{ inputs.installModule }}
+        installCustomModule: ${{ install.installCustomModule }}
+        customModuleId: ${{ inputs.customModuleId }}
+        customModuleUrl: ${{ inputs.customModuleUrl }}
+
+    - name: Katalon Studio Github Action
+      uses: VirtoCommerce/vc-github-actions/katalon-studio-github-action@master
+      with:
+        version: '8.2.5'
+        projectPath: '${{ github.workspace }}/${{ env.KATALON_PATH }}/platform_storefront.prj'
+        args: '-noSplash -retry=0 -testSuiteCollectionPath="${{ env.DEFAULT_TEST_SUITE }}" -browserType="Chrome" -apiKey= ${{ secrets.katalonApiKey }} -g_urlBack="http://localhost:8090" -g_urlFront="http://localhost:8080" -executionProfile="default"'
+
+    - name: Katalon Report to PR
+      if: ${{ ( success() || failure() ) && github.event_name == 'pull_request' }}
+      uses: VirtoCommerce/vc-github-actions/publish-katalon-report@master
+      with:
+        testProjectPath: ${{ github.workspace }}
