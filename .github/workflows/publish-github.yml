@@ -63,6 +63,6 @@ jobs:
 
     - name: Publish Nuget
       if: ${{ inputs.forceNuget }}
-      uses: VirtoCommerce/vc-github-actions/publish-nuget@master
+      uses: VirtoCommerce/vc-github-actions/publish-nuget@PT-7271
       with:
-        skip: 'Clean+Restore+Compile+Test+Pack'
+        skipString: 'Clean+Restore+Compile+Test+Pack'
