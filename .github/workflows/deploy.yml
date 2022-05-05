@@ -21,6 +21,12 @@ on:
         default: true
         required: false
         type: boolean
+      taskNumber:
+        description: 'Jira key for link commit'
+        default: 'undefined'
+        required: false
+        type: string
+
     secrets:
       envPAT:
         required: true
@@ -64,7 +70,7 @@ jobs:
           deployBranch: ${{ steps.deployConfig.outputs.deployBranch }}
           artifactKey: ${{ steps.deployConfig.outputs.artifactKey }}
           artifactUrl: ${{ inputs.artifactUrl }}
-          taskNumber: 'undefined'
+          taskNumber: ${{ inputs.taskNumber }}
           forceCommit: '${{ inputs.forceCommit }}'
           cmPath: ${{ steps.deployConfig.outputs.cmPath }}
 
