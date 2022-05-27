@@ -1,6 +1,6 @@
 ![VirtoCommerce-OpenSource- NET-B2B-ECommerce-Platform](https://user-images.githubusercontent.com/7639413/170726093-a41b51b7-ddd1-4783-9b00-481c70ca6c81.png)
 
-## Join us now
+## JOIN US NOW
 👉 [Explore Virto Commerce](https://virtocommerce.com/)
 
 👉 [Virto Commerce B2B Marketplace](https://virtocommerce.com/solutions/marketplace)
@@ -11,10 +11,10 @@
 
 👉 [Browse careers at Virto Commerce](https://virtocommerce.com/career)
 
-## Who we are
-As a Microsoft Gold Partner, Virto serves more than 100 companies worldwide and has offices in five countries, including the Americas and Europe. Leveraging our open source ecommerce platform, hosted solution and full-service offering, our clients strategically use ecommerce to build stronger customer relationships and rapidly increase global online sales. Virto Commerce’s flagship product, the ecommerce cloud-based, open-source, .NET platform, is the only B2B-first headless digital commerce solution that is specifically designed to adapt to ever-changing complex scenarios common in the B2B market. 
+## WHO WE ARE
+As a Microsoft Gold Partner, Virto serves more than 100 companies worldwide and has offices in five countries, including the Americas and Europe. Leveraging our open source ecommerce platform, hosted solution and full-service offering, our clients strategically use ecommerce to build stronger customer relationships and rapidly increase global online sales. Virto Commerce’s flagship product, the ecommerce cloud-based, open-source, [.NET platform](https://virtocommerce.com/microsoft-ecommerce-platform), is the only [B2B-first headless digital commerce solution](https://virtocommerce.com/headless-ecommerce) that is specifically designed to adapt to ever-changing complex scenarios common in the B2B market. 
 
-## What and how we do it
+## WHAT AND HOW WE DO IT
 At Virto Commerce, we pride ourselves on being proactive technology innovators who are deeply dedicated to creating flexible, agile commerce software solutions that improve business and accelerate digital adoption. All this requires a special mindset and a lot of collaborative effort to make complex things simple. We believe in the uniting power of technology, teamwork and spirit, and take personal responsibility for every project we undertake.
 
 ## FAQ
