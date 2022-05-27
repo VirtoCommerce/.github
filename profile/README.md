@@ -1,7 +1,9 @@
-![Virto Atomic Architecture™ | Modular Architecture Extensible & Composable](https://user-images.githubusercontent.com/7639413/170719613-9c6bab70-a12d-400a-be44-5284ad4588f1.png)
+![VirtoCommerce-OpenSource- NET-B2B-ECommerce-Platform](https://user-images.githubusercontent.com/7639413/170726093-a41b51b7-ddd1-4783-9b00-481c70ca6c81.png)
 
 ## Join us now
 👉 [Explore Virto Commerce](https://virtocommerce.com/)
+
+👉 [Virto Commerce B2B Marketplace](https://virtocommerce.com/solutions/marketplace)
 
 👉 [Explore Virto’s open-source .NET ecommerce platform](https://virtocommerce.com/microsoft-ecommerce-platform)
 
