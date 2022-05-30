@@ -1,5 +1,5 @@
 
-![image](./Virto%20Commerce%20.NET%20eCommerce%20Platform.png)
+![Virto Commerce  NET eCommerce Platform](https://user-images.githubusercontent.com/7566324/171011661-e42f6b80-84f6-4447-9b6b-01b51347de95.png)
 
 ## JOIN US NOW
 👉 [Explore Virto Commerce](https://virtocommerce.com/)
