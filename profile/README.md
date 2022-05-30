@@ -1,4 +1,5 @@
-![VirtoCommerce-OpenSource- NET-B2B-ECommerce-Platform](https://user-images.githubusercontent.com/7639413/170726093-a41b51b7-ddd1-4783-9b00-481c70ca6c81.png)
+
+![image](./Virto%20Commerce%20.NET%20eCommerce%20Platform.png)
 
 ## JOIN US NOW
 👉 [Explore Virto Commerce](https://virtocommerce.com/)
