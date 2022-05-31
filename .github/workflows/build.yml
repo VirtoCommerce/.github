@@ -129,25 +129,6 @@ jobs:
         imageName: ${{ env.IMAGE_NAME }}
         tag: ${{ env.IMAGE_TAG }}
         dockerFiles: ${{ inputs.dockerFiles }}
-  
-    - name: Docker Login
-      if: ${{ inputs.uploadDocker == 'true' }}
-      uses: azure/docker-login@v1
-      with:
-        login-server: 'ghcr.io'
-        username: $GITHUB_ACTOR
-        password: ${{ secrets.GITHUB_TOKEN }}
-    
-    - name: Publish Docker Image
-      if: ${{ inputs.uploadDocker == 'true' }}
-      uses: VirtoCommerce/vc-github-actions/publish-docker-image@master
-      with:
-          image: ${{ env.IMAGE_NAME }}
-          tag: ${{ env.IMAGE_TAG }}
-          docker_user: ${{ secrets.DOCKER_USERNAME }}
-          docker_token: ${{ secrets.DOCKER_TOKEN }}
-          docker_hub: 'false'
-          update_latest: 'false'
 
     - name: Save Docker to tar
       if: ${{ inputs.uploadDocker == 'true' }}
