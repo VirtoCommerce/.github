@@ -1,4 +1,4 @@
-# v1.0.0
+# v1.0.1
 name: VC Publish Github release
 
 on:
@@ -42,10 +42,10 @@ jobs:
     - name: Install VirtoCommerce.GlobalTool
       uses: VirtoCommerce/vc-github-actions/setup-vcbuild@master
 
-    - uses: actions/checkout@v2
+    - uses: actions/checkout@v3
     
     - name: Get package from cache
-      uses: actions/cache@v2
+      uses: actions/cache@v3
       id: restore-build
       with:
         key: ${{ inputs.fullKey }}
@@ -53,6 +53,11 @@ jobs:
         path: |
           ${{ github.workspace }}/artifacts
           ${{ github.workspace }}/publish
+
+    - name: List /artifacts folder
+      if: steps.restore-build.outputs.cache-hit == 'true'
+      working-directory: ${{ github.workspace }}/artifacts
+      run: ls -l
 
     - name: Publish Github Release
       id: githubRelease
