@@ -57,9 +57,10 @@ jobs:
         path: |
           ${{ env.DOCKER_TAR }}
 
-    # - name: Check cache status # Fail workflow if cache not present
-    #   if: steps.restore-build.outputs.cache-hit != 'true'
-    #   run: exit 1
+    - name: Check cache status # Warn workflow if fullKey not present
+      if: steps.restore-build.outputs.cache-hit != 'true'
+      run: |
+        echo -e "\033[33mWarning: Cache not found for input keys: ${{ inputs.fullKey }}. The cache may have been restored from alternative key ${{ inputs.shortKey }}"
 
     - name: Load Docker image 
       id: load-docker
