@@ -7,10 +7,6 @@ on:
       downloadUrl: 
         value: '${{ jobs.publish-github.outputs.downloadUrl }}'
     inputs:
-      shortKey:
-        required: false
-        type: string
-        default: ''
       fullKey:
         required: true
         type: string
@@ -49,13 +45,17 @@ jobs:
       id: restore-build
       with:
         key: ${{ inputs.fullKey }}
-        restore-keys: ${{ inputs.shortKey }}
         path: |
           ${{ github.workspace }}/artifacts
           ${{ github.workspace }}/publish
 
+    - name: Check is cache restored
+      if: steps.restore-build.outputs.cache-hit != 'true'
+      run: |
+        echo -e "\033[31mError: Cache not found for input keys: ${{ inputs.fullKey }}"
+        exit 1
+
     - name: List /artifacts folder
-      if: steps.restore-build.outputs.cache-hit == 'true'
       working-directory: ${{ github.workspace }}/artifacts
       run: ls -l
 
