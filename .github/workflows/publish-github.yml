@@ -17,6 +17,10 @@ on:
         required: false
         type: boolean
         default: true
+      incrementPatch:
+        required: false
+        type: string
+        default: 'false'
 
     secrets:
       envPAT:
@@ -39,7 +43,12 @@ jobs:
       uses: VirtoCommerce/vc-github-actions/setup-vcbuild@master
 
     - uses: actions/checkout@v3
-    
+
+    - name: Increment Patch Version
+      if: ${{ inputs.incrementPatch == 'true' }}
+      run: |
+        vc-build IncrementPatch
+
     - name: Get package from cache
       uses: actions/cache@v3
       id: restore-build
@@ -49,7 +58,7 @@ jobs:
           ${{ github.workspace }}/artifacts
           ${{ github.workspace }}/publish
 
-    - name: Check is cache restored
+    - name: Exit if cache not restored
       if: steps.restore-build.outputs.cache-hit != 'true'
       run: |
         echo -e "\033[31mError: Cache not found for input keys: ${{ inputs.fullKey }}"
