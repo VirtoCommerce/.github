@@ -86,12 +86,6 @@ jobs:
       with:
         fetch-depth: ${{ env.FETCH_DEPTH }}
 
-    - name: Setup Git Credentials for IncrementPatch
-      if: ${{ inputs.incrementPatch == 'true' }}
-      uses: VirtoCommerce/vc-github-actions/setup-git-credentials-github@master
-      with:
-        githubToken: ${{ env.GITHUB_TOKEN }}
-
     - name: Increment Patch Version
       if: ${{ inputs.incrementPatch == 'true' }}
       run: |
