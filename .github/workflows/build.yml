@@ -56,6 +56,7 @@ jobs:
       IMAGE_NAME: ${{ inputs.imageName }}
       IMAGE_TAG: ''
       GITHUB_TOKEN: ${{ secrets.envPAT }}
+      FETCH_DEPTH: 1
       VERSION_SUFFIX: ''
       MSBuildEnableWorkloadResolver: 'false'
     outputs:
@@ -76,8 +77,14 @@ jobs:
     - name: Install VirtoCommerce.GlobalTool
       uses: VirtoCommerce/vc-github-actions/setup-vcbuild@master
 
-    - uses: actions/checkout@v3
+    - name: Set FETCH_DEPTH variables
+      if: ${{ inputs.forceVersionSuffix == 'true' }}
+      run: |
+        echo "IMAGE_TAG=0" >> $GITHUB_ENV
 
+    - uses: actions/checkout@v3
+      with:
+        fetch-depth: ${{ env.FETCH_DEPTH }}
 
     - name: Setup Git Credentials for IncrementPatch
       if: ${{ inputs.incrementPatch == 'true' }}
