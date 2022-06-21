@@ -1,5 +1,5 @@
-# v1.0.1
-name: VC Publish Github release
+# v1.1.0
+name: VC Publish Github release and Nuget package
 
 on:
   workflow_call:
@@ -11,9 +11,14 @@ on:
         required: true
         type: string
       changelog:
-        required: true
+        required: false
         type: string
+        default: ''
       forceNuget:
+        required: false
+        type: boolean
+        default: true
+      forceGithub:
         required: false
         type: boolean
         default: true
@@ -69,6 +74,7 @@ jobs:
       run: ls -l
 
     - name: Publish Github Release
+      if: ${{ inputs.forceGithub }}
       id: githubRelease
       with:
         changelog: ${{ inputs.changelog }}
