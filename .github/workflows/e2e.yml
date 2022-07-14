@@ -84,6 +84,7 @@ jobs:
         installCustomModule: ${{ inputs.installCustomModule }}
         customModuleId: ${{ inputs.customModuleId }}
         customModuleUrl: ${{ inputs.customModuleUrl }}
+        envDir: '${{ github.workspace }}'
 
     - name: Katalon Studio Github Action
       uses: VirtoCommerce/vc-github-actions/katalon-studio-github-action@master
