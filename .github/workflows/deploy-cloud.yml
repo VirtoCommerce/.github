@@ -1,0 +1,139 @@
+# v1.0.0
+name: VC cloud deployment
+
+on:
+  workflow_call:
+    inputs:
+      argoServer:
+        required: true
+        default: 'argo.virtocommerce.cloud'
+        type: string
+      deploymentSource:
+        description: 'Deployment source. Allowed values: platform, module'
+        required: true
+        type: string
+      platformVer:
+        description: 'Deploying Platform version'
+        required: false
+        type: string
+      platformTag:
+        description: 'Deploying Platform tag'
+        required: false
+        type: string
+      moduleId: 
+        description: 'Deploying Module id'
+        required: false
+        type: string
+      moduleVer: 
+        description: 'Deploying Module version'
+        required: false
+        type: string
+      moduleLink: 
+        description: 'Deploying Module link'
+        required: false
+        type: string
+      matrix:
+        description: 'Stringified JSON object listing target deployment parameters'
+        default: '{"include":[{"envName": "dev", "confPath": ".deployment/demoManager/argoDeploy-marketplace.json"}]}'
+        required: false
+        type: string
+      forceCommit:
+        description: 'Create deployment commit instead of Pull request to a deployment repo'
+        default: true
+        required: false
+        type: boolean
+      taskNumber:
+        description: 'Jira key for link commit'
+        default: 'undefined'
+        required: false
+        type: string
+
+    secrets:
+      envPAT:
+        required: true
+      argoLogin:
+        required: true
+      argoPassword:
+        required: true
+
+jobs:
+  Deploy:
+    strategy:
+      matrix:  ${{ fromJSON(inputs.matrix) }}
+
+    runs-on: ubuntu-latest
+    env:
+      GITHUB_TOKEN: ${{ secrets.envPAT }}
+      ARGO_SERVER: ${{ inputs.argoServer }}
+      SLEEP_TIME: '1m'
+
+    steps: 
+      # - name: Read deployment config
+      #   uses: VirtoCommerce/vc-github-actions/get-deploy-param@master
+      #   id: deployConfig
+      #   with:
+      #     envName: ${{ matrix.envName }}
+      #     deployConfigPath: ${{ matrix.confPath }}
+
+      - name: Set deployment config
+        id: deployConfig
+        run: |
+          echo "::set-output name=deployRepo::vc-deploy-dev"
+          echo "::set-output name=deployBranch::vcpt"
+          echo "::set-output name=configPath::./backend/packages.json"
+
+      - name: Start deployment
+        uses: bobheadxi/deployments@master
+        id: deployment
+        with:
+          step: start
+          token: ${{ env.GITHUB_TOKEN }}
+          env: Development
+          no_override: false
+
+      - name: Update deployment-cm
+        uses: VirtoCommerce/vc-github-actions/cloud-deployment@master
+        with:
+          deployRepo: ${{ steps.deployConfig.outputs.deployRepo }}
+          deployBranch: ${{ steps.deployConfig.outputs.deployBranch }}
+          platformVer: ${{ inputs.platformVer }}
+          platformTag: ${{ inputs.platformTag }}
+          moduleId: ${{ inputs.moduleId }}
+          moduleVer: ${{ inputs.moduleVer }}
+          moduleLink: ${{ inputs.moduleLink }}
+          taskNumber: ${{ inputs.taskNumber }}
+          forceCommit: '${{ inputs.forceCommit }}'
+          configPath: ${{ steps.deployConfig.outputs.configPath }}
+
+      - name: Sleep for ${{ env.SLEEP_TIME }}
+        if: ${{ inputs.forceCommit }}
+        run: sleep ${{ env.SLEEP_TIME }}
+        shell: bash
+
+      - name: Wait for environment is up
+        if: ${{ inputs.forceCommit }}
+        timeout-minutes: 10
+        uses: VirtoCommerce/vc-github-actions/vc-argocd-cli@master
+        id: argocd-cli
+        with:
+          server: ${{env.ARGO_SERVER}}
+          username: ${{ secrets.argoLogin }}
+          password: ${{ secrets.argoPassword }}
+          command: app wait ${{ steps.deployConfig.outputs.deployAppName }}
+
+      - name: BUILD_STATE::successful
+        if: success()
+        run: echo "BUILD_STATE=successful" >> $GITHUB_ENV
+
+      - name: BUILD_STATE::failed
+        if: failure()
+        run: echo "BUILD_STATE=failed"  >> $GITHUB_ENV
+
+      - name: Update GitHub deployment status
+        uses: bobheadxi/deployments@master
+        if: always()
+        with:
+          step: finish
+          token: ${{ env.GITHUB_TOKEN }}
+          status: ${{ job.status }}
+          deployment_id: ${{ steps.deployment.outputs.deployment_id }}
