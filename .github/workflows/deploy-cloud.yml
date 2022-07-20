@@ -96,6 +96,7 @@ jobs:
         with:
           deployRepo: ${{ steps.deployConfig.outputs.deployRepo }}
           deployBranch: ${{ steps.deployConfig.outputs.deployBranch }}
+          deploymentSource: ${{ inputs.deploymentSource }}
           platformVer: ${{ inputs.platformVer }}
           platformTag: ${{ inputs.platformTag }}
           moduleId: ${{ inputs.moduleId }}
