@@ -80,7 +80,7 @@ jobs:
         run: |
           echo "::set-output name=deployRepo::vc-deploy-dev"
           echo "::set-output name=deployBranch::vcpt"
-          echo "::set-output name=configPath::./backend/packages.json"
+          echo "::set-output name=configPath::backend/packages.json"
 
       - name: Start deployment
         uses: bobheadxi/deployments@master
