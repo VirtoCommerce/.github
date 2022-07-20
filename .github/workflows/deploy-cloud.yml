@@ -65,7 +65,7 @@ jobs:
     env:
       GITHUB_TOKEN: ${{ secrets.envPAT }}
       ARGO_SERVER: ${{ inputs.argoServer }}
-      SLEEP_TIME: '1m'
+      SLEEP_TIME: '5m'
 
     steps: 
       # - name: Read deployment config
@@ -81,6 +81,7 @@ jobs:
           echo "::set-output name=deployRepo::vc-deploy-dev"
           echo "::set-output name=deployBranch::vcpt"
           echo "::set-output name=configPath::backend/packages.json"
+          echo "::set-output name=deployAppName::vcpt-main"
 
       - name: Start deployment
         uses: bobheadxi/deployments@master
