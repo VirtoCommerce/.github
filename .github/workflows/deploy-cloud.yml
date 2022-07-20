@@ -5,7 +5,7 @@ on:
   workflow_call:
     inputs:
       argoServer:
-        required: true
+        required: false
         default: 'argo.virtocommerce.cloud'
         type: string
       deploymentSource:
