@@ -8,8 +8,12 @@ on:
         required: false
         default: 'argo.virtocommerce.cloud'
         type: string
-      deploymentSource:
+      releaseSource:
         description: 'Deployment source. Allowed values: platform, module'
+        required: true
+        type: string
+      releaseType:
+        description: 'Release type. Allowed values: GithubReleases, AzureBlob'
         required: true
         type: string
       platformVer:
@@ -28,8 +32,8 @@ on:
         description: 'Deploying Module version'
         required: false
         type: string
-      moduleLink: 
-        description: 'Deploying Module link'
+      moduleBlob: 
+        description: 'Deploying Module blob name'
         required: false
         type: string
       matrix:
@@ -97,12 +101,13 @@ jobs:
         with:
           deployRepo: ${{ steps.deployConfig.outputs.deployRepo }}
           deployBranch: ${{ steps.deployConfig.outputs.deployBranch }}
-          deploymentSource: ${{ inputs.deploymentSource }}
+          releaseSource: ${{ inputs.releaseSource }}
+          releaseType: ${{ inputs.releaseType }}
           platformVer: ${{ inputs.platformVer }}
           platformTag: ${{ inputs.platformTag }}
           moduleId: ${{ inputs.moduleId }}
           moduleVer: ${{ inputs.moduleVer }}
-          moduleLink: ${{ inputs.moduleLink }}
+          moduleBlob: ${{ inputs.moduleBlob }}
           taskNumber: ${{ inputs.taskNumber }}
           forceCommit: '${{ inputs.forceCommit }}'
           configPath: ${{ steps.deployConfig.outputs.configPath }}
