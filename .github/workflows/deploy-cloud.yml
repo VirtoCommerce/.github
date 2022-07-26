@@ -110,7 +110,7 @@ jobs:
           moduleBlob: ${{ inputs.moduleBlob }}
           taskNumber: ${{ inputs.taskNumber }}
           forceCommit: '${{ inputs.forceCommit }}'
-          configPath: ${{ steps.deployConfig.outputs.configPath }}
+          configPath: ${{ steps.deployConfig.outputs.cmPath }}
 
       - name: Sleep for ${{ env.SLEEP_TIME }}
         if: ${{ inputs.forceCommit }}
