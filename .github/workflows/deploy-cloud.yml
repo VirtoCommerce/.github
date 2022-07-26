@@ -72,20 +72,20 @@ jobs:
       SLEEP_TIME: '5m'
 
     steps: 
-      # - name: Read deployment config
-      #   uses: VirtoCommerce/vc-github-actions/get-deploy-param@master
-      #   id: deployConfig
-      #   with:
-      #     envName: ${{ matrix.envName }}
-      #     deployConfigPath: ${{ matrix.confPath }}
-
-      - name: Set deployment config
+      - name: Read deployment config
+        uses: VirtoCommerce/vc-github-actions/get-deploy-param@master
         id: deployConfig
-        run: |
-          echo "::set-output name=deployRepo::vc-deploy-dev"
-          echo "::set-output name=deployBranch::vcpt"
-          echo "::set-output name=configPath::backend/packages.json"
-          echo "::set-output name=deployAppName::vcpt-main"
+        with:
+          envName: ${{ matrix.envName }}
+          deployConfigPath: ${{ matrix.confPath }}
+
+      # - name: Set deployment config
+      #   id: deployConfig
+      #   run: |
+      #     echo "::set-output name=deployRepo::vc-deploy-dev"
+      #     echo "::set-output name=deployBranch::vcpt"
+      #     echo "::set-output name=configPath::backend/packages.json"
+      #     echo "::set-output name=deployAppName::vcpt-main"
 
       - name: Start deployment
         uses: bobheadxi/deployments@master
