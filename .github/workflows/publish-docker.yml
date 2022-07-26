@@ -1,4 +1,4 @@
-# v1.0.0
+# v1.1.0
 name: VC Publish docker
 
 on:
@@ -6,6 +6,11 @@ on:
     outputs:
       imagePath: 
         value: '${{ jobs.publish-docker.outputs.imagePath }}'
+      image: 
+        value: '${{ jobs.publish-docker.outputs.image }}'
+      tag: 
+        value: '${{ jobs.publish-docker.outputs.tag }}'
+
     inputs:
       shortKey:
         required: false
@@ -45,6 +50,8 @@ jobs:
       UPDATE_LATEST_TAG: ${{ inputs.updateLatestTag }}
     outputs:
       imagePath: '${{ steps.load-docker.outputs.image }}:${{ steps.load-docker.outputs.tag }}'
+      image: '${{ steps.load-docker.outputs.image }}'
+      tag: '${{ steps.load-docker.outputs.tag }}'
 
     steps: 
 
