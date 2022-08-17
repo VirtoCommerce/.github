@@ -35,7 +35,7 @@ on:
 
 jobs:
   publish-github:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-18.04
     env:
       NUGET_KEY: ${{ secrets.nugetKey }}
       GITHUB_TOKEN: ${{ secrets.envPAT }}

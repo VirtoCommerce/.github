@@ -49,7 +49,7 @@ on:
 
 jobs:
   build-artifacts:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-18.04
     env:
       DOCKER_TAR: 'image.tar'
       ARTIFACT_NAME: ${{ github.event.repository.name }}

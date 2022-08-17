@@ -9,7 +9,7 @@ on:
 
 jobs:
   test-and-sonar:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-18.04
     env:
       SONAR_TOKEN: ${{ secrets.sonarToken }}
       MSBuildEnableWorkloadResolver: 'false'
