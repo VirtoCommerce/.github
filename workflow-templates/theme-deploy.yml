@@ -39,7 +39,7 @@ jobs:
         no_override: false
 
     - name: Checkout ArgoCD repository 
-      uses: actions/checkout@v2
+      uses: actions/checkout@v3
       with:
         token: ${{ secrets.REPO_TOKEN }}
         repository: ${{ github.event.inputs.appDescriptionRepo }}
