@@ -1,4 +1,4 @@
-# v1.1.10
+# v3.200.15
 name: Module CI
 
 on:
@@ -28,7 +28,7 @@ on:
 jobs:
   ci:
     if: ${{ github.actor != 'dependabot[bot]' && (github.event.pull_request.head.repo.full_name == github.repository || github.event.pull_request.head.repo.full_name == '') }}  # Check that PR not from forked repo and not from Dependabot
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-20.04
     env:
       CLOUD_INSTANCE_BASE_URL: ${{secrets.CLOUD_INSTANCE_BASE_URL}}
       CLIENT_ID: ${{secrets.CLIENT_ID}}
@@ -51,11 +51,6 @@ jobs:
         if: ${{ github.ref == 'refs/heads/master' && github.event_name == 'push' }}
         run: |
           echo "RELEASE_STATUS=true" >> $GITHUB_ENV
-
-      - name: Set up JDK 11 for dotnet-sonarscanner #Sonar stop accepting Java versions less than 11
-        uses: actions/setup-java@v1
-        with:
-          java-version: 1.11
 
       - uses: actions/checkout@v2
         with:

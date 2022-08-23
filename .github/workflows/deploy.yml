@@ -1,4 +1,4 @@
-# v1.0.0
+# v3.200.15
 name: VC deployment
 
 on:
@@ -40,7 +40,7 @@ jobs:
     strategy:
       matrix:  ${{ fromJSON(inputs.matrix) }}
 
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-20.04
     env:
       GITHUB_TOKEN: ${{ secrets.envPAT }}
       ARGO_SERVER: ${{ inputs.argoServer }}

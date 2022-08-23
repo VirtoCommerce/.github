@@ -26,7 +26,7 @@ on:
 
 jobs:
   cd:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-20.04
     steps: 
     
     - name: Start deployment

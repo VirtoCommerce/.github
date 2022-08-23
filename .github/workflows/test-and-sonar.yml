@@ -1,4 +1,4 @@
-# v1.0.0
+# v3.200.15
 name: VC unit test and sonar scan
 
 on:
@@ -9,26 +9,16 @@ on:
 
 jobs:
   test-and-sonar:
-    runs-on: ubuntu-18.04
+    runs-on: ubuntu-20.04
     env:
       SONAR_TOKEN: ${{ secrets.sonarToken }}
       MSBuildEnableWorkloadResolver: 'false'
   
     steps: 
 
-    - name: Set up Node 14
-      uses: actions/setup-node@v2
-      with:
-        node-version: '14'
-
     - name: Install VirtoCommerce.GlobalTool
       uses: VirtoCommerce/vc-github-actions/setup-vcbuild@master
     
-    - uses: actions/setup-java@v3
-      with:
-        distribution: 'microsoft'
-        java-version: '11'
-
     - name: Install dotnet-sonarscanner
       run: dotnet tool install --global dotnet-sonarscanner
 

@@ -1,4 +1,4 @@
-# v1.1.0
+# v3.200.15
 name: VC Publish Github release and Nuget package
 
 on:
@@ -35,7 +35,7 @@ on:
 
 jobs:
   publish-github:
-    runs-on: ubuntu-18.04
+    runs-on: ubuntu-20.04
     env:
       NUGET_KEY: ${{ secrets.nugetKey }}
       GITHUB_TOKEN: ${{ secrets.envPAT }}

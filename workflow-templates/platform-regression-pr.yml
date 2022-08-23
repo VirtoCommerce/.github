@@ -13,7 +13,7 @@ on:
 
 jobs:
   check-label:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-20.04
     outputs:
       isLabeled: ${{ steps.checkLabel.outputs.isLabeled }}
       pullNumber: ${{ steps.checkLabel.outputs.pullNumber }}
@@ -38,7 +38,7 @@ jobs:
       PR_TITLE: ""
       PR_BODY: ""
       TARGETBRANCH_EXISTS: "false"
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-20.04
     steps:
     - name: Set PR_BRANCH PR_TITLE PR_BODY
       run: |

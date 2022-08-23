@@ -1,4 +1,4 @@
-# v1.1.0
+# v3.200.15
 name: VC Publish docker
 
 on:
@@ -41,7 +41,7 @@ on:
 
 jobs:
   publish-docker:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-20.04
     env:
       DOCKER_TAR: ${{ inputs.dockerTar }}
       GITHUB_TOKEN: ${{ secrets.envPAT }}
