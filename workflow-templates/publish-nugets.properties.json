@@ -1,0 +1,5 @@
+{
+    "name": "Force nugets publish",
+    "description": "VirtoCommerce nugets publish workflow template.",
+    "iconName": "virto-commerce"
+}
