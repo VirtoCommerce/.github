@@ -1,0 +1,63 @@
+# v3.200.16
+name: Get metadata
+
+on:
+  workflow_call:
+    outputs:
+      changelog: 
+        value: ${{ jobs.get-metadata.outputs.changelog }}
+      versionSuffix: 
+        value: ${{ jobs.get-metadata.outputs.versionSuffix }}
+      imageTag: 
+        value: ${{ jobs.get-metadata.outputs.imageTag }}
+
+
+    inputs:
+      forceVersionSuffix:
+        required: false
+        type: string
+        default: 'true'
+
+jobs:
+  get-metadata:
+    runs-on: ubuntu-20.04
+    env:
+      FETCH_DEPTH: 1
+
+    outputs:
+      changelog: ${{ steps.changelog.outputs.changelog }}
+      versionSuffix: ${{ steps.version.outputs.version_suffix }}
+      imageTag: ${{ steps.version.outputs.image_tag }}
+
+    steps: 
+
+    - name: Install VirtoCommerce.GlobalTool
+      uses: VirtoCommerce/vc-github-actions/setup-vcbuild@master
+
+    - name: Set FETCH_DEPTH variables
+      if: ${{ inputs.forceVersionSuffix == 'true' }}
+      run: |
+        echo "FETCH_DEPTH=0" >> $GITHUB_ENV
+
+    - uses: actions/checkout@v3
+      with:
+        fetch-depth: ${{ env.FETCH_DEPTH }}
+
+    - name: Get Changelog
+      id: changelog
+      uses: VirtoCommerce/vc-github-actions/changelog-generator@master
+
+    - name: Get Artifact Version
+      uses: VirtoCommerce/vc-github-actions/get-image-version@master
+      id: artifactVer
+
+    - name: Set version variables
+      if: ${{ inputs.forceVersionSuffix == 'true' }}
+      id: version
+      run: |
+        if [ '${{ github.event_name }}' == 'workflow_dispatch' ]; then
+          echo ::set-output name=version_suffix::${{ steps.artifactVer.outputs.fullSuffix }}
+        else
+          echo ::set-output name=version_suffix::${{ steps.artifactVer.outputs.suffix }}
+        fi;
+        echo ::set-output name=image_tag::${{ steps.artifactVer.outputs.taggedVersion }}
