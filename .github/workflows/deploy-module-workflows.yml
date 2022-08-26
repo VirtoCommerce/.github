@@ -1,0 +1,116 @@
+name: Deploy Module workflows
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version to deploy'
+        required: true
+        type: string
+        default: 'v3.200.15'
+
+jobs:
+
+  deploy:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+# Module workflows
+        repoName: [vc-module-assets
+                  ,vc-module-Authorize.Net
+                  ,vc-module-avatax
+                  ,vc-module-azureblob-assets
+                  ,vc-module-azure-search
+                  ,vc-module-bulk-actions
+                  ,vc-module-cart
+                  ,vc-module-catalog
+                  ,vc-module-catalog-csv-import
+                  ,vc-module-catalog-export-import
+                  ,vc-module-catalog-personalization
+                  ,vc-module-catalog-publishing
+                  ,vc-module-content
+                  ,vc-module-contract
+                  ,vc-module-core
+                  ,vc-module-customer
+                  ,vc-module-customer-export-import
+                  ,vc-module-customer-review
+                  ,vc-module-dynamic-associations
+                  ,vc-module-elastic-app-search
+                  ,vc-module-elastic-search
+                  ,vc-module-event-bus
+                  ,vc-module-experience-api
+                  ,vc-module-export
+                  ,vc-module-filesystem-assets
+                  ,vc-module-gdpr
+                  ,vc-module-google-ecommerce-analytics
+                  ,vc-module-image-tools
+                  ,vc-module-inventory
+                  ,vc-module-lucene-search
+                  ,vc-module-marketing
+                  ,vc-module-metadata
+                  ,vc-module-notification
+                  ,vc-module-order
+                  ,vc-module-payment
+                  ,vc-module-price-export-import
+                  ,vc-module-pricing
+                  ,vc-module-profile-experience-api
+                  ,vc-module-quote
+                  ,vc-module-return
+                  ,vc-module-search
+                  ,vc-module-shipping
+                  ,vc-module-sitemaps
+                  ,vc-module-store
+                  ,vc-module-subscription
+                  ,vc-module-tax
+                  ,vc-module-webhooks
+                  ,vc-module-native-payment-methods
+                  ,vc-module-shipstation
+                  ,vc-module-authorize-net]
+
+# Module samples workflows
+        # include:
+        # - deploymentFolder: modules-sample
+        #   repoName: vc-module-order
+        # - deploymentFolder: modules-sample
+        #   repoName: vc-module-customer
+        # - deploymentFolder: modules-sample
+        #   repoName: vc-module-notification
+
+    env:
+      DEPLOY_REPO: ${{ github.repository_owner }}/${{ matrix.repoName }}
+      TEMPLATE_REPO_FOLDER: 'main'
+      TEMPLATES_LIST: 'release.yml publish-nugets.yml module-release-hotfix.yml module-ci.yml'
+      WORKING_DIR: ${{ github.workspace }}
+    steps:
+
+    - name: Checkout .github
+      uses: actions/checkout@v3
+      with:
+        ref: ${{ inputs.version }}
+        path: ${{ env.TEMPLATE_REPO_FOLDER }}
+
+    - name: Checkout ${{ env.DEPLOY_REPO }}
+      uses: actions/checkout@v3
+      with:
+        repository: ${{ env.DEPLOY_REPO }}
+        path: ${{ matrix.repoName }}
+        token: ${{ secrets.REPO_TOKEN }}
+
+    - name: Copy workflows
+      working-directory: ${{ env.WORKING_DIR }}/${{ env.TEMPLATE_REPO_FOLDER }}/workflow-templates
+      env:
+        DEST_FOLDER: '${{ env.WORKING_DIR }}/${{ matrix.repoName }}/.github/workflows/'
+      run: |
+        cp ${{ env.TEMPLATES_LIST }} ${{ env.DEST_FOLDER }}
+
+    - name: Setup Git Credentials
+      uses: VirtoCommerce/vc-github-actions/setup-git-credentials-github@master
+      with: 
+        githubToken: ${{ secrets.REPO_TOKEN }}
+
+    - name: Commit changes to ${{ env.DEPLOY_REPO }}
+      working-directory: ${{ matrix.repoName }}
+      run: |
+        git add .
+        git commit -m "ci: Auto update Github Action workflows"
+        git push
