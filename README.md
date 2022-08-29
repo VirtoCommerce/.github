@@ -1,4 +1,4 @@
-# VirtoCommerce common workflows
+# VirtoCommerce workflows
 
 Default workflow templates and reusable workflows for VirtoCommerce platform/modules.
 
