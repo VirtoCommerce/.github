@@ -16,7 +16,6 @@ jobs:
     strategy:
       matrix:
 # Platform workflows
-#        repoName: [vc-platform]
         repoName: [vc-platform]
 
     env:
