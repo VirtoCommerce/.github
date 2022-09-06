@@ -49,7 +49,7 @@ jobs:
       artifactUrl: ${{ steps.artifactUrl.outputs.DOCKER_URL }}
       jira-keys: ${{ steps.jira_keys.outputs.jira-keys }}
       version: ${{ steps.image.outputs.shortVersion }}
-      tag: ${{ steps.version.outputs.taggedVersion }}
+      tag: ${{ steps.image.outputs.taggedVersion }}
 
     steps:
 
