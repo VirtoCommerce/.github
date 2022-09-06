@@ -1,4 +1,4 @@
-# v3.200.16
+# v3.200.17
 name: VC cloud deployment
 
 on:
@@ -38,27 +38,19 @@ on:
         type: string
       matrix:
         description: 'Stringified JSON object listing target deployment parameters'
-        default: '{"include":[{"envName": "dev", "confPath": ".deployment/demoManager/argoDeploy-marketplace.json"}]}'
+        default: '{"include":[{"envName": "dev", "confPath": ".deployment/module/cloudDeploy.json", "forceCommit": "true"]}'
         required: false
         type: string
-      forceCommit:
-        description: 'Create deployment commit instead of Pull request to a deployment repo'
-        default: true
-        required: false
-        type: boolean
       taskNumber:
         description: 'Jira key for link commit'
         default: 'undefined'
         required: false
         type: string
-
-    secrets:
-      envPAT:
-        required: true
-      argoLogin:
-        required: true
-      argoPassword:
-        required: true
+      jiraKeys:
+        description: 'Jira keys for deployment link'
+        default: ''
+        required: false
+        type: string
 
 jobs:
   Deploy:
@@ -67,25 +59,32 @@ jobs:
 
     runs-on: ubuntu-20.04
     env:
-      GITHUB_TOKEN: ${{ secrets.envPAT }}
+      CLOUD_INSTANCE_BASE_URL: ${{secrets.CLOUD_INSTANCE_BASE_URL}}
+      CLIENT_ID: ${{secrets.CLIENT_ID}}
+      CLIENT_SECRET: ${{secrets.CLIENT_SECRET}}
+      GITHUB_TOKEN: ${{ secrets.REPO_TOKEN }}
       ARGO_SERVER: ${{ inputs.argoServer }}
-      SLEEP_TIME: '5m'
+      SLEEP_TIME: '3m'
 
     steps: 
+
+      - name: Set forceCommit value #Create deployment commit instead of Pull request to a deployment repo
+        id: forceCommit
+        shell: pwsh
+        run: | 
+           $forceCommits = @("true", "false")
+           if ($forceCommits -contains "${{ matrix.forceCommit }}".ToLower()) {
+             echo "::set-output name=value::${{ matrix.forceCommit }}"
+           } else {
+             echo "::set-output name-value::true"
+           }
+
       - name: Read deployment config
         uses: VirtoCommerce/vc-github-actions/get-deploy-param@master
         id: deployConfig
         with:
           envName: ${{ matrix.envName }}
           deployConfigPath: ${{ matrix.confPath }}
-
-      # - name: Set deployment config
-      #   id: deployConfig
-      #   run: |
-      #     echo "::set-output name=deployRepo::vc-deploy-dev"
-      #     echo "::set-output name=deployBranch::vcpt"
-      #     echo "::set-output name=configPath::backend/packages.json"
-      #     echo "::set-output name=deployAppName::vcpt-main"
 
       - name: Start deployment
         uses: bobheadxi/deployments@master
@@ -109,38 +108,64 @@ jobs:
           moduleVer: ${{ inputs.moduleVer }}
           moduleBlob: ${{ inputs.moduleBlob }}
           taskNumber: ${{ inputs.taskNumber }}
-          forceCommit: '${{ inputs.forceCommit }}'
+          forceCommit: ${{ steps.forceCommit.outputs.value }}
           configPath: ${{ steps.deployConfig.outputs.cmPath }}
 
       - name: Sleep for ${{ env.SLEEP_TIME }}
-        if: ${{ inputs.forceCommit }}
+        if: ${{ steps.forceCommit.outputs.value == 'true' }}
         run: sleep ${{ env.SLEEP_TIME }}
         shell: bash
 
       - name: Wait for environment is up
-        if: ${{ inputs.forceCommit }}
-        timeout-minutes: 10
+        if: ${{ steps.forceCommit.outputs.value == 'true' }}
+        timeout-minutes: 5
         uses: VirtoCommerce/vc-github-actions/vc-argocd-cli@master
-        id: argocd-cli
         with:
           server: ${{env.ARGO_SERVER}}
-          username: ${{ secrets.argoLogin }}
-          password: ${{ secrets.argoPassword }}
+          username: ${{ secrets.VIRTOCLOUD_LOGIN }}
+          password: ${{ secrets.VIRTOCLOUD_PASSWORD }}
           command: app wait ${{ steps.deployConfig.outputs.deployAppName }}
 
-      - name: BUILD_STATE::successful
+      - name: DEPLOY_STATE::successful
         if: success()
-        run: echo "BUILD_STATE=successful" >> $GITHUB_ENV
+        run: echo "DEPLOY_STATE=successful" >> $GITHUB_ENV
 
-      - name: BUILD_STATE::failed
+      - name: DEPLOY_STATE::failed
         if: failure()
-        run: echo "BUILD_STATE=failed"  >> $GITHUB_ENV
+        run: echo "DEPLOY_STATE=failed"  >> $GITHUB_ENV
 
       - name: Update GitHub deployment status
         uses: bobheadxi/deployments@master
         if: always()
         with:
           step: finish
-          token: ${{ env.GITHUB_TOKEN }}
+          token: ${{ secrets.GITHUB_TOKEN }}
           status: ${{ job.status }}
           deployment_id: ${{ steps.deployment.outputs.deployment_id }}
+
+      - name: Push Deployment Info to Jira
+        if: ${{ env.CLOUD_INSTANCE_BASE_URL != 0 && env.CLIENT_ID != 0 && env.CLIENT_SECRET != 0 && inputs.jiraKeys != '' && always() }}
+        id: push_deployment_info_to_jira
+        uses: HighwayThree/jira-upload-deployment-info@master
+        env:
+          CLOUD_INSTANCE_BASE_URL: ${{secrets.CLOUD_INSTANCE_BASE_URL}}
+          CLIENT_ID: ${{secrets.CLIENT_ID}}
+          CLIENT_SECRET: ${{secrets.CLIENT_SECRET}}
+        with:
+          cloud-instance-base-url: ${{ secrets.CLOUD_INSTANCE_BASE_URL }}
+          client-id: ${{ secrets.CLIENT_ID }}
+          client-secret: ${{ secrets.CLIENT_SECRET }}
+          deployment-sequence-number: ${{ github.run_id }}
+          update-sequence-number: ${{ github.run_id }}
+          issue-keys: ${{ inputs.jiraKeys }}
+          display-name: ${{ steps.deployConfig.outputs.deployAppName }}
+          url: ${{ steps.deployConfig.outputs.environmentUrl }}
+          description: 'Deployment to the ${{ steps.deployConfig.outputs.environmentName }} environment'
+          last-updated: '${{github.event.head_commit.timestamp}}'
+          state: '${{ env.DEPLOY_STATE }}'
+          pipeline-id: '${{ github.repository }} ${{ github.workflow }}'
+          pipeline-display-name: 'Workflow: ${{ github.workflow }} (#${{ github.run_number }})'
+          pipeline-url: '${{github.event.repository.html_url}}/actions/runs/${{github.run_id}}'
+          environment-id: ${{ steps.deployConfig.outputs.environmentId }}
+          environment-display-name: ${{ steps.deployConfig.outputs.environmentName }}
+          environment-type: ${{ steps.deployConfig.outputs.environmentType }}
