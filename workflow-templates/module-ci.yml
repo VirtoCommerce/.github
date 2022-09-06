@@ -50,6 +50,7 @@ jobs:
       jira-keys: ${{ steps.jira_keys.outputs.jira-keys }}
       version: ${{ steps.artifact_ver.outputs.shortVersion }}
       moduleId: ${{ steps.artifact_ver.outputs.moduleId }}
+      matrix: ${{ steps.deployment-matrix.outputs.matrix }}
 
     steps:
 
@@ -150,6 +151,14 @@ jobs:
           else
             echo ::set-output name=download_url::${{ steps.blobRelease.outputs.packageUrl }}
           fi;
+
+      - name: Create deployment matrix
+        if: ${{ github.ref == 'refs/heads/dev' || github.ref == 'refs/heads/master'}}
+        uses: VirtoCommerce/vc-github-actions/cloud-create-deploy-matrix@master
+        id: deployment-matrix
+        with:
+          deployConfigPath: 'cloudDeploy.json'
+          releaseBranch: 'master'
 
       - name: Setup Git Credentials
         if: ${{ (github.ref == 'refs/heads/dev' || github.ref == 'refs/heads/master') && github.event_name != 'workflow_dispatch' }}
@@ -338,7 +347,7 @@ jobs:
       moduleId: ${{ needs.ci.outputs.moduleId }}
       moduleVer: ${{ needs.ci.outputs.version }}
       argoServer: 'argo.virtocommerce.cloud'
-      matrix: '{"include":[{"envName": "prod", "confPath": ".deployment/module/cloudDeploy.json"}, {"envName": "dev", "confPath": ".deployment/module/cloudDeploy.json"}]}' # Deploy to dev and demo environments
+      matrix: '{"include":${{ needs.ci.outputs.matrix }}}'
     secrets:
       envPAT: ${{ secrets.REPO_TOKEN }}
       argoLogin: ${{ secrets.ARGOCD_LOGIN }}
