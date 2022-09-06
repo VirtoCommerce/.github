@@ -12,10 +12,6 @@ on:
         description: 'Deployment source. Allowed values: platform, module'
         required: true
         type: string
-      releaseType:
-        description: 'Release type. Allowed values: GithubReleases, AzureBlob'
-        required: true
-        type: string
       platformVer:
         description: 'Deploying Platform version'
         required: false
@@ -38,7 +34,7 @@ on:
         type: string
       matrix:
         description: 'Stringified JSON object listing target deployment parameters'
-        default: '{"include":[{"envName": "dev", "confPath": ".deployment/module/cloudDeploy.json", "forceCommit": "true"]}'
+        default: '{"include":[{"envName": "dev", "confPath": ".deployment/module/cloudDeploy.json", "forceCommit": "true", "releaseType": "AzureBlob"]}'
         required: false
         type: string
       taskNumber:
@@ -101,7 +97,7 @@ jobs:
           deployRepo: ${{ steps.deployConfig.outputs.deployRepo }}
           deployBranch: ${{ steps.deployConfig.outputs.deployBranch }}
           releaseSource: ${{ inputs.releaseSource }}
-          releaseType: ${{ inputs.releaseType }}
+          releaseType: ${{ matrix.releaseType }}
           platformVer: ${{ inputs.platformVer }}
           platformTag: ${{ inputs.platformTag }}
           moduleId: ${{ inputs.moduleId }}
