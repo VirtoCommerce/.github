@@ -50,11 +50,9 @@ on:
 
 jobs:
   Deploy:
-    continue-on-error: true
     strategy:
       fail-fast: false
       matrix:  ${{ fromJSON(inputs.matrix) }}
-      max-parallel: 1
 
     runs-on: ubuntu-20.04
     env:
