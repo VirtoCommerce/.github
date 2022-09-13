@@ -1,4 +1,4 @@
-# v3.200.17
+# v3.200.18
 
 name: Common katalon tests
 
@@ -40,6 +40,16 @@ on:
         required: false
         type: string
         default: ''
+      platformDockerTag:
+        description: 'Platform docker tag'
+        required: false
+        type: string
+        default: 'dev-linux-latest'
+      storefrontDockerTag:
+        description: 'Storefront docker tag'
+        required: false
+        type: string
+        default: 'dev-linux-latest'
 
     secrets:
       envPAT:
@@ -75,8 +85,8 @@ jobs:
       with:
         githubUser: ${{ env.GITHUB_ACTOR }}
         githubToken: ${{ env.GITHUB_TOKEN }}
-        platformDockerTag: 'dev-linux-latest'
-        storefrontDockerTag: 'dev-linux-latest'
+        platformDockerTag: ${{ inputs.platformDockerTag }}
+        storefrontDockerTag: ${{ inputs.storefrontDockerTag }}
         platformImage: ghcr.io/virtocommerce/platform
         storefrontImage: ghcr.io/virtocommerce/storefront
         validateSwagger: 'false'
@@ -92,6 +102,25 @@ jobs:
         version: '8.2.5'
         projectPath: '${{ github.workspace }}/${{ env.KATALON_PATH }}/platform_storefront.prj'
         args: '-noSplash -retry=0 -testSuiteCollectionPath="${{ env.DEFAULT_TEST_SUITE }}" -browserType="Chrome" -apiKey= ${{ secrets.katalonApiKey }} -g_urlBack="http://localhost:8090" -g_urlFront="http://localhost:8080" -executionProfile="default"'
+
+    - name: Katalon Report Uploader
+      if: always()
+      uses: katalon-studio/report-uploader@v0.0.8
+      env:
+        PASSWORD: ${{ secrets.katalonApiKey }}
+        PROJECT_ID: 171535
+        TYPE: junit
+        REPORT_PATH: ${{ github.workspace }}/vc-quality-gate-katalon/Reports
+
+    - name: Save Katalon Report as workflow artifact
+      if: always()
+      uses: actions/upload-artifact@v2
+      with:
+        name: reports
+        path: |
+          vc-quality-gate-katalon/Reports
+          /home/runner/.katalon/*/Katalon_Studio_Engine_Linux_*/configuration/*.log.
+        retention-days: 5
 
     - name: Katalon Report to PR
       if: ${{ ( success() || failure() ) && github.event_name == 'pull_request' }}
