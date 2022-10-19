@@ -39,7 +39,6 @@ jobs:
                   ,vc-module-elastic-search
                   ,vc-module-event-bus
                   ,vc-module-experience-api
-                  ,vc-module-quote-experience-api
                   ,vc-module-export
                   ,vc-module-filesystem-assets
                   ,vc-module-gdpr
