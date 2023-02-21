@@ -17,7 +17,7 @@ jobs:
       matrix:
 # Module workflows
         repoName: [vc-module-assets
-                  ,vc-module-Authorize.Net
+                  ,vc-module-authorize-net
                   ,vc-module-avatax
                   ,vc-module-azureblob-assets
                   ,vc-module-azure-search
@@ -47,10 +47,11 @@ jobs:
                   ,vc-module-inventory
                   ,vc-module-lucene-search
                   ,vc-module-marketing
-                  ,vc-module-metadata
+                  ,vc-module-marketing-experience-api
                   ,vc-module-notification
                   ,vc-module-order
                   ,vc-module-payment
+                  ,vc-module-power-bi-reports
                   ,vc-module-price-export-import
                   ,vc-module-pricing
                   ,vc-module-profile-experience-api
@@ -64,8 +65,7 @@ jobs:
                   ,vc-module-tax
                   ,vc-module-webhooks
                   ,vc-module-native-payment-methods
-                  ,vc-module-shipstation
-                  ,vc-module-authorize-net]
+                  ,vc-module-shipstation]
 
 # Module samples workflows
         # include:
