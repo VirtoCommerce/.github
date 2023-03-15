@@ -59,7 +59,7 @@ on:
 
 jobs:
   e2e-tests:
-    runs-on: ubuntu-18.04 # katalon action runs correctly on ubuntu-18.04
+    runs-on: ubuntu-22.04 # katalon action runs correctly on ubuntu-18.04
 
     env:
       GITHUB_TOKEN: ${{ secrets.envPAT }}
@@ -99,7 +99,7 @@ jobs:
     - name: Katalon Studio Github Action
       uses: VirtoCommerce/vc-github-actions/katalon-studio-github-action@master
       with:
-        version: '8.2.5'
+        version: '8.4.1'
         projectPath: '${{ github.workspace }}/${{ env.KATALON_PATH }}/platform_storefront.prj'
         args: '-noSplash -retry=0 -testSuiteCollectionPath="${{ env.DEFAULT_TEST_SUITE }}" -browserType="Chrome" -apiKey= ${{ secrets.katalonApiKey }} -g_urlBack="http://localhost:8090" -g_urlFront="http://localhost:8080" -executionProfile="default"'
 
