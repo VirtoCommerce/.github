@@ -1,4 +1,4 @@
-# v3.200.24
+# v3.200.25
 name: VC cloud deployment
 
 on:
@@ -71,9 +71,9 @@ jobs:
         run: | 
            $forceCommits = @("true", "false")
            if ($forceCommits -contains "${{ matrix.forceCommit }}".ToLower()) {
-             echo "::set-output name=value::${{ matrix.forceCommit }}"
+             echo "name=value::${{ matrix.forceCommit }}" >> $GITHUB_OUTPUT
            } else {
-             echo "::set-output name-value::true"
+             echo "name-value::true" >> $GITHUB_OUTPUT
            }
 
       - name: Read deployment config

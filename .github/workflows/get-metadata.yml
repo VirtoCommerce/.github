@@ -1,4 +1,4 @@
-# v3.200.24
+# v3.200.25
 name: Get metadata
 
 on:
@@ -55,8 +55,8 @@ jobs:
       id: version
       run: |
         if [ '${{ github.event_name }}' == 'workflow_dispatch' ]; then
-          echo ::set-output name=version_suffix::${{ steps.artifactVer.outputs.fullSuffix }}
+          echo "name=version_suffix::${{ steps.artifactVer.outputs.fullSuffix }}" >> $GITHUB_OUTPUT
         else
-          echo ::set-output name=version_suffix::${{ steps.artifactVer.outputs.suffix }}
+          echo "name=version_suffix::${{ steps.artifactVer.outputs.suffix }}" >> $GITHUB_OUTPUT
         fi;
-        echo ::set-output name=image_tag::${{ steps.artifactVer.outputs.taggedVersion }}
+        echo "name=image_tag::${{ steps.artifactVer.outputs.taggedVersion }}" >> $GITHUB_OUTPUT
