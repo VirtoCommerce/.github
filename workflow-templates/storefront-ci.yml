@@ -123,7 +123,7 @@ jobs:
     - name: Set artifactUrl value
       id: artifactUrl
       run: |
-        echo "name=DOCKER_URL::${{ env.PACKAGE_SERVER }}/${{github.repository_owner }}/${{ env.IMAGE_NAME }}:${{ steps.image.outputs.taggedVersion }}"  >> $GITHUB_OUTPUT
+        echo "DOCKER_URL=${{ env.PACKAGE_SERVER }}/${{github.repository_owner }}/${{ env.IMAGE_NAME }}:${{ steps.image.outputs.taggedVersion }}"  >> $GITHUB_OUTPUT
 
     - name: Build Docker Image
       if: ${{ env.BUILD_DOCKER == 'true' }}
@@ -211,9 +211,9 @@ jobs:
       id: deployEnv
       run: |
         if [ '${{ github.ref }}' = 'refs/heads/master' ]; then
-          echo "name=NAME::prod" >> $GITHUB_OUTPUT
+          echo "NAME=prod" >> $GITHUB_OUTPUT
         else
-          echo "name=NAME::dev"  >> $GITHUB_OUTPUT
+          echo "NAME=dev"  >> $GITHUB_OUTPUT
         fi;
 
     - name: Invoke Module deployment workflow

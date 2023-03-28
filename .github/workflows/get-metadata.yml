@@ -55,8 +55,8 @@ jobs:
       id: version
       run: |
         if [ '${{ github.event_name }}' == 'workflow_dispatch' ]; then
-          echo "name=version_suffix::${{ steps.artifactVer.outputs.fullSuffix }}" >> $GITHUB_OUTPUT
+          echo "version_suffix=${{ steps.artifactVer.outputs.fullSuffix }}" >> $GITHUB_OUTPUT
         else
-          echo "name=version_suffix::${{ steps.artifactVer.outputs.suffix }}" >> $GITHUB_OUTPUT
+          echo "version_suffix=${{ steps.artifactVer.outputs.suffix }}" >> $GITHUB_OUTPUT
         fi;
-        echo "name=image_tag::${{ steps.artifactVer.outputs.taggedVersion }}" >> $GITHUB_OUTPUT
+        echo "image_tag=${{ steps.artifactVer.outputs.taggedVersion }}" >> $GITHUB_OUTPUT
