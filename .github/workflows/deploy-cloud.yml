@@ -73,7 +73,7 @@ jobs:
            if ($forceCommits -contains "${{ matrix.forceCommit }}".ToLower()) {
              echo "::set-output name=value::${{ matrix.forceCommit }}"
            } else {
-             echo "::set-output name-value::true"
+             echo "::set-output name=value::true"
            }
 
       - name: Read deployment config
