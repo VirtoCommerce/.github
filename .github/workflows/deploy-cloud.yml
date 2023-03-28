@@ -71,9 +71,9 @@ jobs:
         run: | 
            $forceCommits = @("true", "false")
            if ($forceCommits -contains "${{ matrix.forceCommit }}".ToLower()) {
-             echo "name=value::${{ matrix.forceCommit }}" >> $GITHUB_OUTPUT
+             echo "value=${{ matrix.forceCommit }}" >> $GITHUB_OUTPUT
            } else {
-             echo "name-value::true" >> $GITHUB_OUTPUT
+             echo "value=true" >> $GITHUB_OUTPUT
            }
 
       - name: Read deployment config
