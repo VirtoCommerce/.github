@@ -1,4 +1,4 @@
-# v3.200.26
+# v3.200.27
 name: Storefront CI
 
 on:
@@ -64,7 +64,7 @@ jobs:
       run: |
         echo "BUILD_DOCKER=true" >> $GITHUB_ENV
 
-    - uses: actions/checkout@v2
+    - uses: actions/checkout@v3
       with:
         fetch-depth: 0
 

@@ -1,4 +1,4 @@
-# v3.200.26
+# v3.200.27
 name: VC build
 
 on:
@@ -70,7 +70,7 @@ jobs:
     steps: 
 
     - name: Set up Node 18
-      uses: actions/setup-node@v2
+      uses: actions/setup-node@v3
       with:
         node-version: '18'
 
