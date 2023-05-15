@@ -55,7 +55,7 @@ jobs:
           deployConfigPath: ${{ matrix.confPath }}
 
       - name: Start deployment
-        uses: bobheadxi/deployments@master
+        uses: bobheadxi/deployments@main
         id: deployment
         with:
           step: start
@@ -99,7 +99,7 @@ jobs:
         run: echo "BUILD_STATE=failed"  >> $GITHUB_ENV
 
       - name: Update GitHub deployment status
-        uses: bobheadxi/deployments@master
+        uses: bobheadxi/deployments@main
         if: always()
         with:
           step: finish
