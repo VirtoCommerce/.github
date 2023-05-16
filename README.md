@@ -1,4 +1,4 @@
-# VirtoCommerce workflows
+# Virto Commerce Workflows
 
 Default workflow templates and reusable workflows for VirtoCommerce platform/modules.
 
@@ -31,7 +31,7 @@ To update workflow templates:
 - Add a version tag for releases of your workflows.
 
  ```git
-    git tag -a -m "My template release" v3.200.27
+    git tag -a -m "My template release" v3.200.28
     git push --follow-tags
  ```
 
