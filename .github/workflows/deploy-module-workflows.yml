@@ -17,9 +17,11 @@ jobs:
       matrix:
 # Module workflows
         repoName: [vc-module-assets
+                  ,vc-module-app-insights
                   ,vc-module-authorize-net
                   ,vc-module-avatax
                   ,vc-module-azureblob-assets
+                  ,vc-module-azure-ad
                   ,vc-module-azure-search
                   ,vc-module-bulk-actions
                   ,vc-module-cart
@@ -43,6 +45,7 @@ jobs:
                   ,vc-module-filesystem-assets
                   ,vc-module-gdpr
                   ,vc-module-google-ecommerce-analytics
+                  ,vc-module-hotjar
                   ,vc-module-image-tools
                   ,vc-module-inventory
                   ,vc-module-lucene-search
