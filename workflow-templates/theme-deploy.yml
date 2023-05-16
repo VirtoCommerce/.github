@@ -36,7 +36,7 @@ jobs:
         step: start
         token: ${{ secrets.GITHUB_TOKEN }}
         env: Development
-        no_override: false
+        override: true
 
     - name: Checkout ArgoCD repository 
       uses: actions/checkout@v3
