@@ -1,4 +1,4 @@
-# v3.200.29
+# v3.200.30
 name: Get metadata
 
 on:
@@ -22,6 +22,7 @@ jobs:
     runs-on: ubuntu-20.04
     env:
       FETCH_DEPTH: 1
+      GITHUB_TOKEN: ${{ secrets.REPO_TOKEN }}
 
     outputs:
       changelog: ${{ steps.changelog.outputs.changelog }}
