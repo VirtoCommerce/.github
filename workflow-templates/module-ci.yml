@@ -1,4 +1,4 @@
-# v3.200.30
+# v3.200.31
 name: Module CI
 
 on:
@@ -127,12 +127,14 @@ jobs:
         uses: VirtoCommerce/vc-github-actions/publish-blob-release@master
         with:
           blobSAS: ${{ secrets.BLOB_TOKEN }}
+          blobUrl: ${{ secrets.BLOB_URL }}
           
       - name: Add Jira link
         if: ${{ github.event_name == 'pull_request' }}
         uses: VirtoCommerce/vc-github-actions/publish-jira-link@master
         with:
           branchName: ${{ github.head_ref }}
+          repoOrg: ${{ github.repository_owner }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
@@ -141,6 +143,7 @@ jobs:
         uses: VirtoCommerce/vc-github-actions/publish-artifact-link@master
         with:
           artifactUrl: ${{ steps.blobRelease.outputs.packageUrl }}
+          repoOrg: ${{ github.repository_owner }}
           downloadComment: 'Artifact URL:'
 
       - name: Publish Github Release
@@ -239,7 +242,7 @@ jobs:
     if: ${{ ((github.ref == 'refs/heads/dev') && (github.event_name == 'push') && (needs.ci.outputs.run-e2e == 'true')) ||
         (github.event_name == 'workflow_dispatch')}}
     needs: 'ci'
-    uses: VirtoCommerce/.github/.github/workflows/e2e.yml@v3.200.30
+    uses: VirtoCommerce/.github/.github/workflows/e2e.yml@v3.200.31
     with:
       katalonRepo: 'VirtoCommerce/vc-quality-gate-katalon'
       katalonRepoBranch: 'dev'
@@ -259,7 +262,7 @@ jobs:
         (github.ref == 'refs/heads/dev')) && 
         github.event_name == 'push' }}
     needs: ci
-    uses: VirtoCommerce/.github/.github/workflows/deploy-cloud.yml@v3.200.30
+    uses: VirtoCommerce/.github/.github/workflows/deploy-cloud.yml@v3.200.31
     with:
       releaseSource: module
       moduleId: ${{ needs.ci.outputs.moduleId }}
