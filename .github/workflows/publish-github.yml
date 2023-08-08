@@ -78,6 +78,7 @@ jobs:
       id: githubRelease
       with:
         changelog: ${{ inputs.changelog }}
+        organization: ${{ github.repository_owner }}
         skipString: 'Clean+Restore+Compile+WebPackBuild+Test+Publish+Compress'
       uses: VirtoCommerce/vc-github-actions/publish-github-release@master
 
