@@ -99,6 +99,9 @@ jobs:
 
       - name: SonarCloud Begin
         uses: VirtoCommerce/vc-github-actions/sonar-scanner-begin@master
+        with:
+          repoOrg: ${{ github.repository_owner }}
+          sonarOrg: ${{secrets.SONAR_ORG_KEY}}
 
       - name: Build
         run: vc-build Compile
