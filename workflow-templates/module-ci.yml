@@ -130,7 +130,7 @@ jobs:
         uses: VirtoCommerce/vc-github-actions/publish-blob-release@master
         with:
           blobSAS: ${{ secrets.BLOB_TOKEN }}
-          blobUrl: ${{ secrets.BLOB_URL }}
+          blobUrl: ${{ vars.BLOB_URL }}
           
       - name: Add Jira link
         if: ${{ github.event_name == 'pull_request' }}
