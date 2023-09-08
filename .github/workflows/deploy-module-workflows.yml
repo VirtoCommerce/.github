@@ -38,7 +38,7 @@ jobs:
                   ,vc-module-dynamic-associations
                   ,vc-module-elastic-app-search
                   ,vc-module-elastic-search
-                  ,vc-module-elastic-search-8x
+                  ,vc-module-elastic-search-8
                   ,vc-module-event-bus
                   ,vc-module-experience-api
                   ,vc-module-export
