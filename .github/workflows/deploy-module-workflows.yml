@@ -43,6 +43,7 @@ jobs:
                   ,vc-module-experience-api
                   ,vc-module-export
                   ,vc-module-filesystem-assets
+                  ,vc-module-file-experience-api
                   ,vc-module-gdpr
                   ,vc-module-google-ecommerce-analytics
                   ,vc-module-hotjar
