@@ -26,7 +26,6 @@ jobs:
                   ,vc-module-cart
                   ,vc-module-catalog
                   ,vc-module-catalog-csv-import
-                  ,vc-module-catalog-export-import
                   ,vc-module-catalog-personalization
                   ,vc-module-catalog-publishing
                   ,vc-module-content
