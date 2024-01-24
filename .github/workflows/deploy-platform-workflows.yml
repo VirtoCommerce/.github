@@ -7,7 +7,7 @@ on:
         description: 'Version to deploy'
         required: true
         type: string
-        default: 'v3.200.36'
+        default: 'v3.800.0'
 
 jobs:
 

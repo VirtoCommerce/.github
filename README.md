@@ -31,7 +31,7 @@ To update workflow templates:
 - Add a version tag for releases of your workflows.
 
  ```git
-    git tag -a -m "My template release" v3.200.36
+    git tag -a -m "My template release" v3.800.0
     git push --follow-tags
  ```
 
