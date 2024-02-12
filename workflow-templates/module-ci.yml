@@ -261,7 +261,7 @@ jobs:
         (github.ref == 'refs/heads/dev')) && 
         github.event_name == 'push' }}
     needs: ci
-    uses: VirtoCommerce/.github/.github/workflows/deploy-cloud.yml@v3.800.0
+    uses: VirtoCommerce/.github/.github/workflows/deploy-cloud.yml@v3.800.2
     with:
       releaseSource: module
       moduleId: ${{ needs.ci.outputs.moduleId }}
