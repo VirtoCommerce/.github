@@ -1,4 +1,5 @@
-# v0.1
+# v3.800.2
+# https://virtocommerce.atlassian.net/browse/VCST-349
 name: Module deployment
 on:
   workflow_dispatch:
@@ -39,7 +40,7 @@ jobs:
         no_override: false
 
     - name: Checkout ArgoCD repository 
-      uses: actions/checkout@v3
+      uses: actions/checkout@v4
       with:
         token: ${{ secrets.REPO_TOKEN }}
         repository: "${{ github.event.inputs.appDescriptionRepo }}"
@@ -48,7 +49,6 @@ jobs:
     - name: Update deployment-cm
       shell: pwsh
       run: |
-
         cd ${{ github.workspace }}
         cd .${{ github.event.inputs.appFolder }}
         $fileName = "./deployment-cm.yaml"

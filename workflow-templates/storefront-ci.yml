@@ -1,4 +1,5 @@
-# v3.800.0
+# v3.800.2
+# https://virtocommerce.atlassian.net/browse/VCST-349
 name: Storefront CI
 
 on:
@@ -64,7 +65,7 @@ jobs:
       run: |
         echo "BUILD_DOCKER=true" >> $GITHUB_ENV
 
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
       with:
         fetch-depth: 0
 

@@ -1,4 +1,5 @@
-# v 0.1
+# v3.800.2
+# https://virtocommerce.atlassian.net/browse/VCST-349
 name: Platform Regression PR
 
 on: 
@@ -47,7 +48,7 @@ jobs:
         echo "PR_BODY=Automated cherry-pick update from PR ${{ needs.check-label.outputs.pullUrl}}" >> $GITHUB_ENV
 
     - name: checkout
-      uses: actions/checkout@v3
+      uses: actions/checkout@v4
 
     - uses: VirtoCommerce/vc-github-actions/setup-git-credentials-github@master
       with:

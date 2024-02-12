@@ -25,7 +25,7 @@ jobs:
     steps: 
     
     - name: Start deployment
-      uses: bobheadxi/deployments@main
+      uses: bobheadxi/deployments@main # uses node16 no node20 version available yet
       id: deployment
       with:
         step: start
@@ -34,7 +34,7 @@ jobs:
         override: true
 
     - name: Checkout ArgoCD repository
-      uses: actions/checkout@v3
+      uses: actions/checkout@v4
       with:
         token: ${{ secrets.REPO_TOKEN }}
         repository: "${{ github.event.inputs.appDescriptionRepo }}"
@@ -87,7 +87,7 @@ jobs:
       run: echo "BUILD_STATE=failed"  >> $GITHUB_ENV
 
     - name: Update GitHub deployment status
-      uses: bobheadxi/deployments@main
+      uses: bobheadxi/deployments@main # uses node16 no node20 version available yet
       if: always()
       with:
         step: finish
