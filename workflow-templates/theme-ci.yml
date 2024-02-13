@@ -1,4 +1,5 @@
-# v1.1.3
+# v3.800.2
+# https://virtocommerce.atlassian.net/browse/VCST-349
 name: Theme CI
 on:
   workflow_dispatch:
@@ -31,12 +32,12 @@ jobs:
       VERSION_SUFFIX: ""
 
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
       with:
         fetch-depth: 0
 
     - name: Setup sonarqube
-      uses: warchant/setup-sonar-scanner@v3
+      uses: warchant/setup-sonar-scanner@v8
 
     - name: Get Image Version
       uses: VirtoCommerce/vc-github-actions/get-image-version@master

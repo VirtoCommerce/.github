@@ -1,4 +1,5 @@
-# v3.800.0
+# v3.800.2
+# https://virtocommerce.atlassian.net/browse/VCST-349
 name: VC Publish docker
 
 on:
@@ -56,7 +57,7 @@ jobs:
     steps: 
 
     - name: Get Docker image from cache
-      uses: actions/cache@v3
+      uses: actions/cache@v4
       id: restore-build
       with:
         key: ${{ inputs.fullKey }}

@@ -1,4 +1,5 @@
-# 5
+# v3.800.2
+# https://virtocommerce.atlassian.net/browse/VCST-349
 name: Increment version
 
 on:
@@ -29,7 +30,7 @@ jobs:
       run: echo "MODULE_MANIFEST=*module.manifest" >> $GITHUB_ENV
 
     - name: Checkout
-      uses: actions/checkout@v3
+      uses: actions/checkout@v4
 
     - name: Install VirtoCommerce.GlobalTool
       uses: VirtoCommerce/vc-github-actions/setup-vcbuild@master

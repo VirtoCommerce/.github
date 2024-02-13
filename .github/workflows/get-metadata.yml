@@ -1,4 +1,5 @@
-# v3.800.0
+# v3.800.2
+# https://virtocommerce.atlassian.net/browse/VCST-349
 name: Get metadata
 
 on:

@@ -1,4 +1,5 @@
-# v0.1
+# v3.800.2
+# https://virtocommerce.atlassian.net/browse/VCST-349
 name: Theme deployment
 on:
   workflow_dispatch:
@@ -39,7 +40,7 @@ jobs:
         override: true
 
     - name: Checkout ArgoCD repository 
-      uses: actions/checkout@v3
+      uses: actions/checkout@v4
       with:
         token: ${{ secrets.REPO_TOKEN }}
         repository: ${{ github.event.inputs.appDescriptionRepo }}
