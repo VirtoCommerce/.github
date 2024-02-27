@@ -1,5 +1,5 @@
-# v3.800.3
-# https://virtocommerce.atlassian.net/browse/VCST-570
+# v3.800.4
+# https://virtocommerce.atlassian.net/browse/VCST-488
 name: Theme CI
 on:
   workflow_dispatch:
@@ -74,17 +74,17 @@ jobs:
       with:
         artifactPath: ${{ steps.build.outputs.artifactPath }}
         artifactName: ${{ steps.build.outputs.artifactName }}
+    
+    - name: Install VirtoCommerce.GlobalTool
+      uses: VirtoCommerce/vc-github-actions/setup-vcbuild@master
 
-    - name: Create Release
+    - name: Publish Github Release
       if: ${{ github.ref == 'refs/heads/master' }}
       id: create_release
-      uses: actions/create-release@v1
       with:
-        tag_name: ${{ steps.image.outputs.prefix }}
-        release_name: ${{ steps.image.outputs.prefix }}
-        draft: false
-        prerelease: false
-        body: ${{ steps.changelog.outputs.changelog }}
+        changelog: ${{ steps.changelog.outputs.changelog }}
+        organization: ${{ github.repository_owner }}
+      uses: VirtoCommerce/vc-github-actions/publish-github-release@master
 
     - name: Upload Release Asset
       if: ${{ github.ref == 'refs/heads/master' }}
