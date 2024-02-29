@@ -1,5 +1,5 @@
-# v3.800.3
-# https://virtocommerce.atlassian.net/browse/VCST-570
+# v3.800.4
+# https://virtocommerce.atlassian.net/browse/VCST-488
 name: VC deployment
 
 on:
@@ -56,7 +56,7 @@ jobs:
           deployConfigPath: ${{ matrix.confPath }}
 
       - name: Start deployment
-        uses: bobheadxi/deployments@main
+        uses: VirtoCommerce/vc-github-actions/gh-deployments@master
         id: deployment
         with:
           step: start
@@ -100,7 +100,7 @@ jobs:
         run: echo "BUILD_STATE=failed"  >> $GITHUB_ENV
 
       - name: Update GitHub deployment status
-        uses: bobheadxi/deployments@main
+        uses: VirtoCommerce/vc-github-actions/gh-deployments@master
         if: always()
         with:
           step: finish
