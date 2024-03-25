@@ -58,6 +58,7 @@ jobs:
                   ,vc-module-price-export-import
                   ,vc-module-pricing
                   ,vc-module-profile-experience-api
+                  ,vc-module-push-messages
                   ,vc-module-quote
                   ,vc-module-return
                   ,vc-module-search
