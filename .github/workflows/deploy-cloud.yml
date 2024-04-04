@@ -91,7 +91,7 @@ jobs:
           step: start
           token: ${{ env.GITHUB_TOKEN }}
           env: Development
-          override: true
+          no_override: true
 
       - name: Update deployment-cm
         uses: VirtoCommerce/vc-github-actions/cloud-create-deployment@master
