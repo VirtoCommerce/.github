@@ -1,5 +1,5 @@
-# v3.800.4
-# https://virtocommerce.atlassian.net/browse/VCST-488
+# v3.800.5
+# https://virtocommerce.atlassian.net/browse/VCST-571
 name: Module CI
 
 on:
@@ -15,10 +15,10 @@ on:
       - '**/cloudDeploy.json'
       - samples/**
     branches:
-      [master, dev]
+      [master, main, dev]
   pull_request:
     branches:
-      [master, dev]
+      [master, main, dev]
     paths-ignore:
       - 'docs/**'
       - 'build/**'
@@ -99,7 +99,7 @@ jobs:
             echo "VERSION_SUFFIX=${{ steps.artifact_ver.outputs.suffix }}" >> $GITHUB_ENV
           fi;
       - name: Add version suffix
-        if: ${{ github.ref != 'refs/heads/master' || github.ref != 'refs/heads/main' }}
+        if: ${{ github.ref != 'refs/heads/master' && github.ref != 'refs/heads/main' }}
         uses: VirtoCommerce/vc-github-actions/add-version-suffix@master
         with:
           versionSuffix: ${{ env.VERSION_SUFFIX }}
@@ -241,7 +241,7 @@ jobs:
     if: ${{ ((github.ref == 'refs/heads/dev') && (github.event_name == 'push') && (needs.ci.outputs.run-e2e == 'true')) ||
         (github.event_name == 'workflow_dispatch')}}
     needs: 'ci'
-    uses: VirtoCommerce/.github/.github/workflows/e2e.yml@v3.800.4
+    uses: VirtoCommerce/.github/.github/workflows/e2e.yml@ v3.800.5
     with:
       katalonRepo: 'VirtoCommerce/vc-quality-gate-katalon'
       katalonRepoBranch: 'dev'
@@ -259,7 +259,7 @@ jobs:
   deploy-cloud:
     if: ${{ (github.ref == 'refs/heads/master' || github.ref == 'refs/heads/main' || github.ref == 'refs/heads/dev') && github.event_name == 'push' }}
     needs: ci
-    uses: VirtoCommerce/.github/.github/workflows/deploy-cloud.yml@v3.800.4
+    uses: VirtoCommerce/.github/.github/workflows/deploy-cloud.yml@ v3.800.5
     with:
       releaseSource: module
       moduleId: ${{ needs.ci.outputs.moduleId }}

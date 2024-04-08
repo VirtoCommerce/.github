@@ -1,5 +1,5 @@
-# v3.800.4
-# https://virtocommerce.atlassian.net/browse/VCST-488
+# v3.800.5
+# https://virtocommerce.atlassian.net/browse/VCST-571
 name: Theme CI
 on:
   workflow_dispatch:
@@ -11,10 +11,10 @@ on:
       - 'README.md'
       - 'LICENSE'
     branches:
-      [master, dev]
+      [master, main, dev]
   pull_request:
     branches:
-      [master, dev]
+      [master, main, dev]
     paths-ignore:
       - '.github/**'
       - 'docs/**'
