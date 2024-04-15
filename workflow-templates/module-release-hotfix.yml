@@ -51,7 +51,7 @@ jobs:
       fullKey: ${{ needs.build.outputs.packageFullKey }}
       changeLog: '${{ needs.get-metadata.outputs.changeLog }}'
       incrementPatch: ${{ github.event.inputs.incrementPatch }}
-      preRelease: 'true'
+      makeLatest: 'false'
 
     secrets:
       envPAT: ${{ secrets.GITHUB_TOKEN }}

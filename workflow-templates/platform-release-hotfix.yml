@@ -66,6 +66,7 @@ jobs:
       fullKey: ${{ needs.build.outputs.packageFullKey }}
       changeLog: '${{ needs.get-metadata.outputs.changeLog }}'
       incrementPatch: ${{ github.event.inputs.incrementPatch }}
+      makeLatest: 'false'
     secrets:
       envPAT: ${{ secrets.GITHUB_TOKEN }}
       nugetKey: ${{ secrets.NUGET_KEY }}
