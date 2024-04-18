@@ -76,7 +76,7 @@ jobs:
       run: dotnet tool install --global dotnet-sonarscanner
 
     - name: Get Image Version
-      uses: VirtoCommerce/vc-github-actions/get-image-version@master
+      uses: VirtoCommerce/vc-github-actions/get-image-version@VCST-571
       id: image
 
     - name: Get changelog
@@ -152,7 +152,7 @@ jobs:
 
     - name: Publish Docker Image
       if: ${{ env.BUILD_DOCKER == 'true' }}
-      uses: VirtoCommerce/vc-github-actions/publish-docker-image@master
+      uses: VirtoCommerce/vc-github-actions/publish-docker-image@VCST-571
       with:
           image: ${{ steps.dockerBuild.outputs.imageName }}
           tag: ${{ steps.image.outputs.taggedVersion }}

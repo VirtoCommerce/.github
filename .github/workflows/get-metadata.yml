@@ -49,7 +49,7 @@ jobs:
       uses: VirtoCommerce/vc-github-actions/changelog-generator@master
 
     - name: Get Artifact Version
-      uses: VirtoCommerce/vc-github-actions/get-image-version@master
+      uses: VirtoCommerce/vc-github-actions/get-image-version@VCST-571
       id: artifactVer
 
     - name: Set version variables
