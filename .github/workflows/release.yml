@@ -29,4 +29,15 @@ jobs:
           githubToken: ${{ secrets.envPAT }}
       
       - name: Run vc-build QuickRelease
-        run: vc-build QuickRelease
+        shell: pwsh
+        run: |
+          $branchList = git branch --all --list '*/main'
+          if ($Null -ne $branchList) {
+            $branchMain = $branchList.Replace(' ','')
+            if ($branchMain -eq 'remotes/origin/main') {
+              $branchMain = 'main'
+            }
+          } else {
+            $branchMain = 'master'
+          }
+          vc-build QuickRelease -MainBranch $branchMain
