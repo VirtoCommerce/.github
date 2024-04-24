@@ -99,7 +99,7 @@ jobs:
         vc-build IncrementPatch
 
     - name: Get Artifact Version
-      uses: VirtoCommerce/vc-github-actions/get-image-version@VCST-571
+      uses: VirtoCommerce/vc-github-actions/get-image-version@master
       id: artifactVer
 
     - name: Set IMAGE_TAG variables

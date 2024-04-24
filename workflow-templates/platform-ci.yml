@@ -95,7 +95,7 @@ jobs:
       run: dotnet tool install --global dotnet-sonarscanner
 
     - name: Get Image Version
-      uses: VirtoCommerce/vc-github-actions/get-image-version@VCST-571
+      uses: VirtoCommerce/vc-github-actions/get-image-version@master
       id: image
 
     - name: Get changelog
@@ -221,7 +221,7 @@ jobs:
 
     - name: Create deployment matrix
       if: ${{ github.ref == 'refs/heads/dev' || github.ref == 'refs/heads/master' || github.ref == 'refs/heads/main' }}
-      uses: VirtoCommerce/vc-github-actions/cloud-create-deploy-matrix@VCST-571
+      uses: VirtoCommerce/vc-github-actions/cloud-create-deploy-matrix@master
       id: deployment-matrix
       with:
         deployConfigPath: 'cloudDeploy.json'
@@ -239,7 +239,7 @@ jobs:
 
     - name: Publish Docker Image
       if: ${{ env.BUILD_DOCKER == 'true' }}
-      uses: VirtoCommerce/vc-github-actions/publish-docker-image@VCST-571
+      uses: VirtoCommerce/vc-github-actions/publish-docker-image@master
       with:
           image: ${{ steps.dockerBuild.outputs.imageName }}
           tag: ${{ env.DOCKER_TAG }}

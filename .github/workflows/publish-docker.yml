@@ -84,7 +84,7 @@ jobs:
         password: ${{ env.GITHUB_TOKEN }}
 
     - name: Publish Docker Image
-      uses: VirtoCommerce/vc-github-actions/publish-docker-image@VCST-571
+      uses: VirtoCommerce/vc-github-actions/publish-docker-image@master
       with:
           image: ${{ steps.load-docker.outputs.image }}
           tag: ${{ steps.load-docker.outputs.tag }}
