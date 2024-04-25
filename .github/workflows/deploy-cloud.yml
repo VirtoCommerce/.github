@@ -1,5 +1,5 @@
-# v3.800.4
-# https://virtocommerce.atlassian.net/browse/VCST-488
+# v3.800.5
+# https://virtocommerce.atlassian.net/browse/VCST-571
 name: VC cloud deployment
 
 on:
@@ -91,7 +91,7 @@ jobs:
           step: start
           token: ${{ env.GITHUB_TOKEN }}
           env: Development
-          override: true
+          no_override: true
 
       - name: Update deployment-cm
         uses: VirtoCommerce/vc-github-actions/cloud-create-deployment@master

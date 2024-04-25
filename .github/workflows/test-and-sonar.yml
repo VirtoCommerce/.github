@@ -1,5 +1,5 @@
-# v3.800.4
-# https://virtocommerce.atlassian.net/browse/VCST-488
+# v3.800.5
+# https://virtocommerce.atlassian.net/browse/VCST-571
 name: VC unit test and sonar scan
 
 on:
@@ -47,7 +47,7 @@ jobs:
           echo "VERSION_SUFFIX=${{ steps.artifactVer.outputs.suffix }}" >> $GITHUB_ENV
  
     - name: Add version suffix
-      if: ${{ github.ref != 'refs/heads/master' }}
+      if: ${{ github.ref != 'refs/heads/master' || github.ref != 'refs/heads/main' }}
       uses: VirtoCommerce/vc-github-actions/add-version-suffix@master
       with:
         versionSuffix: ${{ env.VERSION_SUFFIX }}

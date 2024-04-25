@@ -1,5 +1,5 @@
-# v3.800.4
-# https://virtocommerce.atlassian.net/browse/VCST-488
+# v3.800.5
+# https://virtocommerce.atlassian.net/browse/VCST-571
 name: Theme CI
 on:
   workflow_dispatch:
@@ -11,10 +11,10 @@ on:
       - 'README.md'
       - 'LICENSE'
     branches:
-      [master, dev]
+      [master, main, dev]
   pull_request:
     branches:
-      [master, dev]
+      [master, main, dev]
     paths-ignore:
       - '.github/**'
       - 'docs/**'
@@ -94,7 +94,7 @@ jobs:
         yarn compress
 
     - name: Publish
-      if: ${{ github.ref == 'refs/heads/master' || github.ref == 'refs/heads/dev' || (github.event_name == 'workflow_dispatch' && github.ref != 'refs/heads/master')}}
+      if: ${{ github.ref == 'refs/heads/master' || github.ref == 'refs/heads/main' || github.ref == 'refs/heads/dev' || (github.event_name == 'workflow_dispatch' && (github.ref != 'refs/heads/master' || github.ref != 'refs/heads/main'))}}
       id: publish
       uses: VirtoCommerce/vc-github-actions/publish-theme@master
       with:
