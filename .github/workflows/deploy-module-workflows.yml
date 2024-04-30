@@ -69,7 +69,8 @@ jobs:
                   ,vc-module-tax
                   ,vc-module-webhooks
                   ,vc-module-native-payment-methods
-                  ,vc-module-shipstation]
+                  ,vc-module-shipstation
+                  ,vc-module-white-labeling]
 
 # Module samples workflows
         # include:

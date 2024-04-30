@@ -1,4 +1,4 @@
-# v3.800.5
+# v3.800.6
 # https://virtocommerce.atlassian.net/browse/VCST-915
 name: Release hotfix
 
@@ -13,13 +13,11 @@ on:
 
 jobs:
   test:
-    uses: VirtoCommerce/.github/.github/workflows/test-and-sonar.yml@v3.800.5
-    secrets:
+    uses: VirtoCommerce/.github/.github/workflows/test-and-sonar.yml    secrets:
       sonarToken: ${{ secrets.SONAR_TOKEN }}
 
   build:
-    uses: VirtoCommerce/.github/.github/workflows/build.yml@v3.800.5
-    with:
+    uses: VirtoCommerce/.github/.github/workflows/build.yml    with:
       uploadPackage: 'true'
       uploadDocker: 'true'
       imageName: 'platform'
@@ -47,8 +45,7 @@ jobs:
   publish-docker:
     needs:
       [build, get-metadata]
-    uses: VirtoCommerce/.github/.github/workflows/publish-docker.yml@v3.800.5
-    with:
+    uses: VirtoCommerce/.github/.github/workflows/publish-docker.yml    with:
       fullKey: ${{ needs.build.outputs.dockerFullKey }}
       shortKey: '${{ needs.build.outputs.dockerShortKey }}-'
       dockerTar: 'image.tar'
@@ -61,8 +58,7 @@ jobs:
   publish-github-release:
     needs:
       [build, test, get-metadata]
-    uses: VirtoCommerce/.github/.github/workflows/publish-github.yml@v3.800.5
-    with:
+    uses: VirtoCommerce/.github/.github/workflows/publish-github.yml    with:
       fullKey: ${{ needs.build.outputs.packageFullKey }}
       changeLog: '${{ needs.get-metadata.outputs.changeLog }}'
       incrementPatch: ${{ github.event.inputs.incrementPatch }}
