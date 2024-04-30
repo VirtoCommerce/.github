@@ -47,7 +47,7 @@ jobs:
           echo "VERSION_SUFFIX=${{ steps.artifactVer.outputs.suffix }}" >> $GITHUB_ENV
  
     - name: Add version suffix
-      if: ${{ github.ref != 'refs/heads/master' }}
+      if: ${{ github.ref != 'refs/heads/master' || github.ref != 'refs/heads/main' }}
       uses: VirtoCommerce/vc-github-actions/add-version-suffix@master
       with:
         versionSuffix: ${{ env.VERSION_SUFFIX }}

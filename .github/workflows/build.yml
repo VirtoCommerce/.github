@@ -117,7 +117,7 @@ jobs:
         echo "IMAGE_TAG=${{ steps.artifactVer.outputs.taggedVersion }}" >> $GITHUB_ENV
 
     - name: Add version suffix
-      if: ${{ github.ref != 'refs/heads/master' || inputs.forceVersionSuffix == 'true'}}
+      if: ${{ github.ref != 'refs/heads/master' || github.ref != 'refs/heads/main' || inputs.forceVersionSuffix == 'true'}}
       uses: VirtoCommerce/vc-github-actions/add-version-suffix@master
       with:
         versionSuffix: ${{ env.VERSION_SUFFIX }}
@@ -146,7 +146,7 @@ jobs:
       id: dockerBuild
       uses: VirtoCommerce/vc-github-actions/build-docker-image@master
       with:
-        outputs: type=tar,dest=${{ github.workspace }}/${{ env.DOCKER_TAR }}
+        # outputs: type=tar,dest=${{ github.workspace }}/${{ env.DOCKER_TAR }}
         imageName: ${{ env.IMAGE_NAME }}
         tag: ${{ env.IMAGE_TAG }}
         dockerFiles: ${{ inputs.dockerFiles }}
