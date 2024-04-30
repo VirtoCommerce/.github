@@ -13,11 +13,13 @@ on:
 
 jobs:
   test:
-    uses: VirtoCommerce/.github/.github/workflows/test-and-sonar.yml    secrets:
+    uses: VirtoCommerce/.github/.github/workflows/test-and-sonar.yml@v3.800.6    
+    secrets:
       sonarToken: ${{ secrets.SONAR_TOKEN }}
 
   build:
-    uses: VirtoCommerce/.github/.github/workflows/build.yml    with:
+    uses: VirtoCommerce/.github/.github/workflows/build.yml@v3.800.6    
+    with:
       uploadPackage: 'true'
       uploadDocker: 'false'
       forceVersionSuffix: ${{ github.event.inputs.publishAlpha }}
@@ -27,7 +29,8 @@ jobs:
   publish-nuget:
     needs:
       [build, test]
-    uses: VirtoCommerce/.github/.github/workflows/publish-github.yml    with:
+    uses: VirtoCommerce/.github/.github/workflows/publish-github.yml@v3.800.6    
+    with:
       fullKey: ${{ needs.build.outputs.packageFullKey }}
       forceGithub: false
     secrets:

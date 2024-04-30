@@ -241,7 +241,8 @@ jobs:
     if: ${{ ((github.ref == 'refs/heads/dev') && (github.event_name == 'push') && (needs.ci.outputs.run-e2e == 'true')) ||
         (github.event_name == 'workflow_dispatch')}}
     needs: 'ci'
-    uses: VirtoCommerce/.github/.github/workflows/e2e.yml    with:
+    uses: VirtoCommerce/.github/.github/workflows/e2e.yml@v3.800.6
+    with:
       katalonRepo: 'VirtoCommerce/vc-quality-gate-katalon'
       katalonRepoBranch: 'dev'
       testSuite: 'Test Suites/Modules/Platform_collection'
@@ -260,7 +261,8 @@ jobs:
         (github.ref == 'refs/heads/dev')) && 
         github.event_name == 'push' }}
     needs: ci
-    uses: VirtoCommerce/.github/.github/workflows/deploy-cloud.yml    with:
+    uses: VirtoCommerce/.github/.github/workflows/deploy-cloud.yml@v3.800.6
+    with:
       releaseSource: module
       moduleId: ${{ needs.ci.outputs.moduleId }}
       moduleVer: ${{ needs.ci.outputs.version }}
