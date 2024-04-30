@@ -86,7 +86,7 @@ jobs:
         organization: ${{ github.repository_owner }}
         skipString: 'Clean+Restore+Compile+WebPackBuild+Test+Publish+Compress'
         makeLatest: ${{ inputs.makeLatest }}
-      uses: VirtoCommerce/vc-github-actions/publish-github-release@master
+      uses: VirtoCommerce/vc-github-actions/publish-github-release@VCST-915
 
     - name: Publish Nuget
       if: ${{ inputs.forceNuget }}
