@@ -1,6 +1,5 @@
-# v3.800.5
-# https://virtocommerce.atlassian.net/browse/VCST-571
-
+# v3.800.6
+# https://virtocommerce.atlassian.net/browse/VCST-915
 name: Common katalon tests
 
 on:
@@ -100,24 +99,24 @@ jobs:
     - name: Setup Java
       uses: actions/setup-java@v4
       with:
-        distribution: 'zulu'
-        java-version: '8'
+        distribution: 'temurin'
+        java-version: '17'
 
     - name: Katalon Studio Github Action
       uses: VirtoCommerce/vc-github-actions/katalon-studio-github-action@master
       with:
-        version: '8.4.1'
+        version: '9.4.0'
         projectPath: '${{ github.workspace }}/${{ env.KATALON_PATH }}/platform_storefront.prj'
         args: '-noSplash -retry=0 -testSuiteCollectionPath="${{ env.DEFAULT_TEST_SUITE }}" -browserType="Chrome" -apiKey= ${{ secrets.katalonApiKey }} -g_urlBack="http://localhost:8090" -g_urlFront="http://localhost:8080" -executionProfile="default"'
 
-    - name: Katalon Report Uploader
-      if: always()
-      uses: katalon-studio/report-uploader@v0.0.8
-      env:
-        PASSWORD: ${{ secrets.katalonApiKey }}
-        PROJECT_ID: 171535
-        TYPE: junit
-        REPORT_PATH: ${{ github.workspace }}/vc-quality-gate-katalon/Reports
+    # - name: Katalon Report Uploader
+    #   if: always()
+    #   uses: katalon-studio/report-uploader@v0.0.8
+    #   env:
+    #     PASSWORD: ${{ secrets.katalonApiKey }}
+    #     PROJECT_ID: 171535
+    #     TYPE: junit
+    #     REPORT_PATH: ${{ github.workspace }}/vc-quality-gate-katalon/Reports
 
     - name: Save Katalon Report as workflow artifact
       if: always()

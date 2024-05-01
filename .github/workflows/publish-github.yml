@@ -1,5 +1,5 @@
-# v3.800.5
-# https://virtocommerce.atlassian.net/browse/VCST-571
+# v3.800.6
+# https://virtocommerce.atlassian.net/browse/VCST-915
 name: VC Publish Github release and Nuget package
 
 on:
@@ -27,6 +27,10 @@ on:
         required: false
         type: string
         default: 'false'
+      makeLatest:
+        required: false
+        type: string
+        default: 'true'
 
     secrets:
       envPAT:
@@ -81,6 +85,7 @@ jobs:
         changelog: ${{ inputs.changelog }}
         organization: ${{ github.repository_owner }}
         skipString: 'Clean+Restore+Compile+WebPackBuild+Test+Publish+Compress'
+        makeLatest: ${{ inputs.makeLatest }}
       uses: VirtoCommerce/vc-github-actions/publish-github-release@master
 
     - name: Publish Nuget
