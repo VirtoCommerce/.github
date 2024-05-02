@@ -113,9 +113,9 @@ jobs:
         run: |
           dotnet tool install --global VirtoCommerce.GlobalTool
           echo '### Check for deployment start...'
-          vc-build WaitForStatus -CloudUrl ${{ inputs.cloudUrl }} -CloudToken ${{ secrets.CLOUD_TOKEN }} -EnvironmentName ${{ steps.deployConfig.outputs.deployAppName }} -HealthStatus Progressing
+          vc-build CloudEnvStatus -CloudUrl ${{ inputs.cloudUrl }} -CloudToken ${{ secrets.CLOUD_TOKEN }} -EnvironmentName ${{ steps.deployConfig.outputs.deployAppName }} -HealthStatus Progressing
           echo '### Check for deployment complete...'
-          vc-build WaitForStatus -CloudUrl ${{ inputs.cloudUrl }} -CloudToken ${{ secrets.CLOUD_TOKEN }} -EnvironmentName ${{ steps.deployConfig.outputs.deployAppName }} -HealthStatus Healthy -SyncStatus Synced
+          vc-build CloudEnvStatus -CloudUrl ${{ inputs.cloudUrl }} -CloudToken ${{ secrets.CLOUD_TOKEN }} -EnvironmentName ${{ steps.deployConfig.outputs.deployAppName }} -HealthStatus Healthy -SyncStatus Synced
 
       - name: DEPLOY_STATE::successful
         if: success()
