@@ -17,6 +17,8 @@ on:
         value: ${{ jobs.build-artifacts.outputs.artifactName }}
       dockerTar:
         value: ${{ jobs.build-artifacts.outputs.dockerTar }}
+      imageTag:
+        value: ${{ jobs.build-artifacts.outputs.imageTag }}
 
     inputs:
       uploadPackage:
@@ -67,6 +69,7 @@ jobs:
       packageFullKey: ${{ steps.cache-key.outputs.packageFullKey }}
       dockerTar: ${{ env.DOCKER_TAR }}
       artifactName: ${{ env.ARTIFACT_NAME }}
+      imageTag: ${{ steps.artifactVer.outputs.taggedVersion }}
 
     steps: 
 
