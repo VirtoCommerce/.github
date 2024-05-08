@@ -1,5 +1,5 @@
-# v3.800.6
-# https://virtocommerce.atlassian.net/browse/VCST-915
+# v3.800.7
+# https://virtocommerce.atlassian.net/browse/VCST-1109
 name: VC build
 
 on:
@@ -17,6 +17,8 @@ on:
         value: ${{ jobs.build-artifacts.outputs.artifactName }}
       dockerTar:
         value: ${{ jobs.build-artifacts.outputs.dockerTar }}
+      imageTag:
+        value: ${{ jobs.build-artifacts.outputs.imageTag }}
 
     inputs:
       uploadPackage:
@@ -67,6 +69,7 @@ jobs:
       packageFullKey: ${{ steps.cache-key.outputs.packageFullKey }}
       dockerTar: ${{ env.DOCKER_TAR }}
       artifactName: ${{ env.ARTIFACT_NAME }}
+      imageTag: ${{ steps.artifactVer.outputs.taggedVersion }}
 
     steps: 
 
