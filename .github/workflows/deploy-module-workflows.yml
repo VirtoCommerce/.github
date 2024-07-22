@@ -75,6 +75,7 @@ jobs:
                   ,vc-module-x-cart
                   ,vc-module-x-catalog
                   ,vc-module-x-cms
+                  ,vc-module-x-order
                   ,vc-module-builder-io]
 
 # Module samples workflows
