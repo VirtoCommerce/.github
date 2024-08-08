@@ -1,5 +1,5 @@
 # v3.800.8
-# https://virtocommerce.atlassian.net/browse/VCST-1617
+# https://virtocommerce.atlassian.net/browse/VCST-1109
 name: Module deployment
 on:
   workflow_dispatch:
