@@ -1,5 +1,5 @@
-# v3.800.7
-# https://virtocommerce.atlassian.net/browse/VCST-1109
+# v3.800.8
+# https://virtocommerce.atlassian.net/browse/VCST-1617
 name: Release workflow
 
 on:
