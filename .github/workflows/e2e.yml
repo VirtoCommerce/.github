@@ -135,6 +135,7 @@ jobs:
         testProjectPath: ${{ github.workspace }}
 
     - name: Parse JUnit_Report.xml
+      if: always()
       shell: pwsh
       run: |
         $reportXml = find vc-quality-gate-katalon/Reports -name 'JUnit_Report.xml'
