@@ -156,7 +156,7 @@ jobs:
             }
           }
         }
-        if ($failures.count -eq 0){
+        if ($($failures.count) -eq 0){
           Write-Output "No failures found!"
         } else {
           Write-Output "Found failures:"
