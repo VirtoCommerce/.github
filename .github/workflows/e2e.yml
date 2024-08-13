@@ -139,7 +139,8 @@ jobs:
       shell: pwsh
       run: |
         $reportXml = find vc-quality-gate-katalon/Reports -name 'JUnit_Report.xml'
-        Write-Host "The report file(s) path(es): $reportXml"
+        Write-Output "Found report file(s) path(es):"
+        Write-Output $($reportXml.GetEnumerator())
         $array = @()
         $failures = @()
         $casePattern = '\d{2}-\d{2}-\d{4}T\d{2}:\d{2}:\d{2}\s-\s\[TEST_CASE\]\[FAILED\]'
@@ -159,6 +160,6 @@ jobs:
           Write-Output "No failures found!"
         } else {
           Write-Output "Found failures:"
-          Write-Output $failures
+          Write-Output $($failures.GetEnumerator())
         }
         
