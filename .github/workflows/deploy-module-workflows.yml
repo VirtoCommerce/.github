@@ -45,6 +45,7 @@ jobs:
                   ,vc-module-file-experience-api
                   ,vc-module-gdpr
                   ,vc-module-google-ecommerce-analytics
+                  ,vc-module-google-sso
                   ,vc-module-hotjar
                   ,vc-module-image-tools
                   ,vc-module-inventory
