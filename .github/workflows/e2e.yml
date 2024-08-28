@@ -133,3 +133,33 @@ jobs:
       uses: VirtoCommerce/vc-github-actions/publish-katalon-report@master
       with:
         testProjectPath: ${{ github.workspace }}
+
+    - name: Parse JUnit_Report.xml
+      if: always()
+      shell: pwsh
+      run: |
+        $reportXml = find vc-quality-gate-katalon/Reports -name 'JUnit_Report.xml'
+        Write-Output "Found report file(s) path(es):"
+        Write-Output $($reportXml.GetEnumerator())
+        $array = @()
+        $failures = @()
+        $casePattern = '\d{2}-\d{2}-\d{4}T\d{2}:\d{2}:\d{2}\s-\s\[TEST_CASE\]\[FAILED\]'
+        $failurePattern = '\d{2}-\d{2}-\d{4}T\d{2}:\d{2}:\d{2}\s-\s\[.*\]\[FAILED\]\s-\s[\S\s\r]*?(?=\d{2}-\d{2}-\d{4}T\d{2}:\d{2}:\d{2}\s-\s\[.*\]\[\w+\])'
+        foreach ($file in $reportXml){
+          $XPath = "/testsuites/testsuite/testcase/system-out"
+          $mc = Select-Xml -Path $file -XPath $Xpath | Select-Object -ExpandProperty Node
+          $array = $($mc.GetEnumerator())
+          foreach ($item in $array){
+            $m = ([regex]$failurePattern).Matches($($item.InnerText))
+            foreach ($fail in $m.Groups) {
+              $failures += $($fail.Value)
+            }
+          }
+        }
+        if ($($failures.count) -eq 0){
+          Write-Output "No failures found!"
+        } else {
+          Write-Output "Found failures:"
+          Write-Output $($failures.GetEnumerator())
+        }
+        
