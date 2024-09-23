@@ -118,6 +118,10 @@ jobs:
     #     TYPE: junit
     #     REPORT_PATH: ${{ github.workspace }}/vc-quality-gate-katalon/Reports
 
+    - name: Report status for workflow check
+      id: status
+      run: echo "Tests run successfully" >> "$GITHUB_OUTPUT"
+
     - name: Save Katalon Report as workflow artifact
       if: always()
       uses: actions/upload-artifact@v4
@@ -162,4 +166,5 @@ jobs:
           Write-Output "Found failures:"
           Write-Output $($failures.GetEnumerator())
         }
-        
+    outputs:
+      tests-result: ${{ steps.status.outputs }}    
