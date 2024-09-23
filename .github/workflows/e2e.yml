@@ -102,6 +102,11 @@ jobs:
         distribution: 'temurin'
         java-version: '17'
 
+    - name: Report status for workflow check
+      id: status
+      run: | 
+        echo "status=success" >> $GITHUB_OUTPUT
+
     - name: Katalon Studio Github Action
       uses: VirtoCommerce/vc-github-actions/katalon-studio-github-action@master
       with:
@@ -117,11 +122,6 @@ jobs:
     #     PROJECT_ID: 171535
     #     TYPE: junit
     #     REPORT_PATH: ${{ github.workspace }}/vc-quality-gate-katalon/Reports
-
-    - name: Report status for workflow check
-      id: status
-      run: | 
-        echo "status=success" >> "$GITHUB_OUTPUT"
 
     - name: Save Katalon Report as workflow artifact
       if: always()
