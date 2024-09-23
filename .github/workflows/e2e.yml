@@ -168,4 +168,4 @@ jobs:
           Write-Output $($failures.GetEnumerator())
         }
     outputs:
-      tests-result: ${{ steps.status.outputs }}    
+      tests-result: ${{ steps.status.outputs.status }}    
