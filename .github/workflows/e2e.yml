@@ -73,98 +73,98 @@ jobs:
     - name: Install VirtoCommerce.GlobalTool
       uses: VirtoCommerce/vc-github-actions/setup-vcbuild@master
 
-    # - name: Getting tests
-    #   uses: actions/checkout@v4
-    #   with:
-    #     repository: ${{ env.KATALON_REPO }}
-    #     ref: ${{ env.KATALON_REPO_BRANCH }}
-    #     path: ${{ env.KATALON_PATH }}
+    - name: Getting tests
+      uses: actions/checkout@v4
+      with:
+        repository: ${{ env.KATALON_REPO }}
+        ref: ${{ env.KATALON_REPO_BRANCH }}
+        path: ${{ env.KATALON_PATH }}
 
-    # - name: Docker Env
-    #   uses: VirtoCommerce/vc-github-actions/docker-env@master
-    #   with:
-    #     githubUser: ${{ env.GITHUB_ACTOR }}
-    #     githubToken: ${{ env.GITHUB_TOKEN }}
-    #     platformDockerTag: ${{ inputs.platformDockerTag }}
-    #     storefrontDockerTag: ${{ inputs.storefrontDockerTag }}
-    #     platformImage: ghcr.io/virtocommerce/platform
-    #     storefrontImage: ghcr.io/virtocommerce/storefront
-    #     validateSwagger: 'false'
-    #     installModules: ${{ inputs.installModules }}
-    #     installCustomModule: ${{ inputs.installCustomModule }}
-    #     customModuleId: ${{ inputs.customModuleId }}
-    #     customModuleUrl: ${{ inputs.customModuleUrl }}
-    #     envDir: '${{ github.workspace }}'
+    - name: Docker Env
+      uses: VirtoCommerce/vc-github-actions/docker-env@master
+      with:
+        githubUser: ${{ env.GITHUB_ACTOR }}
+        githubToken: ${{ env.GITHUB_TOKEN }}
+        platformDockerTag: ${{ inputs.platformDockerTag }}
+        storefrontDockerTag: ${{ inputs.storefrontDockerTag }}
+        platformImage: ghcr.io/virtocommerce/platform
+        storefrontImage: ghcr.io/virtocommerce/storefront
+        validateSwagger: 'false'
+        installModules: ${{ inputs.installModules }}
+        installCustomModule: ${{ inputs.installCustomModule }}
+        customModuleId: ${{ inputs.customModuleId }}
+        customModuleUrl: ${{ inputs.customModuleUrl }}
+        envDir: '${{ github.workspace }}'
         
-    # - name: Setup Java
-    #   uses: actions/setup-java@v4
-    #   with:
-    #     distribution: 'temurin'
-    #     java-version: '17'
+    - name: Setup Java
+      uses: actions/setup-java@v4
+      with:
+        distribution: 'temurin'
+        java-version: '17'
 
-    # - name: Katalon Studio Github Action
-    #   uses: VirtoCommerce/vc-github-actions/katalon-studio-github-action@master
-    #   with:
-    #     version: '9.4.0'
-    #     projectPath: '${{ github.workspace }}/${{ env.KATALON_PATH }}/platform_storefront.prj'
-    #     args: '-noSplash -retry=0 -testSuiteCollectionPath="${{ env.DEFAULT_TEST_SUITE }}" -browserType="Chrome" -apiKey= ${{ secrets.katalonApiKey }} -g_urlBack="http://localhost:8090" -g_urlFront="http://localhost:8080" -executionProfile="default"'
+    - name: Katalon Studio Github Action
+      uses: VirtoCommerce/vc-github-actions/katalon-studio-github-action@master
+      with:
+        version: '9.4.0'
+        projectPath: '${{ github.workspace }}/${{ env.KATALON_PATH }}/platform_storefront.prj'
+        args: '-noSplash -retry=0 -testSuiteCollectionPath="${{ env.DEFAULT_TEST_SUITE }}" -browserType="Chrome" -apiKey= ${{ secrets.katalonApiKey }} -g_urlBack="http://localhost:8090" -g_urlFront="http://localhost:8080" -executionProfile="default"'
     
-    # - name: Report status for workflow check
-    #   id: status
-    #   run: | 
-    #     echo "status=success" >> $GITHUB_OUTPUT
-    # # - name: Katalon Report Uploader
-    # #   if: always()
-    # #   uses: katalon-studio/report-uploader@v0.0.8
-    # #   env:
-    # #     PASSWORD: ${{ secrets.katalonApiKey }}
-    # #     PROJECT_ID: 171535
-    # #     TYPE: junit
-    # #     REPORT_PATH: ${{ github.workspace }}/vc-quality-gate-katalon/Reports
-
-    # - name: Save Katalon Report as workflow artifact
+    - name: Report status for workflow check
+      id: status
+      run: | 
+        echo "status=success" >> $GITHUB_OUTPUT
+    # - name: Katalon Report Uploader
     #   if: always()
-    #   uses: actions/upload-artifact@v4
-    #   with:
-    #     name: reports
-    #     path: |
-    #       vc-quality-gate-katalon/Reports
-    #       /home/runner/.katalon/*/Katalon_Studio_Engine_Linux_*/configuration/*.log.
-    #     retention-days: 5
+    #   uses: katalon-studio/report-uploader@v0.0.8
+    #   env:
+    #     PASSWORD: ${{ secrets.katalonApiKey }}
+    #     PROJECT_ID: 171535
+    #     TYPE: junit
+    #     REPORT_PATH: ${{ github.workspace }}/vc-quality-gate-katalon/Reports
 
-    # - name: Katalon Report to PR
-    #   if: ${{ ( success() || failure() ) && github.event_name == 'pull_request' }}
-    #   uses: VirtoCommerce/vc-github-actions/publish-katalon-report@master
-    #   with:
-    #     testProjectPath: ${{ github.workspace }}
+    - name: Save Katalon Report as workflow artifact
+      if: always()
+      uses: actions/upload-artifact@v4
+      with:
+        name: reports
+        path: |
+          vc-quality-gate-katalon/Reports
+          /home/runner/.katalon/*/Katalon_Studio_Engine_Linux_*/configuration/*.log.
+        retention-days: 5
 
-    # - name: Parse JUnit_Report.xml
-    #   if: always()
-    #   shell: pwsh
-    #   run: |
-    #     $reportXml = find vc-quality-gate-katalon/Reports -name 'JUnit_Report.xml'
-    #     Write-Output "Found report file(s) path(es):"
-    #     Write-Output $($reportXml.GetEnumerator())
-    #     $array = @()
-    #     $failures = @()
-    #     $casePattern = '\d{2}-\d{2}-\d{4}T\d{2}:\d{2}:\d{2}\s-\s\[TEST_CASE\]\[FAILED\]'
-    #     $failurePattern = '\d{2}-\d{2}-\d{4}T\d{2}:\d{2}:\d{2}\s-\s\[.*\]\[FAILED\]\s-\s[\S\s\r]*?(?=\d{2}-\d{2}-\d{4}T\d{2}:\d{2}:\d{2}\s-\s\[.*\]\[\w+\])'
-    #     foreach ($file in $reportXml){
-    #       $XPath = "/testsuites/testsuite/testcase/system-out"
-    #       $mc = Select-Xml -Path $file -XPath $Xpath | Select-Object -ExpandProperty Node
-    #       $array = $($mc.GetEnumerator())
-    #       foreach ($item in $array){
-    #         $m = ([regex]$failurePattern).Matches($($item.InnerText))
-    #         foreach ($fail in $m.Groups) {
-    #           $failures += $($fail.Value)
-    #         }
-    #       }
-    #     }
-    #     if ($($failures.count) -eq 0){
-    #       Write-Output "No failures found!"
-    #     } else {
-    #       Write-Output "Found failures:"
-    #       Write-Output $($failures.GetEnumerator())
-    #     }
-    # outputs:
-    #   test-status: ${{ steps.status.outputs.status }}
+    - name: Katalon Report to PR
+      if: ${{ ( success() || failure() ) && github.event_name == 'pull_request' }}
+      uses: VirtoCommerce/vc-github-actions/publish-katalon-report@master
+      with:
+        testProjectPath: ${{ github.workspace }}
+
+    - name: Parse JUnit_Report.xml
+      if: always()
+      shell: pwsh
+      run: |
+        $reportXml = find vc-quality-gate-katalon/Reports -name 'JUnit_Report.xml'
+        Write-Output "Found report file(s) path(es):"
+        Write-Output $($reportXml.GetEnumerator())
+        $array = @()
+        $failures = @()
+        $casePattern = '\d{2}-\d{2}-\d{4}T\d{2}:\d{2}:\d{2}\s-\s\[TEST_CASE\]\[FAILED\]'
+        $failurePattern = '\d{2}-\d{2}-\d{4}T\d{2}:\d{2}:\d{2}\s-\s\[.*\]\[FAILED\]\s-\s[\S\s\r]*?(?=\d{2}-\d{2}-\d{4}T\d{2}:\d{2}:\d{2}\s-\s\[.*\]\[\w+\])'
+        foreach ($file in $reportXml){
+          $XPath = "/testsuites/testsuite/testcase/system-out"
+          $mc = Select-Xml -Path $file -XPath $Xpath | Select-Object -ExpandProperty Node
+          $array = $($mc.GetEnumerator())
+          foreach ($item in $array){
+            $m = ([regex]$failurePattern).Matches($($item.InnerText))
+            foreach ($fail in $m.Groups) {
+              $failures += $($fail.Value)
+            }
+          }
+        }
+        if ($($failures.count) -eq 0){
+          Write-Output "No failures found!"
+        } else {
+          Write-Output "Found failures:"
+          Write-Output $($failures.GetEnumerator())
+        }
+    outputs:
+      test-status: ${{ steps.status.outputs.status }}
