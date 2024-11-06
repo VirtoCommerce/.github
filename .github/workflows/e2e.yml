@@ -1,5 +1,5 @@
-# v3.800.9
-# https://virtocommerce.atlassian.net/browse/VCST-1260
+# v3.800.10
+# https://virtocommerce.atlassian.net/browse/VCST-1738
 name: Common katalon tests
 
 on:
@@ -108,7 +108,7 @@ jobs:
         version: '9.4.0'
         projectPath: '${{ github.workspace }}/${{ env.KATALON_PATH }}/platform_storefront.prj'
         args: '-noSplash -retry=0 -testSuiteCollectionPath="${{ env.DEFAULT_TEST_SUITE }}" -browserType="Chrome" -apiKey= ${{ secrets.katalonApiKey }} -g_urlBack="http://localhost:8090" -g_urlFront="http://localhost:8080" -executionProfile="default"'
-
+    
     # - name: Katalon Report Uploader
     #   if: always()
     #   uses: katalon-studio/report-uploader@v0.0.8
@@ -162,4 +162,3 @@ jobs:
           Write-Output "Found failures:"
           Write-Output $($failures.GetEnumerator())
         }
-        
