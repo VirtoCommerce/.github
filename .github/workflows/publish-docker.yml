@@ -1,5 +1,5 @@
-# v3.800.10
-# https://virtocommerce.atlassian.net/browse/VCST-1738
+# v3.800.11
+# bump-ubuntu-version
 name: VC Publish docker
 
 on:
@@ -42,7 +42,7 @@ on:
 
 jobs:
   publish-docker:
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-24.04
     env:
       DOCKER_TAR: ${{ inputs.dockerTar }}
       GITHUB_TOKEN: ${{ secrets.envPAT }}

@@ -1,5 +1,5 @@
-# v3.800.10
-# https://virtocommerce.atlassian.net/browse/VCST-1738
+# v3.800.11
+# bump-ubuntu-version
 name: Platform Regression PR
 
 on: 
@@ -14,7 +14,7 @@ on:
 
 jobs:
   check-label:
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-24.04
     outputs:
       isLabeled: ${{ steps.checkLabel.outputs.isLabeled }}
       pullNumber: ${{ steps.checkLabel.outputs.pullNumber }}
@@ -39,7 +39,7 @@ jobs:
       PR_TITLE: ""
       PR_BODY: ""
       TARGETBRANCH_EXISTS: "false"
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-24.04
     steps:
     - name: Set PR_BRANCH PR_TITLE PR_BODY
       run: |

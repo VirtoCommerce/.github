@@ -1,5 +1,5 @@
-# v3.800.10
-# https://virtocommerce.atlassian.net/browse/VCST-1738
+# v3.800.11
+# bump-ubuntu-version
 name: Theme deployment
 on:
   workflow_dispatch:
@@ -27,7 +27,7 @@ on:
 
 jobs:
   cd:
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-24.04
     steps: 
     
     - name: Start deployment
