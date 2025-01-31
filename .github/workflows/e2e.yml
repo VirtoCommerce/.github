@@ -86,9 +86,7 @@ jobs:
         githubUser: ${{ env.GITHUB_ACTOR }}
         githubToken: ${{ env.GITHUB_TOKEN }}
         platformDockerTag: ${{ inputs.platformDockerTag }}
-        storefrontDockerTag: ${{ inputs.storefrontDockerTag }}
         platformImage: ghcr.io/virtocommerce/platform
-        storefrontImage: ghcr.io/virtocommerce/storefront
         validateSwagger: 'false'
         installModules: ${{ inputs.installModules }}
         installCustomModule: ${{ inputs.installCustomModule }}
