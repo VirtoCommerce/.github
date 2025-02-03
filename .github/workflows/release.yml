@@ -53,10 +53,10 @@ jobs:
           }
           if ( '${{inputs.patchVersion}}' -eq 'false'){
             echo "Running QuickRelease"
-            vc-build StartHotfix -MainBranch $branchMain -CustomVersionPrefix ${{inputs.versionPrefix}}
-            vc-build CompleteHotfix -MainBranch $branchMain
+            vc-build QuickRelease -MainBranch $branchMain
           } else {
             echo "Running CompleteHotfix"
+            vc-build StartHotfix -MainBranch $branchMain -CustomVersionPrefix ${{inputs.versionPrefix}}
             vc-build CompleteHotfix -MainBranch $branchMain -VersionPrefix ${{inputs.versionPrefix}}
           }
           
