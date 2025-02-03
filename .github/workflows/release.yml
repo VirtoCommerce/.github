@@ -4,6 +4,12 @@ name: Release workflow
 
 on:
   workflow_call:
+    inputs:
+      patchVersion:
+        type: string
+        required: false
+        default: 'false'
+        description: 'Issue patch version'
     secrets:
         envPAT:
           required: true
@@ -40,4 +46,9 @@ jobs:
           } else {
             $branchMain = 'master'
           }
-          vc-build QuickRelease -MainBranch $branchMain
+          if ( '${{inputs.patchVersion}}' -eq 'false'){
+            vc-build QuickRelease -MainBranch $branchMain
+          } else {
+            vc-build CompleteHotfix -MainBranch $branchMain 
+          }
+          
