@@ -29,12 +29,9 @@ jobs:
   publish-nuget:
     needs:
       [build, test]
-<<<<<<< HEAD
-    # uses: VirtoCommerce/.github/.github/workflows/publish-github.yml@v3.800.10    
+    # uses: VirtoCommerce/.github/.github/workflows/publish-github.yml@v3.800.11    
     uses: VirtoCommerce/.github/.github/workflows/publish-github.yml@VCST-2469    
-=======
-    uses: VirtoCommerce/.github/.github/workflows/publish-github.yml@v3.800.11    
->>>>>>> v3.800.11
+
     with:
       fullKey: ${{ needs.build.outputs.packageFullKey }}
       forceGithub: false
