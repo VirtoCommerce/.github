@@ -107,5 +107,4 @@ jobs:
       uses: VirtoCommerce/vc-github-actions/publish-blob-release@master
       with:
         blobSAS: ${{ secrets.BLOB_SAS }}
-        # blobSAS: ${{ secrets.blobKey }}
         blobUrl: ${{ vars.BLOB_URL }}

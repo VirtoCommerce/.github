@@ -81,7 +81,7 @@ jobs:
         path: ${{ env.KATALON_PATH }}
 
     - name: Docker Env
-      uses: VirtoCommerce/vc-github-actions/docker-env@VCST-2469
+      uses: VirtoCommerce/vc-github-actions/docker-env@v3.800.11
       with:
         githubUser: ${{ env.GITHUB_ACTOR }}
         githubToken: ${{ env.GITHUB_TOKEN }}
