@@ -31,7 +31,7 @@ jobs:
       [build, test]
     # uses: VirtoCommerce/.github/.github/workflows/publish-github.yml@v3.800.11    
     uses: VirtoCommerce/.github/.github/workflows/publish-github.yml@VCST-2469    
-
+    # secrets: inherit
     with:
       fullKey: ${{ needs.build.outputs.packageFullKey }}
       forceGithub: false
@@ -39,4 +39,4 @@ jobs:
     secrets:
       envPAT: ${{ secrets.GITHUB_TOKEN }}
       nugetKey: ${{ secrets.NUGET_KEY }}
-      blobKey: ${{ secrets.BLOB_TOKEN }}
+      blobKey: ${{ secrets.BLOB_SAS }}
