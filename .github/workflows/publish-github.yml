@@ -41,7 +41,7 @@ on:
         required: true
       nugetKey:
         required: false
-      blobKey:
+      BLOB_SAS:
         required: false
 
 jobs:
