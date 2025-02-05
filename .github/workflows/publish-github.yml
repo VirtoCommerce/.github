@@ -15,6 +15,10 @@ on:
         required: false
         type: string
         default: ''
+      forceBlob:
+        required: false
+        type: boolean
+        default: false
       forceNuget:
         required: false
         type: boolean
@@ -44,6 +48,7 @@ jobs:
     env:
       NUGET_KEY: ${{ secrets.nugetKey }}
       GITHUB_TOKEN: ${{ secrets.envPAT }}
+      BLOB_SAS: ${{ secrets.BLOB_TOKEN }}
     outputs:
       downloadUrl: ${{ steps.githubRelease.outputs.downloadUrl }}
 
@@ -93,3 +98,11 @@ jobs:
       uses: VirtoCommerce/vc-github-actions/publish-nuget@master
       with:
         skipString: 'Clean+Restore+Compile+Test+Pack'
+
+    - name: Publish to Blob
+      if:  ${{ inputs.forceBlob }}
+      id: blobRelease
+      uses: VirtoCommerce/vc-github-actions/publish-blob-release@master
+      with:
+        blobSAS: ${{ secrets.BLOB_TOKEN }}
+        blobUrl: ${{ vars.BLOB_URL }}
