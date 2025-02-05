@@ -41,6 +41,8 @@ on:
         required: true
       nugetKey:
         required: false
+      blobKey:
+        required: false
 
 jobs:
   publish-github:
