@@ -1,5 +1,5 @@
-# v3.800.10
-# https://virtocommerce.atlassian.net/browse/VCST-1738
+# v3.800.11
+# bump-ubuntu-version
 name: VC Publish Github release and Nuget package
 
 on:
@@ -46,7 +46,7 @@ on:
 
 jobs:
   publish-github:
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-24.04
     env:
       NUGET_KEY: ${{ secrets.nugetKey }}
       GITHUB_TOKEN: ${{ secrets.envPAT }}
