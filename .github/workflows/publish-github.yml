@@ -48,7 +48,7 @@ jobs:
     env:
       NUGET_KEY: ${{ secrets.nugetKey }}
       GITHUB_TOKEN: ${{ secrets.envPAT }}
-      BLOB_SAS: ${{ secrets.BLOB_TOKEN }}
+      BLOB_SAS: ${{ secrets.blobKey }}
     outputs:
       downloadUrl: ${{ steps.githubRelease.outputs.downloadUrl }}
 
@@ -104,5 +104,5 @@ jobs:
       id: blobRelease
       uses: VirtoCommerce/vc-github-actions/publish-blob-release@master
       with:
-        blobSAS: ${{ secrets.BLOB_TOKEN }}
+        blobSAS: ${{ secrets.BLOB_SAS }}
         blobUrl: ${{ vars.BLOB_URL }}
