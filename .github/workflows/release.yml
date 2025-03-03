@@ -60,6 +60,8 @@ jobs:
             vc-build QuickRelease -MainBranch $branchMain
           } else {
             echo "Running QuickHotfix"
+            echo "patchVerson is ${{inputs.patchVersion}}"
+            echo "Comparison result is $(${{inputs.patchVersion}} -eq 'false')"
             vc-build QuickHotfix -MainBranch $branchMain
           }
           
