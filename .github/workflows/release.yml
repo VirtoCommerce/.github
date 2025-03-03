@@ -31,8 +31,11 @@ jobs:
           fetch-depth: 0
           token: ${{ secrets.envPAT }}
 
-      - name: Install VirtoCommerce.GlobalTool
-        uses: VirtoCommerce/vc-github-actions/setup-vcbuild@master
+      # - name: Install VirtoCommerce.GlobalTool
+      #   uses: VirtoCommerce/vc-github-actions/setup-vcbuild@master
+
+      - name: Install vc-build
+        run: 'dotnet tool install --global VirtoCommerce.GlobalTool --version 3.810.0-alpha.235'
 
       - name: Setup Git Credentials
         uses: VirtoCommerce/vc-github-actions/setup-git-credentials-github@master
