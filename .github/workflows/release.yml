@@ -56,6 +56,7 @@ jobs:
           }
           if ( ${{inputs.patchVersion}} -eq 'false'){
             echo "Running QuickRelease"
+            echo "patchVerson is ${{inputs.patchVersion}}"
             vc-build QuickRelease -MainBranch $branchMain
           } else {
             echo "Running QuickHotfix"
