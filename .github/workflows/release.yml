@@ -54,13 +54,11 @@ jobs:
           } else {
             $branchMain = 'master'
           }
-          if ( ${{inputs.patchVersion}} -eq $false){
+          if ( ${{inputs.patchVersion}} -eq 'false'){
             echo "Running QuickRelease"
             vc-build QuickRelease -MainBranch $branchMain
           } else {
-            echo "Running CompleteHotfix"
-            # vc-build StartHotfix -MainBranch $branchMain -CustomVersionPrefix ${{inputs.versionPrefix}}
-            # vc-build CompleteHotfix -MainBranch $branchMain -VersionPrefix ${{inputs.versionPrefix}}
+            echo "Running QuickHotfix"
             vc-build QuickHotfix -MainBranch $branchMain
           }
           
