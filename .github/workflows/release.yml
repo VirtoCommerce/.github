@@ -54,14 +54,14 @@ jobs:
           } else {
             $branchMain = 'master'
           }
-          if ( ${{inputs.patchVersion}} -eq 'false'){
+          if ( ${{inputs.patchVersion}} -eq $false ){
             echo "Running QuickRelease"
             echo "patchVerson is ${{inputs.patchVersion}}"
             vc-build QuickRelease -MainBranch $branchMain
           } else {
             echo "Running QuickHotfix"
             echo "patchVerson is ${{inputs.patchVersion}}"
-            echo "Comparison result is $(${{inputs.patchVersion}} -eq 'false')"
+            echo "Comparison result is $(${{inputs.patchVersion}} -eq $false)"
             vc-build QuickHotfix -MainBranch $branchMain
           }
           
