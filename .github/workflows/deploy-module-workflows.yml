@@ -55,6 +55,7 @@ jobs:
                   ,vc-module-marketing
                   ,vc-module-marketing-experience-api
                   ,vc-module-notification
+                  ,vc-module-open-search
                   ,vc-module-order
                   ,vc-module-payment
                   ,vc-module-power-bi-reports
@@ -80,6 +81,7 @@ jobs:
                   ,vc-module-x-catalog
                   ,vc-module-x-cms
                   ,vc-module-x-order
+                  ,vc-module-x-recommend
                   ,vc-module-builder-io]
 
 # Module samples workflows
