@@ -15,11 +15,6 @@ on:
         required: false
         default: 'hotfix'
         description: 'Version prefix'
-      makeLatest:
-        type: boolean
-        required: false
-        default: false
-        description: 'Mark release latest'
     secrets:
         envPAT:
           required: true
@@ -67,6 +62,6 @@ jobs:
             echo "Running QuickHotfix"
             echo "patchVerson is ${{inputs.patchVersion}}"
             echo "Comparison result is $("${{inputs.patchVersion}}" -eq "false")"
-            vc-build QuickHotfix -MainBranch $branchMain -MakeLatest ${{inputs.makeLatest}}
+            vc-build QuickHotfix -MainBranch $branchMain
           }
           
