@@ -35,7 +35,7 @@ jobs:
       #   uses: VirtoCommerce/vc-github-actions/setup-vcbuild@master
 
       - name: Install vc-build
-        run: 'dotnet tool install --global VirtoCommerce.GlobalTool --version 3.810.0-alpha.235'
+        run: 'dotnet tool install --global VirtoCommerce.GlobalTool --version 3.811.0-alpha.240'
 
       - name: Setup Git Credentials
         uses: VirtoCommerce/vc-github-actions/setup-git-credentials-github@master
