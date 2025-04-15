@@ -3,6 +3,10 @@
 name: Theme CI
 on:
   workflow_dispatch:
+  workflow_call:
+    secrets:
+        envPAT:
+          required: true
 
 jobs:
   ci:
