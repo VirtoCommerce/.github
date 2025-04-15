@@ -1,0 +1,98 @@
+# v3.800.11
+# bump-ubuntu-version
+name: Theme CI
+on:
+  workflow_dispatch:
+
+jobs:
+  ci:
+    runs-on: ubuntu-latest
+    env: 
+      SONAR_TOKEN: ${{secrets.SONAR_TOKEN}}
+      GITHUB_TOKEN: ${{ secrets.REPO_TOKEN }}
+      BLOB_SAS: ${{ secrets.BLOB_TOKEN }}
+      VERSION_SUFFIX: ""
+
+    steps:
+    - uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+
+    - name: Set up Node 20
+      uses: actions/setup-node@v4
+      with:
+        node-version: '20'
+
+    - name: Enable corepack
+      run: |
+        corepack enable
+
+    - name: Setup sonarqube
+      uses: warchant/setup-sonar-scanner@v8
+
+    - name: Increment Version
+      run: |
+        vc-build IncrementPatch
+        git add ${{ github.workspace }}/package.json
+        git commit -m "ci: Auto IncrementPatch"
+        git push
+
+    - name: Get Image Version
+      uses: VirtoCommerce/vc-github-actions/get-image-version@master
+      id: image
+
+    - name: Set VERSION_SUFFIX variable
+      run: |
+        if [ '${{ github.event_name }}' = 'workflow_dispatch' ]; then
+          echo "VERSION_SUFFIX=${{ steps.image.outputs.fullSuffix }}" >> $GITHUB_ENV
+        else
+          echo "VERSION_SUFFIX=${{ steps.image.outputs.suffix }}" >> $GITHUB_ENV
+        fi;
+
+    - name: Get changelog
+      id: changelog
+      uses: VirtoCommerce/vc-github-actions/changelog-generator@master
+
+    - name: SonarCloud Scan
+      uses: VirtoCommerce/vc-github-actions/sonar-theme@master
+      with:
+        projectVersion: ${{ steps.image.outputs.fullVersion }}
+
+    - name: Update package.json Version
+      run: |
+        yarn version ${{ env.VERSION }}
+
+    - name: Install dependencies
+      run: |
+        yarn install
+
+    - name: Build
+      run: |
+        yarn build
+
+    - name: Unit Tests
+      run: |
+        yarn test:unit --run
+
+    - name: Typing Tests
+      run: |
+        yarn test:typing --run
+
+    - name: Packaging
+      run: |
+        yarn compress
+
+    - name: Publish
+      id: publish
+      uses: VirtoCommerce/vc-github-actions/publish-theme@master
+      with:
+        artifactPath: ${{ steps.build.outputs.artifactPath }}
+        artifactName: ${{ steps.build.outputs.artifactName }}
+
+    - name: Create GH Release
+      run: |
+        gh release create ${{ steps.image.outputs.shortVersion }} \
+              --repo="$GITHUB_REPOSITORY" \
+              --title="${GITHUB_REPOSITORY#*/} ${{ steps.image.outputs.shortVersion }}" \
+              --notes=${{ steps.changelog.outputs.changelog }} \
+              "artifacts/${GITHUB_REPOSITORY#*/}-${{ steps.image.outputs.shortVersion }}.zip#${GITHUB_REPOSITORY#*/}-${{ steps.image.outputs.shortVersion }}.zip"

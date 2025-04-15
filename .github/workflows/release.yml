@@ -1,20 +1,9 @@
-# v3.800.11
-# bump-ubuntu-version
+# v3.800.12
+# https://virtocommerce.atlassian.net/browse/VCST-2469
 name: Release workflow
 
 on:
   workflow_call:
-    inputs:
-      patchVersion:
-        type: boolean
-        required: true
-        default: false
-        description: 'Increment patch version'
-      versionPrefix:
-        type: string
-        required: false
-        default: 'hotfix'
-        description: 'Version prefix'
     secrets:
         envPAT:
           required: true
@@ -31,11 +20,8 @@ jobs:
           fetch-depth: 0
           token: ${{ secrets.envPAT }}
 
-      # - name: Install VirtoCommerce.GlobalTool
-      #   uses: VirtoCommerce/vc-github-actions/setup-vcbuild@master
-
-      - name: Install vc-build
-        run: 'dotnet tool install --global VirtoCommerce.GlobalTool --version 3.811.0-alpha.240'
+      - name: Install VirtoCommerce.GlobalTool
+        uses: VirtoCommerce/vc-github-actions/setup-vcbuild@master
 
       - name: Setup Git Credentials
         uses: VirtoCommerce/vc-github-actions/setup-git-credentials-github@master
@@ -54,42 +40,4 @@ jobs:
           } else {
             $branchMain = 'master'
           }
-          if ( "${{inputs.patchVersion}}" -eq "false" ){
-            echo "Running QuickRelease"
-            echo "patchVerson is ${{inputs.patchVersion}}"
-            vc-build QuickRelease -MainBranch $branchMain
-          } else {
-            echo "Running vc-build IncrementPatch"
-            vc-build IncrementPatch
-            git add ${{ github.workspace }}/package.json
-            git commit -m "ci: Auto IncrementPatch"
-            git push
-            # echo "Running QuickHotfix"
-            # echo "patchVerson is ${{inputs.patchVersion}}"
-            # echo "Comparison result is $("${{inputs.patchVersion}}" -eq "false")"
-            # vc-build QuickHotfix -MainBranch $branchMain
-          }
-
-      - name: Increment Version
-        run: |
-          vc-build IncrementPatch
-          git add ${{ github.workspace }}/package.json
-          git commit -m "ci: Auto IncrementPatch"
-          git push
-
-      - name: Get Image Version
-        uses: VirtoCommerce/vc-github-actions/get-image-version@master
-        with:
-          projectType: theme
-        id: image
-
-      - name: Create Release
-        if: ${{inputs.patchVersion == true }}
-        id: create_release
-        uses: actions/create-release@v1
-        with:
-          tag_name: ${{ steps.image.outputs.prefix }}
-          release_name: ${{ steps.image.outputs.prefix }}
-          draft: false
-          prerelease: false
-          # body: ${{ steps.changelog.outputs.changelog }}
+          vc-build QuickRelease -MainBranch $branchMain
