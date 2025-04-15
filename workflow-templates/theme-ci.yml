@@ -69,10 +69,6 @@ jobs:
       with:
         projectVersion: ${{ steps.image.outputs.fullVersion }}
 
-    - name: Set VERSION
-        run: |
-          echo "VERSION=${{ steps.image.outputs.prefix }}${{ env.VERSION_SUFFIX && '-' || '' }}${{ env.VERSION_SUFFIX }}" >> $GITHUB_ENV
-    
     - name: Update package.json Version
       run: |
         yarn version ${{ env.VERSION }}
