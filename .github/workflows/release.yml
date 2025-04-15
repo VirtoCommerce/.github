@@ -9,7 +9,7 @@ on:
         type: boolean
         required: true
         default: false
-        description: 'Issue patch version'
+        description: 'Increment patch version'
       versionPrefix:
         type: string
         required: false
@@ -69,10 +69,27 @@ jobs:
             # echo "Comparison result is $("${{inputs.patchVersion}}" -eq "false")"
             # vc-build QuickHotfix -MainBranch $branchMain
           }
-        
+
       - name: Increment Version
         run: |
           vc-build IncrementPatch
           git add ${{ github.workspace }}/package.json
           git commit -m "ci: Auto IncrementPatch"
           git push
+
+      - name: Get Image Version
+        uses: VirtoCommerce/vc-github-actions/get-image-version@master
+        with:
+          projectType: theme
+        id: image
+
+      - name: Create Release
+        if: ${{inputs.patchVersion == true }}
+        id: create_release
+        uses: actions/create-release@v1
+        with:
+          tag_name: ${{ steps.image.outputs.prefix }}
+          release_name: ${{ steps.image.outputs.prefix }}
+          draft: false
+          prerelease: false
+          # body: ${{ steps.changelog.outputs.changelog }}
