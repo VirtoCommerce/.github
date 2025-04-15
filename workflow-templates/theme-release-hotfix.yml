@@ -2,10 +2,7 @@
 # bump-ubuntu-version
 name: Theme CI
 on:
-  workflow_call:
-    secrets:
-        envPAT:
-          required: true
+  workflow_dispatch:
 
 jobs:
   ci:
