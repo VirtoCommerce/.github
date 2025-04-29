@@ -57,6 +57,7 @@ jobs:
                   ,vc-module-notification
                   ,vc-module-open-search
                   ,vc-module-order
+                  ,vc-module-order-management
                   ,vc-module-payment
                   ,vc-module-power-bi-reports
                   ,vc-module-price-export-import
