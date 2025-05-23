@@ -50,6 +50,7 @@ jobs:
                   ,vc-module-google-sso
                   ,vc-module-hotjar
                   ,vc-module-image-tools
+                  ,vc-module-import
                   ,vc-module-inventory
                   ,vc-module-lucene-search
                   ,vc-module-marketing
