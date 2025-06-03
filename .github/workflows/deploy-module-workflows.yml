@@ -24,6 +24,7 @@ jobs:
                   ,vc-module-azure-ad
                   ,vc-module-azure-search
                   ,vc-module-back-in-stock
+                  ,vc-module-builder-io
                   ,vc-module-bulk-actions
                   ,vc-module-cart
                   ,vc-module-catalog
@@ -83,8 +84,7 @@ jobs:
                   ,vc-module-x-catalog
                   ,vc-module-x-cms
                   ,vc-module-x-order
-                  ,vc-module-x-recommend
-                  ,vc-module-builder-io]
+                  ,vc-module-x-recommend]
 
 # Module samples workflows
         # include:
