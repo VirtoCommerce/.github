@@ -50,7 +50,7 @@ jobs:
     env:
       NUGET_KEY: ${{ secrets.nugetKey }}
       GITHUB_TOKEN: ${{ secrets.envPAT }}
-      BLOB_SAS: ${{ secrets.BLOB_SAS }}
+      BLOB_SAS: ${{ secrets.BLOB_TOKEN }}
 
     outputs:
       downloadUrl: ${{ steps.githubRelease.outputs.downloadUrl }}
