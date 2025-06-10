@@ -69,6 +69,7 @@ jobs:
                   ,vc-module-quote
                   ,vc-module-return
                   ,vc-module-search
+                  ,vc-module-seo
                   ,vc-module-shipping
                   ,vc-module-sitemaps
                   ,vc-module-store
