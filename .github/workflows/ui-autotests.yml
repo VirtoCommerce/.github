@@ -5,21 +5,21 @@ name: Common UI tests
 on:
   workflow_call:
     inputs:
-      katalonRepo:
-        description: 'UI tests repository'
-        required: false
-        type: string
-        default: 'VirtoCommerce/vc-quality-gate-katalon'
-      katalonRepoBranch:
-        description: 'UI tests repository branch'
-        required: false
-        type: string
-        default: 'dev'
-      testSuite:
-        description: 'Test Suite'
-        required: false
-        type: string
-        default: 'Test Suites/Modules/Platform_collection'
+      # katalonRepo:
+      #   description: 'UI tests repository'
+      #   required: false
+      #   type: string
+      #   default: 'VirtoCommerce/vc-quality-gate-katalon'
+      # katalonRepoBranch:
+      #   description: 'UI tests repository branch'
+      #   required: false
+      #   type: string
+      #   default: 'dev'
+      # testSuite:
+      #   description: 'Test Suite'
+      #   required: false
+      #   type: string
+      #   default: 'Test Suites/Modules/Platform_collection'
       installModules:
         description: 'Enable or disable "Install Modules" step'
         required: false
@@ -54,8 +54,8 @@ on:
     secrets:
       envPAT:
         required: true
-      katalonApiKey:
-        required: true
+      # katalonApiKey:
+      #   required: true
 
 jobs:
   e2e-tests:
@@ -63,10 +63,10 @@ jobs:
 
     env:
       GITHUB_TOKEN: ${{ secrets.envPAT }}
-      DEFAULT_TEST_SUITE: ${{ inputs.testSuite }}
-      KATALON_REPO: ${{ inputs.katalonRepo}}
-      KATALON_REPO_BRANCH: ${{ inputs.katalonRepoBranch }}
-      KATALON_PATH: 'vc-quality-gate-katalon'
+      # DEFAULT_TEST_SUITE: ${{ inputs.testSuite }}
+      # KATALON_REPO: ${{ inputs.katalonRepo}}
+      # KATALON_REPO_BRANCH: ${{ inputs.katalonRepoBranch }}
+      # KATALON_PATH: 'vc-quality-gate-katalon'
 
     steps:
 
@@ -83,7 +83,7 @@ jobs:
     - name: Docker Env
       uses: VirtoCommerce/vc-github-actions/docker-env-full@VCST-2789
       with:
-        githubUser: ${{ env.GITHUB_ACTOR }}
+        # githubUser: ${{ env.GITHUB_ACTOR }}
         githubToken: ${{ env.GITHUB_TOKEN }}
         platformDockerTag: ${{ inputs.platformDockerTag }}
         platformImage: ghcr.io/virtocommerce/platform
