@@ -80,14 +80,14 @@ jobs:
     #     ref: ${{ env.KATALON_REPO_BRANCH }}
     #     path: ${{ env.KATALON_PATH }}
 
-    - name: Docker Env
+    - name: Docker Env Full
       uses: VirtoCommerce/vc-github-actions/docker-env-full@VCST-2789
       with:
         # githubUser: ${{ env.GITHUB_ACTOR }}
-        githubToken: ${{ env.GITHUB_TOKEN }}
+        # githubToken: ${{ env.GITHUB_TOKEN }}
         platformDockerTag: ${{ inputs.platformDockerTag }}
         platformImage: ghcr.io/virtocommerce/platform
-        validateSwagger: 'false'
+        # validateSwagger: 'false'
         installModules: ${{ inputs.installModules }}
         installCustomModule: ${{ inputs.installCustomModule }}
         customModuleId: ${{ inputs.customModuleId }}
