@@ -44,12 +44,7 @@ on:
         description: 'Platform docker tag'
         required: false
         type: string
-        default: 'dev-linux-latest'
-      storefrontDockerTag:
-        description: 'Storefront docker tag'
-        required: false
-        type: string
-        default: 'dev-linux-latest'
+        default: 'local-latest'
 
     secrets:
       envPAT:
@@ -86,7 +81,7 @@ jobs:
         # githubUser: ${{ env.GITHUB_ACTOR }}
         # githubToken: ${{ env.GITHUB_TOKEN }}
         platformDockerTag: ${{ inputs.platformDockerTag }}
-        platformImage: ghcr.io/virtocommerce/platform
+        # platformImage: ghcr.io/virtocommerce/platform
         # validateSwagger: 'false'
         installModules: ${{ inputs.installModules }}
         installCustomModule: ${{ inputs.installCustomModule }}
