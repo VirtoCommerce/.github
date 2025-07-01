@@ -101,10 +101,10 @@ on:
         type: string
         default: 'true'
       browser:
-        description: 'Browser (JSON array format: ["chromium", "firefox", "webkit"])'
+        # description: 'Browser (JSON array format: ["chromium", "firefox", "webkit"])'
         required: false
         type: string
-        default: '["chromium"]'
+        default: 'chromium' #'["chromium"]'
 
     secrets:
       envPAT:
@@ -144,7 +144,7 @@ jobs:
       with:
         vctestingRepo: ${{ inputs.vctestingRepo }}
         vctestingRepoBranch: ${{ inputs.vctestingRepoBranch }}
-        vctestingPath: 'vc-quality-gate-vctesting'
+        vctestingPath: 'vc-testing-module'
         baseUrl: ${{ inputs.baseUrl }}
         backUrl: ${{ inputs.backUrl }}
         adminUsername: ${{ inputs.adminUsername }}
