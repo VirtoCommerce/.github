@@ -5,31 +5,26 @@ name: Common UI tests
 on:
   workflow_call:
     inputs:
-      # katalonRepo:
-      #   description: 'UI tests repository'
-      #   required: false
-      #   type: string
-      #   default: 'VirtoCommerce/vc-quality-gate-katalon'
-      # katalonRepoBranch:
-      #   description: 'UI tests repository branch'
-      #   required: false
-      #   type: string
-      #   default: 'dev'
-      # testSuite:
-      #   description: 'Test Suite'
-      #   required: false
-      #   type: string
-      #   default: 'Test Suites/Modules/Platform_collection'
+      vctestingRepo:
+        description: 'UI tests repository'
+        required: false
+        type: string
+        default: 'VirtoCommerce/vc-testing-module'
+      vctestingRepoBranch:
+        description: 'UI tests repository branch'
+        required: false
+        type: string
+        default: 'dev'
       installModules:
         description: 'Enable or disable "Install Modules" step'
         required: false
         type: string
-        default: true
+        default: 'true'
       installCustomModule:
         description: 'Enable or disable "Install Custom Modules" step'
         required: false
         type: string
-        default: false
+        default: 'false'
       customModuleId:
         description: 'Custom Module id'
         required: false
@@ -45,104 +40,77 @@ on:
         required: false
         type: string
         default: 'local-latest'
+      baseUrl:
+        description: 'Base url'
+        required: false
+        type: string
+        default: 'https://localhost:8090'
 
     secrets:
       envPAT:
         required: true
-      # katalonApiKey:
-      #   required: true
 
 jobs:
-  e2e-tests:
-    runs-on: ubuntu-22.04 # katalon action runs correctly on ubuntu-18.04
+  ui-autotests:
+    runs-on: ubuntu-22.04
+    strategy:
+      matrix:
+        browser: [chromium]
 
     env:
       GITHUB_TOKEN: ${{ secrets.envPAT }}
-      # DEFAULT_TEST_SUITE: ${{ inputs.testSuite }}
-      # KATALON_REPO: ${{ inputs.katalonRepo}}
-      # KATALON_REPO_BRANCH: ${{ inputs.katalonRepoBranch }}
-      # KATALON_PATH: 'vc-quality-gate-katalon'
+      VC-TESTING_REPO: ${{ inputs.vctestingRepo}}
+      VC-TESTING_REPO_BRANCH: ${{ inputs.vctestingRepoBranch }}
+      VC-TESTING_PATH: 'vc-quality-gate-vctesting'
 
     steps:
 
     - name: Install VirtoCommerce.GlobalTool
       uses: VirtoCommerce/vc-github-actions/setup-vcbuild@master
 
-    # - name: Getting tests
-    #   uses: actions/checkout@v4
-    #   with:
-    #     repository: ${{ env.KATALON_REPO }}
-    #     ref: ${{ env.KATALON_REPO_BRANCH }}
-    #     path: ${{ env.KATALON_PATH }}
+    - name: Getting tests
+      uses: actions/checkout@v4
+      with:
+        repository: ${{ env.VC-TESTING_REPO }}
+        ref: ${{ env.VC-TESTING_REPO_BRANCH }}
+        path: ${{ env.VC-TESTING_PATH }}
 
     - name: Docker Env Full
       uses: VirtoCommerce/vc-github-actions/docker-env-full@VCST-2789
       with:
-        # githubUser: ${{ env.GITHUB_ACTOR }}
-        # githubToken: ${{ env.GITHUB_TOKEN }}
         platformDockerTag: ${{ inputs.platformDockerTag }}
-        # platformImage: ghcr.io/virtocommerce/platform
-        # validateSwagger: 'false'
         installModules: ${{ inputs.installModules }}
         installCustomModule: ${{ inputs.installCustomModule }}
         customModuleId: ${{ inputs.customModuleId }}
         customModuleUrl: ${{ inputs.customModuleUrl }}
         envDir: '${{ github.workspace }}'
         
-    # - name: Setup Java
-    #   uses: actions/setup-java@v4
-    #   with:
-    #     distribution: 'temurin'
-    #     java-version: '17'
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: "3.11"
 
-    # - name: Katalon Studio Github Action
-    #   uses: VirtoCommerce/vc-github-actions/katalon-studio-github-action@master
-    #   with:
-    #     version: '9.4.0'
-    #     projectPath: '${{ github.workspace }}/${{ env.KATALON_PATH }}/platform_storefront.prj'
-    #     args: '-noSplash -retry=0 -testSuiteCollectionPath="${{ env.DEFAULT_TEST_SUITE }}" -browserType="Chrome" -apiKey= ${{ secrets.katalonApiKey }} -g_urlBack="http://localhost:8090" -g_urlFront="http://localhost:8080" -executionProfile="default"'
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+        pip install pytest-html
+        
+    - name: Install Playwright Browsers
+      run: playwright install --with-deps ${{ matrix.browser }}
+      
+    - name: Run GraphQL Tests
+      run: |
+        echo "Running GraphQL tests against ${{ inputs.baseUrl }}"
+        pytest tests_graphql/tests/ --browser ${{ matrix.browser }} --html=graphql-report.html --self-contained-html --tracing=retain-on-failure -v -s
 
-    # - name: Save Katalon Report as workflow artifact
-    #   if: always()
-    #   uses: actions/upload-artifact@v4
-    #   with:
-    #     name: reports
-    #     path: |
-    #       vc-quality-gate-katalon/Reports
-    #       /home/runner/.katalon/*/Katalon_Studio_Engine_Linux_*/configuration/*.log.
-    #     retention-days: 5
-
-    # - name: Katalon Report to PR
-    #   if: ${{ ( success() || failure() ) && github.event_name == 'pull_request' }}
-    #   uses: VirtoCommerce/vc-github-actions/publish-katalon-report@master
-    #   with:
-    #     testProjectPath: ${{ github.workspace }}
-
-    # - name: Parse JUnit_Report.xml
-    #   if: always()
-    #   shell: pwsh
-    #   run: |
-    #     $reportXml = find vc-quality-gate-katalon/Reports -name 'JUnit_Report.xml'
-    #     Write-Output "Found report file(s) path(es):"
-    #     Write-Output $($reportXml.GetEnumerator())
-    #     $array = @()
-    #     $failures = @()
-    #     $casePattern = '\d{2}-\d{2}-\d{4}T\d{2}:\d{2}:\d{2}\s-\s\[TEST_CASE\]\[FAILED\]'
-    #     $failurePattern = '\d{2}-\d{2}-\d{4}T\d{2}:\d{2}:\d{2}\s-\s\[.*\]\[FAILED\]\s-\s[\S\s\r]*?(?=\d{2}-\d{2}-\d{4}T\d{2}:\d{2}:\d{2}\s-\s\[.*\]\[\w+\])'
-    #     foreach ($file in $reportXml){
-    #       $XPath = "/testsuites/testsuite/testcase/system-out"
-    #       $mc = Select-Xml -Path $file -XPath $Xpath | Select-Object -ExpandProperty Node
-    #       $array = $($mc.GetEnumerator())
-    #       foreach ($item in $array){
-    #         $m = ([regex]$failurePattern).Matches($($item.InnerText))
-    #         foreach ($fail in $m.Groups) {
-    #           $failures += $($fail.Value)
-    #         }
-    #       }
-    #     }
-    #     if ($($failures.count) -eq 0){
-    #       Write-Output "No failures found!"
-    #     } else {
-    #       Write-Output "Found failures:"
-    #       Write-Output $($failures.GetEnumerator())
-    #     }
+    - name: Upload test results
+      if: always()
+      uses: actions/upload-artifact@v4
+      with:
+        name: graphql-test-results-${{ matrix.browser }}
+        path: |
+          graphql-report.html
+          playwright-report/
+          test-results/
+        retention-days: 30
