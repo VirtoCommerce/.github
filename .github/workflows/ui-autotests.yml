@@ -5,16 +5,6 @@ name: Common UI tests
 on:
   workflow_call:
     inputs:
-      vctestingRepo:
-        description: 'UI tests repository'
-        required: false
-        type: string
-        default: 'VirtoCommerce/vc-testing-module'
-      vctestingRepoBranch:
-        description: 'UI tests repository branch'
-        required: false
-        type: string
-        default: 'dev'
       installModules:
         description: 'Enable or disable "Install Modules" step'
         required: false
@@ -40,11 +30,81 @@ on:
         required: false
         type: string
         default: 'local-latest'
-      baseUrl:
-        description: 'Base url'
+      vctestingRepo:
+        description: 'UI tests repository'
         required: false
         type: string
-        default: 'https://localhost:8090'
+        default: 'VirtoCommerce/vc-testing-module'
+      vctestingRepoBranch:
+        description: 'UI tests repository branch'
+        required: false
+        type: string
+        default: 'dev'
+      vctestingPath:
+        description: 'UI tests path'
+        required: false
+        type: string
+        default: 'vc-testing-module'
+      baseUrl:
+        description: 'Base URL'
+        required: false
+        type: string
+        default: 'localhost'
+      backUrl:
+        description: 'Back URL'
+        required: false
+        type: string
+        default: 'localhost:8090'
+      adminUsername:
+        description: 'Admin Username'
+        required: false
+        type: string
+        default: 'admin'
+      adminPassword:
+        description: 'Admin Password'
+        required: false
+        type: string
+        default: 'Password3'
+      adminToken:
+        description: 'Admin Token'
+        required: true
+        type: string
+        default: '1234567890'
+      userEmail:
+        description: 'User Email'
+        required: false
+        type: string
+        default: 'b2badmin@test.com'
+      frontAdmin:
+        description: 'Front Admin'
+        required: false
+        type: string
+        default: 'e2e-admin@test.com'
+      password:
+        description: 'Password'
+        required: false
+        type: string
+        default: 'Password1'
+      apiKey:
+        description: 'API Key'
+        required: false
+        type: string
+        default: '1add83ea-2235-41fe-b623-825070824059'
+      storeId:
+        description: 'Store ID'
+        required: false
+        type: string
+        default: 'B2B-store'
+      playwrightHeadless:
+        description: 'Playwright Headless'
+        required: false
+        type: string
+        default: 'true'
+      browser:
+        description: 'Browser (JSON array format: ["chromium", "firefox", "webkit"])'
+        required: false
+        type: string
+        default: '["chromium"]'
 
     secrets:
       envPAT:
@@ -53,27 +113,21 @@ on:
 jobs:
   ui-autotests:
     runs-on: ubuntu-22.04
-    strategy:
-      matrix:
-        browser: [chromium]
 
     env:
       GITHUB_TOKEN: ${{ secrets.envPAT }}
-      VC-TESTING_REPO: ${{ inputs.vctestingRepo}}
-      VC-TESTING_REPO_BRANCH: ${{ inputs.vctestingRepoBranch }}
-      VC-TESTING_PATH: 'vc-quality-gate-vctesting'
 
     steps:
 
     - name: Install VirtoCommerce.GlobalTool
       uses: VirtoCommerce/vc-github-actions/setup-vcbuild@master
 
-    - name: Getting tests
-      uses: actions/checkout@v4
-      with:
-        repository: ${{ env.VC-TESTING_REPO }}
-        ref: ${{ env.VC-TESTING_REPO_BRANCH }}
-        path: ${{ env.VC-TESTING_PATH }}
+    # - name: Getting tests
+    #   uses: actions/checkout@v4
+    #   with:
+    #     repository: ${{ env.VC-TESTING_REPO }}
+    #     ref: ${{ env.VC-TESTING_REPO_BRANCH }}
+    #     path: ${{ env.VC-TESTING_PATH }}
 
     - name: Docker Env Full
       uses: VirtoCommerce/vc-github-actions/docker-env-full@VCST-2789
@@ -84,33 +138,52 @@ jobs:
         customModuleId: ${{ inputs.customModuleId }}
         customModuleUrl: ${{ inputs.customModuleUrl }}
         envDir: '${{ github.workspace }}'
-        
-    - name: Set up Python
-      uses: actions/setup-python@v5
-      with:
-        python-version: "3.11"
-
-    - name: Install dependencies
-      run: |
-        python -m pip install --upgrade pip
-        pip install -r requirements.txt
-        pip install pytest-html
-        
-    - name: Install Playwright Browsers
-      run: playwright install --with-deps ${{ matrix.browser }}
-      
+    
     - name: Run GraphQL Tests
-      run: |
-        echo "Running GraphQL tests against ${{ inputs.baseUrl }}"
-        pytest tests_graphql/tests/ --browser ${{ matrix.browser }} --html=graphql-report.html --self-contained-html --tracing=retain-on-failure -v -s
-
-    - name: Upload test results
-      if: always()
-      uses: actions/upload-artifact@v4
+      uses: VirtoCommerce/vc-github-actions/run-graphql-tests@VCST-2789
       with:
-        name: graphql-test-results-${{ matrix.browser }}
-        path: |
-          graphql-report.html
-          playwright-report/
-          test-results/
-        retention-days: 30
+        vctestingRepo: ${{ inputs.vctestingRepo }}
+        vctestingRepoBranch: ${{ inputs.vctestingRepoBranch }}
+        vctestingPath: 'vc-quality-gate-vctesting'
+        baseUrl: ${{ inputs.baseUrl }}
+        backUrl: ${{ inputs.backUrl }}
+        adminUsername: ${{ inputs.adminUsername }}
+        adminPassword: ${{ inputs.adminPassword }}
+        adminToken: ${{ env.VC_ADMIN_TOKEN }}
+        userEmail: ${{ inputs.userEmail }}
+        frontAdmin: ${{ inputs.frontAdmin }}
+        password: ${{ inputs.password }}
+        apiKey: ${{ secrets.apiKey }}
+        storeId: ${{ inputs.storeId }}
+        playwrightHeadless: ${{ inputs.playwrightHeadless }}
+        browser: ${{ inputs.browser }}
+
+    # - name: Set up Python
+    #   uses: actions/setup-python@v5
+    #   with:
+    #     python-version: "3.11"
+
+    # - name: Install dependencies
+    #   run: |
+    #     python -m pip install --upgrade pip
+    #     pip install -r requirements.txt
+    #     pip install pytest-html
+        
+    # - name: Install Playwright Browsers
+    #   run: playwright install --with-deps ${{ matrix.browser }}
+      
+    # - name: Run GraphQL Tests
+    #   run: |
+    #     echo "Running GraphQL tests against ${{ inputs.baseUrl }}"
+    #     pytest tests_graphql/tests/ --browser ${{ matrix.browser }} --html=graphql-report.html --self-contained-html --tracing=retain-on-failure -v -s
+
+    # - name: Upload test results
+    #   if: always()
+    #   uses: actions/upload-artifact@v4
+    #   with:
+    #     name: graphql-test-results-${{ matrix.browser }}
+    #     path: |
+    #       graphql-report.html
+    #       playwright-report/
+    #       test-results/
+    #     retention-days: 30
