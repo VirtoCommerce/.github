@@ -65,11 +65,11 @@ on:
         required: false
         type: string
         default: 'Password3'
-      adminToken:
-        description: 'Admin Token'
-        required: true
-        type: string
-        default: '1234567890'
+      # adminToken:
+      #   description: 'Admin Token'
+      #   required: true
+      #   type: string
+      #   default: '1234567890'
       userEmail:
         description: 'User Email'
         required: false
