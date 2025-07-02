@@ -5,16 +5,35 @@ name: Common UI tests
 on:
   workflow_call:
     inputs:
-      installModules:
-        description: 'Enable or disable "Install Modules" step'
+      adminPassword:
+        description: 'Admin Password'
         required: false
         type: string
-        default: 'true'
-      installCustomModule:
-        description: 'Enable or disable "Install Custom Modules" step'
+        default: 'Password3'
+      adminUsername:
+        description: 'Admin Username'
         required: false
         type: string
-        default: 'false'
+        default: 'admin'
+      apiKey:
+        description: 'API Key'
+        required: false
+        type: string
+        default: '1add83ea-2235-41fe-b623-825070824059'
+      backUrl:
+        description: 'Back URL'
+        required: false
+        type: string
+        default: 'localhost:8090'
+      baseUrl:
+        description: 'Base URL'
+        required: false
+        type: string
+        default: 'localhost'
+      browser:
+        required: false
+        type: string
+        default: 'chromium'
       customModuleId:
         description: 'Custom Module id'
         required: false
@@ -25,11 +44,55 @@ on:
         required: false
         type: string
         default: ''
+      frontAdmin:
+        description: 'Front Admin'
+        required: false
+        type: string
+        default: 'e2e-admin@test.com'
+      frontendZipUrl:
+        required: false
+        type: string
+        default: 'https://github.com/VirtoCommerce/vc-frontend/releases/download/2.23.0/vc-theme-b2b-vue-2.23.0.zip'
+      installCustomModule:
+        description: 'Enable or disable "Install Custom Modules" step'
+        required: false
+        type: string
+        default: 'false'
+      installModules:
+        description: 'Enable or disable "Install Modules" step'
+        required: false
+        type: string
+        default: 'true'
+      password:
+        description: 'Password'
+        required: false
+        type: string
+        default: 'Password1'
+      playwrightHeadless:
+        description: 'Playwright Headless'
+        required: false
+        type: string
+        default: 'true'
       platformDockerTag:
         description: 'Platform docker tag'
         required: false
         type: string
         default: 'local-latest'
+      storeId:
+        description: 'Store ID'
+        required: false
+        type: string
+        default: 'B2B-store'
+      userEmail:
+        description: 'User Email'
+        required: false
+        type: string
+        default: 'b2badmin@test.com'
+      vctestingPath:
+        description: 'UI tests path'
+        required: false
+        type: string
+        default: 'vc-testing-module'
       vctestingRepo:
         description: 'UI tests repository'
         required: false
@@ -40,75 +103,6 @@ on:
         required: false
         type: string
         default: 'dev'
-      vctestingPath:
-        description: 'UI tests path'
-        required: false
-        type: string
-        default: 'vc-testing-module'
-      baseUrl:
-        description: 'Base URL'
-        required: false
-        type: string
-        default: 'localhost'
-      backUrl:
-        description: 'Back URL'
-        required: false
-        type: string
-        default: 'localhost:8090'
-      adminUsername:
-        description: 'Admin Username'
-        required: false
-        type: string
-        default: 'admin'
-      adminPassword:
-        description: 'Admin Password'
-        required: false
-        type: string
-        default: 'Password3'
-      # adminToken:
-      #   description: 'Admin Token'
-      #   required: true
-      #   type: string
-      #   default: '1234567890'
-      userEmail:
-        description: 'User Email'
-        required: false
-        type: string
-        default: 'b2badmin@test.com'
-      frontAdmin:
-        description: 'Front Admin'
-        required: false
-        type: string
-        default: 'e2e-admin@test.com'
-      password:
-        description: 'Password'
-        required: false
-        type: string
-        default: 'Password1'
-      apiKey:
-        description: 'API Key'
-        required: false
-        type: string
-        default: '1add83ea-2235-41fe-b623-825070824059'
-      storeId:
-        description: 'Store ID'
-        required: false
-        type: string
-        default: 'B2B-store'
-      playwrightHeadless:
-        description: 'Playwright Headless'
-        required: false
-        type: string
-        default: 'true'
-      browser:
-        # description: 'Browser (JSON array format: ["chromium", "firefox", "webkit"])'
-        required: false
-        type: string
-        default: 'chromium' #'["chromium"]'
-      frontendZipUrl:
-        required: false
-        type: string
-        default: 'https://github.com/VirtoCommerce/vc-frontend/releases/download/2.23.0/vc-theme-b2b-vue-2.23.0.zip'
 
     secrets:
       envPAT:
