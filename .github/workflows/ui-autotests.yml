@@ -126,13 +126,6 @@ jobs:
     - name: Install VirtoCommerce.GlobalTool
       uses: VirtoCommerce/vc-github-actions/setup-vcbuild@master
 
-    # - name: Getting tests
-    #   uses: actions/checkout@v4
-    #   with:
-    #     repository: ${{ env.VC-TESTING_REPO }}
-    #     ref: ${{ env.VC-TESTING_REPO_BRANCH }}
-    #     path: ${{ env.VC-TESTING_PATH }}
-
     - name: Docker Env Full
       uses: VirtoCommerce/vc-github-actions/docker-env-full@VCST-2789
       with:
@@ -141,7 +134,6 @@ jobs:
         installCustomModule: ${{ inputs.installCustomModule }}
         customModuleId: ${{ inputs.customModuleId }}
         customModuleUrl: ${{ inputs.customModuleUrl }}
-        envDir: '${{ github.workspace }}'
         frontendZipUrl: ${{ inputs.frontendZipUrl }}
     
     - name: Run GraphQL Tests
@@ -162,33 +154,3 @@ jobs:
         storeId: ${{ inputs.storeId }}
         playwrightHeadless: ${{ inputs.playwrightHeadless }}
         browser: ${{ inputs.browser }}
-
-    # - name: Set up Python
-    #   uses: actions/setup-python@v5
-    #   with:
-    #     python-version: "3.11"
-
-    # - name: Install dependencies
-    #   run: |
-    #     python -m pip install --upgrade pip
-    #     pip install -r requirements.txt
-    #     pip install pytest-html
-        
-    # - name: Install Playwright Browsers
-    #   run: playwright install --with-deps ${{ matrix.browser }}
-      
-    # - name: Run GraphQL Tests
-    #   run: |
-    #     echo "Running GraphQL tests against ${{ inputs.baseUrl }}"
-    #     pytest tests_graphql/tests/ --browser ${{ matrix.browser }} --html=graphql-report.html --self-contained-html --tracing=retain-on-failure -v -s
-
-    # - name: Upload test results
-    #   if: always()
-    #   uses: actions/upload-artifact@v4
-    #   with:
-    #     name: graphql-test-results-${{ matrix.browser }}
-    #     path: |
-    #       graphql-report.html
-    #       playwright-report/
-    #       test-results/
-    #     retention-days: 30
