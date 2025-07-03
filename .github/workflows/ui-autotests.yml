@@ -127,6 +127,7 @@ jobs:
       run: |
         echo "RunTests is disabled"
         exit 0
+        echo "::notice title=Job Name::DRY RUN"
 
     - name: Install VirtoCommerce.GlobalTool
       if: ${{ inputs.runTests == 'true' }}
