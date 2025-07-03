@@ -130,13 +130,6 @@ jobs:
       GITHUB_TOKEN: ${{ secrets.envPAT }}
 
     steps:
-
-    - name: Check if runTests is enabled
-      run: |
-        echo "RunTests is disabled"
-        exit 0
-        echo "::notice title=Job Name::DRY RUN"
-
     - name: Install VirtoCommerce.GlobalTool
       uses: VirtoCommerce/vc-github-actions/setup-vcbuild@master
 
