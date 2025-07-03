@@ -44,6 +44,11 @@ on:
         required: false
         type: string
         default: ''
+      runTests:
+        description: 'Run tests'
+        required: false
+        type: string
+        default: 'true'
       frontAdmin:
         description: 'Front Admin'
         required: false
@@ -116,6 +121,12 @@ jobs:
       GITHUB_TOKEN: ${{ secrets.envPAT }}
 
     steps:
+
+    - name: Check if runTests is enabled
+      if: ${{ inputs.runTests == 'false' }}
+      run: |
+        echo "RunTests is disabled"
+        exit 0
 
     - name: Install VirtoCommerce.GlobalTool
       uses: VirtoCommerce/vc-github-actions/setup-vcbuild@master
