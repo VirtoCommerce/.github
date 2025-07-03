@@ -44,6 +44,11 @@ on:
         required: false
         type: string
         default: ''
+      runTests:
+        description: 'Run tests'
+        required: false
+        type: string
+        default: 'true'
       frontAdmin:
         description: 'Front Admin'
         required: false
@@ -109,13 +114,28 @@ on:
         required: true
 
 jobs:
+  dry-run:
+    if: ${{ inputs.runTests == 'false' }}
+    runs-on: ubuntu-22.04
+    steps:
+      - name: Check if runTests is enabled
+        run: |
+          echo "RunTests is disabled"
   ui-autotests:
+    if: ${{ inputs.runTests == 'true' }}
     runs-on: ubuntu-22.04
 
     env:
       GITHUB_TOKEN: ${{ secrets.envPAT }}
 
     steps:
+
+    - name: Check if runTests is enabled
+      run: |
+        echo "RunTests is disabled"
+        exit 0
+        echo "::notice title=Job Name::DRY RUN"
+
     - name: Install VirtoCommerce.GlobalTool
       uses: VirtoCommerce/vc-github-actions/setup-vcbuild@master
 
