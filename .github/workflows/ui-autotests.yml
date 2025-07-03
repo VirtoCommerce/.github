@@ -44,11 +44,6 @@ on:
         required: false
         type: string
         default: ''
-      runTests:
-        description: 'Run tests'
-        required: false
-        type: string
-        default: 'true'
       frontAdmin:
         description: 'Front Admin'
         required: false
@@ -83,6 +78,11 @@ on:
         required: false
         type: string
         default: 'local-latest'
+      runTests:
+        description: 'Run tests'
+        required: false
+        type: string
+        default: 'true'
       storeId:
         description: 'Store ID'
         required: false
@@ -121,6 +121,7 @@ jobs:
       - name: Check if runTests is enabled
         run: |
           echo "RunTests is disabled"
+
   ui-autotests:
     if: ${{ inputs.runTests == 'true' }}
     runs-on: ubuntu-22.04
