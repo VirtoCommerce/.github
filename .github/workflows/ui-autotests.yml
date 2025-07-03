@@ -114,7 +114,15 @@ on:
         required: true
 
 jobs:
+  dry-run:
+    if: ${{ inputs.runTests == 'false' }}
+    runs-on: ubuntu-22.04
+    steps:
+      - name: Check if runTests is enabled
+        run: |
+          echo "RunTests is disabled"
   ui-autotests:
+    if: ${{ inputs.runTests == 'true' }}
     runs-on: ubuntu-22.04
 
     env:
@@ -123,18 +131,15 @@ jobs:
     steps:
 
     - name: Check if runTests is enabled
-      if: ${{ inputs.runTests == 'false' }}
       run: |
         echo "RunTests is disabled"
         exit 0
         echo "::notice title=Job Name::DRY RUN"
 
     - name: Install VirtoCommerce.GlobalTool
-      if: ${{ inputs.runTests == 'true' }}
       uses: VirtoCommerce/vc-github-actions/setup-vcbuild@master
 
     - name: Docker Env Full
-      if: ${{ inputs.runTests == 'true' }}
       uses: VirtoCommerce/vc-github-actions/docker-env-full@VCST-2789
       with:
         platformDockerTag: ${{ inputs.platformDockerTag }}
@@ -145,7 +150,6 @@ jobs:
         frontendZipUrl: ${{ inputs.frontendZipUrl }}
     
     - name: Run GraphQL Tests
-      if: ${{ inputs.runTests == 'true' }}
       uses: VirtoCommerce/vc-github-actions/run-graphql-tests@VCST-2789
       with:
         vctestingRepo: ${{ inputs.vctestingRepo }}
