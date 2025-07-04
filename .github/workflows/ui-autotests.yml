@@ -1,0 +1,163 @@
+# v3.800.13
+# https://virtocommerce.atlassian.net/browse/VCST-2789
+name: Common UI tests
+
+on:
+  workflow_call:
+    inputs:
+      adminPassword:
+        description: 'Admin Password'
+        required: false
+        type: string
+        default: 'Password3'
+      adminUsername:
+        description: 'Admin Username'
+        required: false
+        type: string
+        default: 'admin'
+      apiKey:
+        description: 'API Key'
+        required: false
+        type: string
+        default: '1add83ea-2235-41fe-b623-825070824059'
+      backUrl:
+        description: 'Back URL'
+        required: false
+        type: string
+        default: 'localhost:8090'
+      baseUrl:
+        description: 'Base URL'
+        required: false
+        type: string
+        default: 'localhost'
+      browser:
+        required: false
+        type: string
+        default: 'chromium'
+      customModuleId:
+        description: 'Custom Module id'
+        required: false
+        type: string
+        default: ''
+      customModuleUrl:
+        description: 'Custom module Module url'
+        required: false
+        type: string
+        default: ''
+      frontAdmin:
+        description: 'Front Admin'
+        required: false
+        type: string
+        default: 'e2e-admin@test.com'
+      frontendZipUrl:
+        required: false
+        type: string
+        default: 'https://github.com/VirtoCommerce/vc-frontend/releases/download/2.23.0/vc-theme-b2b-vue-2.23.0.zip'
+      installCustomModule:
+        description: 'Enable or disable "Install Custom Modules" step'
+        required: false
+        type: string
+        default: 'false'
+      installModules:
+        description: 'Enable or disable "Install Modules" step'
+        required: false
+        type: string
+        default: 'true'
+      password:
+        description: 'Password'
+        required: false
+        type: string
+        default: 'Password1'
+      playwrightHeadless:
+        description: 'Playwright Headless'
+        required: false
+        type: string
+        default: 'true'
+      platformDockerTag:
+        description: 'Platform docker tag'
+        required: false
+        type: string
+        default: 'local-latest'
+      runTests:
+        description: 'Run tests'
+        required: false
+        type: string
+        default: 'true'
+      storeId:
+        description: 'Store ID'
+        required: false
+        type: string
+        default: 'B2B-store'
+      userEmail:
+        description: 'User Email'
+        required: false
+        type: string
+        default: 'b2badmin@test.com'
+      vctestingPath:
+        description: 'UI tests path'
+        required: false
+        type: string
+        default: 'vc-testing-module'
+      vctestingRepo:
+        description: 'UI tests repository'
+        required: false
+        type: string
+        default: 'VirtoCommerce/vc-testing-module'
+      vctestingRepoBranch:
+        description: 'UI tests repository branch'
+        required: false
+        type: string
+        default: 'dev'
+
+    secrets:
+      envPAT:
+        required: true
+
+jobs:
+  dry-run:
+    if: ${{ inputs.runTests == 'false' }}
+    runs-on: ubuntu-22.04
+    steps:
+      - name: Check if runTests is enabled
+        run: |
+          echo "RunTests is disabled"
+
+  ui-autotests:
+    if: ${{ inputs.runTests == 'true' }}
+    runs-on: ubuntu-22.04
+
+    env:
+      GITHUB_TOKEN: ${{ secrets.envPAT }}
+
+    steps:
+    - name: Install VirtoCommerce.GlobalTool
+      uses: VirtoCommerce/vc-github-actions/setup-vcbuild@master
+
+    - name: Docker Env Full
+      uses: VirtoCommerce/vc-github-actions/docker-env-full@master
+      with:
+        platformDockerTag: ${{ inputs.platformDockerTag }}
+        installModules: ${{ inputs.installModules }}
+        installCustomModule: ${{ inputs.installCustomModule }}
+        customModuleId: ${{ inputs.customModuleId }}
+        customModuleUrl: ${{ inputs.customModuleUrl }}
+        frontendZipUrl: ${{ inputs.frontendZipUrl }}
+    
+    - name: Run GraphQL Tests
+      uses: VirtoCommerce/vc-github-actions/run-graphql-tests@master
+      with:
+        vctestingRepo: ${{ inputs.vctestingRepo }}
+        vctestingRepoBranch: ${{ inputs.vctestingRepoBranch }}
+        vctestingPath: 'vc-testing-module'
+        baseUrl: ${{ inputs.baseUrl }}
+        backUrl: ${{ inputs.backUrl }}
+        adminUsername: ${{ inputs.adminUsername }}
+        adminPassword: ${{ inputs.adminPassword }}
+        adminToken: ${{ env.VC_ADMIN_TOKEN }}
+        userEmail: ${{ inputs.userEmail }}
+        frontAdmin: ${{ inputs.frontAdmin }}
+        password: ${{ inputs.password }}
+        apiKey: ${{ inputs.apiKey }}
+        storeId: ${{ inputs.storeId }}
+        playwrightHeadless: ${{ inputs.playwrightHeadless }}
+        browser: ${{ inputs.browser }}
