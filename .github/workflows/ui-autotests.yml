@@ -24,12 +24,12 @@ on:
         description: 'Back URL'
         required: false
         type: string
-        default: 'localhost:8090'
+        default: 'http://localhost:8090'
       baseUrl:
         description: 'Base URL'
         required: false
         type: string
-        default: 'localhost'
+        default: 'http://localhost'
       browser:
         required: false
         type: string
