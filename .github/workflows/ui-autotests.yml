@@ -144,7 +144,7 @@ jobs:
         frontendZipUrl: ${{ inputs.frontendZipUrl }}
     
     - name: Run GraphQL Tests
-      uses: VirtoCommerce/vc-github-actions/run-graphql-tests@master
+      uses: VirtoCommerce/vc-github-actions/run-graphql-tests@VCST-2789-1
       with:
         vctestingRepo: ${{ inputs.vctestingRepo }}
         vctestingRepoBranch: ${{ inputs.vctestingRepoBranch }}
