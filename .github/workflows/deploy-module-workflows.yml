@@ -78,7 +78,8 @@ jobs:
                   ,vc-module-webhooks
                   ,vc-module-native-payment-methods
                   ,vc-module-skyflow
-                  ,vc-module-shipstation                  
+                  ,vc-module-shipstation    
+                  ,vc-module-sql-queries
                   ,vc-module-white-labeling
                   ,vc-module-x-api
                   ,vc-module-x-cart
