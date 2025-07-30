@@ -57,6 +57,7 @@ jobs:
                   ,vc-module-marketing
                   ,vc-module-marketing-experience-api
                   ,vc-module-notification
+                  ,vc-module-openid-connect
                   ,vc-module-open-search
                   ,vc-module-order
                   ,vc-module-order-management
