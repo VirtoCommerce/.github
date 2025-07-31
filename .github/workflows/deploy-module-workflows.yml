@@ -82,6 +82,7 @@ jobs:
                   ,vc-module-skyflow
                   ,vc-module-shipstation    
                   ,vc-module-sql-queries
+                  ,vc-module-task-management
                   ,vc-module-white-labeling
                   ,vc-module-x-api
                   ,vc-module-x-cart
