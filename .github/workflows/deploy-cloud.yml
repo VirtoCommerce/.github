@@ -65,6 +65,13 @@ jobs:
       SLEEP_TIME: '3m'
 
     steps: 
+      - name: Check if matrix.confPath file exists
+        shell: pwsh
+        run: |
+           if (-Not (Test-Path "${{ matrix.confPath }}")) {
+             Write-Host "File ${{ matrix.confPath }} does not exist. Skipping workflow."
+             exit 0
+           }
 
       - name: Set forceCommit value #Create deployment commit instead of Pull request to a deployment repo
         id: forceCommit
