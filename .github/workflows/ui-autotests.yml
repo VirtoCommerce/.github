@@ -142,6 +142,7 @@ jobs:
         customModuleId: ${{ inputs.customModuleId }}
         customModuleUrl: ${{ inputs.customModuleUrl }}
         frontendZipUrl: ${{ inputs.frontendZipUrl }}
+        bacpacFileUrl: 'https://testdsampledata.blob.core.windows.net/sampledata/VirtoCommerce3docker.bacpac'
     
     - name: Run GraphQL Tests
       uses: VirtoCommerce/vc-github-actions/run-graphql-tests@VCST-2789-1
