@@ -134,7 +134,7 @@ jobs:
       uses: VirtoCommerce/vc-github-actions/setup-vcbuild@master
 
     - name: Docker Env Full
-      uses: VirtoCommerce/vc-github-actions/docker-env-full@master
+      uses: VirtoCommerce/vc-github-actions/docker-env-full@VCST-2789-1 #master
       with:
         platformDockerTag: ${{ inputs.platformDockerTag }}
         installModules: ${{ inputs.installModules }}
