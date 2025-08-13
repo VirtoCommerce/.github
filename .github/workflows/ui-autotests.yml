@@ -162,3 +162,4 @@ jobs:
         storeId: ${{ inputs.storeId }}
         playwrightHeadless: ${{ inputs.playwrightHeadless }}
         browser: ${{ inputs.browser }}
+        testSecretEnvFile: ${{ secrets.TEST_SECRET_ENV_FILE_4GRAPHQLTESTS}}
