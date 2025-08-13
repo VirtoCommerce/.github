@@ -112,6 +112,8 @@ on:
     secrets:
       envPAT:
         required: true
+      testSecretEnvFile:
+        required: true
 
 jobs:
   dry-run:
@@ -162,4 +164,4 @@ jobs:
         storeId: ${{ inputs.storeId }}
         playwrightHeadless: ${{ inputs.playwrightHeadless }}
         browser: ${{ inputs.browser }}
-        testSecretEnvFile: ${{ secrets.TEST_SECRET_ENV_FILE_4GRAPHQLTESTS}}
+        testSecretEnvFile: ${{ secrets.testSecretEnvFile}}
