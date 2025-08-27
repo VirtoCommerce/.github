@@ -112,10 +112,11 @@ jobs:
 
     - name: Update blob url in PR body
       if: ${{ inputs.forceBlob }}
+      shell: pwsh
       run: |
-        $repo = ${{ github.repository }}
-        $branch = ${{ github.ref_name }}
-        $blobUrl = ${{ steps.blobRelease.outputs.packageUrl }}
+        $repo = "${{ github.repository }}"
+        $branch = "${{ github.ref_name }}"
+        $blobUrl = "${{ steps.blobRelease.outputs.packageUrl }}"
 
         # Find PR for the current branch
         $openPrsJson = gh pr list --repo $repo --head $branch --state open --json "number,headRefName,baseRefName"
