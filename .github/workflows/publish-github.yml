@@ -113,7 +113,7 @@ jobs:
     - name: Get associated PR
       id: getAssociatedPr
       if: ${{ inputs.forceBlob }}
-      uses: VirtoCommerce/vc-github-actions/get-associated-pr@VCST-3064
+      uses: VirtoCommerce/vc-github-actions/get-associated-pr@master
       with:
         repo: "${{ github.repository }}"
         branch: "${{ github.ref_name }}"
