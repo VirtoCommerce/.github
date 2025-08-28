@@ -122,6 +122,9 @@ jobs:
       if: ${{ inputs.forceBlob }}
       shell: pwsh
       run: |
+        echo "steps.getAssociatedPr.outputs.prNumber: ${{ steps.getAssociatedPr.outputs.prNumber }}"
+        echo "steps.blobRelease.outputs.packageUrl: ${{ steps.blobRelease.outputs.packageUrl }}"
+        
         $prBody = $(gh pr view ${{ steps.getAssociatedPr.outputs.prNumber }} --repo ${{ github.repository }} --json body | ConvertFrom-Json).body
         if ($prBody -match 'https:\/\/vc3prerelease.blob.core.windows.net\/packages\/(\S+)') {
             $prUpdatedBody = $prBody.Replace($matches[0], "${{ steps.blobRelease.outputs.packageUrl }}")
