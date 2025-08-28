@@ -121,7 +121,7 @@ jobs:
     - name: Update blob url in PR body
       if: ${{ inputs.forceBlob }}
       run: |
-        $prBody = $(gh pr view ${{ steps.getAssociatedPr.outputs.pr_number }} --repo ${{ github.repository }} --json body | ConvertFrom-Json).body
+        $prBody = $(gh pr view ${{ steps.getAssociatedPr.outputs.prNumber }} --repo ${{ github.repository }} --json body | ConvertFrom-Json).body
         if ($prBody -match 'https:\/\/vc3prerelease.blob.core.windows.net\/packages\/(\S+)') {
             $prUpdatedBody = $prBody.Replace($matches[0], "${{ vars.BLOB_URL }}")
             Write-Host "Updated PR body with new blob url: ${{ vars.BLOB_URL }}"
@@ -130,7 +130,7 @@ jobs:
             exit 0
         }
 
-        gh pr edit ${{ steps.getAssociatedPr.outputs.pr_number }} --repo ${{ github.repository }} --body $prUpdatedBody
+        gh pr edit ${{ steps.getAssociatedPr.outputs.prNumber }} --repo ${{ github.repository }} --body $prUpdatedBody
         if ($lastExitCode -ne 0) {
             Write-Host "Error: Failed to update PR body"
             exit 1
