@@ -112,41 +112,8 @@ jobs:
 
     - name: Update blob url in PR body
       if: ${{ inputs.forceBlob }}
-      uses: VirtoCommerce/vc-github-actions/update-blob-url-in-pr@VCST-3064
+      uses: VirtoCommerce/vc-github-actions/update-blob-url-in-pr@master
       with:
         repo: "${{ github.repository }}"
         branch: "${{ github.ref_name }}"
         blobUrl: "${{ steps.blobRelease.outputs.packageUrl }}"
-        
-    # - name: Update blob url in PR body
-    #   if: ${{ inputs.forceBlob }}
-    #   shell: pwsh
-    #   run: |
-    #     $repo = "${{ github.repository }}"
-    #     $branch = "${{ github.ref_name }}"
-    #     $blobUrl = "${{ steps.blobRelease.outputs.packageUrl }}"
-
-    #     # Find PR for the current branch
-    #     $openPrsJson = gh pr list --repo $repo --head $branch --state open --json "number,headRefName,baseRefName"
-    #     $openPrs = $openPrsJson | ConvertFrom-Json
-    #     if (!$openPrs) {
-    #         Write-Host "No open PR for branch $branch"
-    #         exit 0
-    #     }
-    #     $prNumber = $openPrs[0].number
-
-    #     $prBody = $(gh pr view $prNumber --repo $repo --json body | ConvertFrom-Json).body
-    #     if ($prBody -match 'https:\/\/vc3prerelease.blob.core.windows.net\/packages\/(\S+)') {
-    #         $prUpdatedBody = $prBody.Replace($matches[0], $blobUrl)
-    #         Write-Host "Updated PR body with new blob url: $blobUrl"
-    #     } else {
-    #         Write-Warning "No blob url found in PR body. Skipping update."
-    #         exit 0
-    #     }
-
-    #     # Update PR body
-    #     gh pr edit $prNumber --repo $repo --body $prUpdatedBody
-    #     if ($lastExitCode -ne 0) {
-    #         Write-Host "Error: Failed to update PR body"
-    #         exit 1
-    #     }
