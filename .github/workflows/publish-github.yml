@@ -118,16 +118,16 @@ jobs:
         repo: "${{ github.repository }}"
         branch: "${{ github.ref_name }}"
 
-    - name: Update blob url in PR body
+    - name: Update blob URL in PR body
       if: ${{ inputs.forceBlob && steps.getPrNumber.outputs.prNumber != '' && steps.getPrNumber.outputs.prNumber != null }}
       shell: pwsh
       run: |
         $prBody = $(gh pr view ${{ steps.getPrNumber.outputs.prNumber }} --repo ${{ github.repository }} --json body | ConvertFrom-Json).body
         if ($prBody -match 'https:\/\/vc3prerelease.blob.core.windows.net\/packages\/(\S+)') {
             $prUpdatedBody = $prBody.Replace($matches[0], "${{ steps.blobRelease.outputs.packageUrl }}")
-            Write-Host "Updated PR #${{ steps.getPrNumber.outputs.prNumber }} body with new blob url: ${{ steps.blobRelease.outputs.packageUrl }}"
+            Write-Host "Updated PR #${{ steps.getPrNumber.outputs.prNumber }} body with new blob URL: ${{ steps.blobRelease.outputs.packageUrl }}"
         } else {
-            Write-Warning "No blob url found in PR body. Skipping update."
+            Write-Warning "No blob URL found in PR body. Skipping update."
             exit 0
         }
         gh pr edit ${{ steps.getPrNumber.outputs.prNumber }} --repo ${{ github.repository }} --body $prUpdatedBody
@@ -135,3 +135,4 @@ jobs:
             Write-Host "Error: Failed to update PR body"
             exit 1
         }
+
