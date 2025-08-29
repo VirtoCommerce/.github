@@ -113,13 +113,13 @@ jobs:
     - name: Get PR number
       id: getPrNumber
       if: ${{ inputs.forceBlob }}
-      uses: VirtoCommerce/vc-github-actions/get-pr-number@master
+      uses: VirtoCommerce/vc-github-actions/get-pr-number@VCST-3064 #master
       with:
         repo: "${{ github.repository }}"
         branch: "${{ github.ref_name }}"
 
     - name: Update blob url in PR body
-      if: ${{ inputs.forceBlob }}
+      if: ${{ inputs.forceBlob }} && ${{ steps.getPrNumber.outputs.prNumber }}
       shell: pwsh
       run: |
         $prBody = $(gh pr view ${{ steps.getPrNumber.outputs.prNumber }} --repo ${{ github.repository }} --json body | ConvertFrom-Json).body
