@@ -119,7 +119,7 @@ jobs:
         branch: "${{ github.ref_name }}"
 
     - name: Update blob url in PR body
-      if: ${{ inputs.forceBlob }} && ${{ steps.getPrNumber.outputs.prNumber }}
+      if: ${{ inputs.forceBlob }} && ${{ steps.getPrNumber.outputs.prNumber != '' }}
       shell: pwsh
       run: |
         $prBody = $(gh pr view ${{ steps.getPrNumber.outputs.prNumber }} --repo ${{ github.repository }} --json body | ConvertFrom-Json).body
