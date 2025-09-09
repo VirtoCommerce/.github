@@ -30,6 +30,11 @@ jobs:
 
           foreach ($repo in $repos) {
               echo "Checking repo: $repo"
+              $testAccess = gh api "repos/VirtoCommerce/$repo" --silent --jq '.id'
+              if ($LASTEXITCODE -ne 0) {
+                  Write-Warning "Skipping $repo - no access or repo doesn't exist"
+                  continue
+              }
               [array]$runs = gh run list -R VirtoCommerce/$repo --limit 5 --json $fields | ConvertFrom-Json
               foreach ($run in $runs) {
                   $runId = "$($run.databaseId)"
