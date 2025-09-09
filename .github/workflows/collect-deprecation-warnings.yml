@@ -19,11 +19,12 @@ jobs:
         id: collect-deprecation-warnings
         shell: pwsh
         run: |
-          # $repos = gh repo list VirtoCommerce --json name -q '.[].name'
-          [array]$repos = 'vc-platform', 'vc-build', 'vc-module-x-api'
+          $repos = gh repo list VirtoCommerce --json name -q '.[].name'
+          # [array]$repos = 'vc-platform', 'vc-build', 'vc-module-x-api'
           $fields = 'databaseId,name,conclusion'
           $result = @()
-          $skipValues = @('angular-cookies@1.8.3', 'angular-translate-loader-url@2.', 'glob@7.1.7')
+          # $skipValues = @('angular-cookies@1.8.3', 'angular-translate-loader-url@2.', 'glob@7.1.7')
+          $skipValues = @('qwerty')
 
           foreach ($repo in $repos) {
               echo "Checking repo: $repo"
