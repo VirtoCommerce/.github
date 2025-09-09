@@ -1,0 +1,93 @@
+# v3.800.15
+# https://virtocommerce.atlassian.net/browse/VCST-3725
+name: Collect deprecation warnings
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      [VCST-2719]
+      
+jobs:
+  collect-deprecation-warnings:
+    runs-on: ubuntu-24.04
+    env:
+      GITHUB_TOKEN: ${{ secrets.REPO_TOKEN }}
+    steps:
+      - name: Collect deprecation warnings
+        run: |
+          # $repos = gh repo list VirtoCommerce --json name -q '.[].name'
+          [array]$repos = 'vc-platform', 'vc-build', 'vc-module-x-api'
+          $fields = 'databaseId,name,conclusion'
+          $result = @()
+          $skipValues = @('angular-cookies@1.8.3', 'angular-translate-loader-url@2.', 'glob@7.1.7')
+
+          foreach ($repo in $repos) {
+              echo "Checking repo: $repo"
+              [array]$runs = gh run list -R VirtoCommerce/$repo --limit 5 --json $fields | ConvertFrom-Json
+              foreach ($run in $runs) {
+                  $runId = "$($run.databaseId)"
+                  $deprecationWarnings = gh run view $runId -R VirtoCommerce/$repo | Select-String -Pattern "deprecated"
+                  if ($deprecationWarnings) {
+                      foreach ($warning in $deprecationWarnings) {
+                          $skip = $false
+                          foreach ($skipValue in $skipValues) {
+                              if ($warning.Line -match $skipValue) {
+                                  # continue
+                                  $skip = $true
+                                  break
+                              }
+                          }
+                          if (!$skip) {
+                              $result += @{
+                                  $run.name = @{
+                                      "https://github.com/VirtoCommerce/$repo/actions/runs/$runId" = $warning.Line
+                                  }
+                              }
+                          }
+                      }
+                  }
+              }
+              echo "Done"
+          }
+          if ($result) {
+              echo $result | ConvertTo-Json -Depth 10 | Out-File -FilePath "$env:RUNNER_TEMP/deprecation-warnings.json"
+          }
+
+  process-deprecation-warnings:
+    runs-on: ubuntu-24.04
+    env:
+      GITHUB_TOKEN: ${{ secrets.REPO_TOKEN }}
+    steps:
+    - name: Process deprecation warnings
+      run: |
+        cat $env:RUNNER_TEMP/deprecation-warnings.json
+
+  #   - name: Docker Env Full
+  #     uses: VirtoCommerce/vc-github-actions/docker-env-full@master
+  #     with:
+  #       platformDockerTag: ${{ inputs.platformDockerTag }}
+  #       installModules: ${{ inputs.installModules }}
+  #       installCustomModule: ${{ inputs.installCustomModule }}
+  #       customModuleId: ${{ inputs.customModuleId }}
+  #       customModuleUrl: ${{ inputs.customModuleUrl }}
+  #       frontendZipUrl: ${{ inputs.frontendZipUrl }}
+    
+  #   - name: Run GraphQL Tests
+  #     uses: VirtoCommerce/vc-github-actions/run-graphql-tests@master
+  #     with:
+  #       vctestingRepo: ${{ inputs.vctestingRepo }}
+  #       vctestingRepoBranch: ${{ inputs.vctestingRepoBranch }}
+  #       vctestingPath: 'vc-testing-module'
+  #       baseUrl: ${{ inputs.baseUrl }}
+  #       backUrl: ${{ inputs.backUrl }}
+  #       adminUsername: ${{ inputs.adminUsername }}
+  #       adminPassword: ${{ inputs.adminPassword }}
+  #       adminToken: ${{ env.VC_ADMIN_TOKEN }}
+  #       userEmail: ${{ inputs.userEmail }}
+  #       frontAdmin: ${{ inputs.frontAdmin }}
+  #       password: ${{ inputs.password }}
+  #       apiKey: ${{ inputs.apiKey }}
+  #       storeId: ${{ inputs.storeId }}
+  #       playwrightHeadless: ${{ inputs.playwrightHeadless }}
+  #       browser: ${{ inputs.browser }}
