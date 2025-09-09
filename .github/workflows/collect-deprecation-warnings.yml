@@ -72,7 +72,7 @@ jobs:
         with:
           teamsWebhookUrl: ${{ secrets.TEAMS_WEBHOOK_URL }}
           mentions: '@(@{id = "859369bc-81d3-498d-a3a8-ceba4dd6c8a4"; name = "Andrew.Kubyshkin" })'
-          message: 'New deprecation warnings found'
+          title: 'New deprecation warnings found'
           workflowName: ${{ github.workflow }}
           buildId: ${{ github.run_id }}
           githubRepo: '${{ github.repository }}'
