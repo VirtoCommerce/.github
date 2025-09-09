@@ -15,6 +15,7 @@ jobs:
       GITHUB_TOKEN: ${{ secrets.REPO_TOKEN }}
     steps:
       - name: Collect deprecation warnings
+        id: collect-deprecation-warnings
         shell: pwsh
         run: |
           # $repos = gh repo list VirtoCommerce --json name -q '.[].name'
@@ -53,22 +54,28 @@ jobs:
           }
           if ($result) {
               echo $result | ConvertTo-Json -Depth 10 | Out-File -FilePath "$env:RUNNER_TEMP/deprecation-warnings.json"
+              echo "result=true" >> $env:GITHUB_OUTPUT
+          } else {
+              Write-Output 'No deprecation warnings found'
+              echo "result=false" >> $env:GITHUB_OUTPUT
           }
-      - name: Process deprecation warnings
+      
+      - name: Display deprecation warnings
+        if: ${{ steps.collect-deprecation-warnings.outputs.result == 'true' }}
         shell: pwsh
         run: |
           cat $env:RUNNER_TEMP/deprecation-warnings.json
 
-
-  #   - name: Docker Env Full
-  #     uses: VirtoCommerce/vc-github-actions/docker-env-full@master
-  #     with:
-  #       platformDockerTag: ${{ inputs.platformDockerTag }}
-  #       installModules: ${{ inputs.installModules }}
-  #       installCustomModule: ${{ inputs.installCustomModule }}
-  #       customModuleId: ${{ inputs.customModuleId }}
-  #       customModuleUrl: ${{ inputs.customModuleUrl }}
-  #       frontendZipUrl: ${{ inputs.frontendZipUrl }}
+      - name: Teams notification
+        if: ${{ steps.collect-deprecation-warnings.outputs.result == 'true' }}
+        uses: VirtoCommerce/vc-github-actions/publish-teams-webhook-notification@VCST-2719 # master
+        with:
+          teamsWebhookUrl: ${{ secrets.TEAMS_WEBHOOK_URL }}
+          mentions: '@(@{id = "859369bc-81d3-498d-a3a8-ceba4dd6c8a4"; name = "Andrew.Kubyshkin" })'
+          message: 'New deprecation warnings found'
+          workflowName: ${{ github.workflow }}
+          buildId: ${{ github.run_id }}
+          githubRepo: '${{ github.repository }}'
     
   #   - name: Run GraphQL Tests
   #     uses: VirtoCommerce/vc-github-actions/run-graphql-tests@master
