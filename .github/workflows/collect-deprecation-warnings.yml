@@ -13,6 +13,7 @@ jobs:
     runs-on: ubuntu-24.04
     env:
       GITHUB_TOKEN: ${{ secrets.REPO_TOKEN }}
+      TEAMS_WEBHOOK_URL: ${{ secrets.TEAMS_WEBHOOK_URL }}
     steps:
       - name: Collect deprecation warnings
         id: collect-deprecation-warnings
@@ -70,7 +71,7 @@ jobs:
         if: ${{ steps.collect-deprecation-warnings.outputs.result == 'true' }}
         uses: VirtoCommerce/vc-github-actions/publish-teams-webhook-notification@VCST-2719 # master
         with:
-          teamsWebhookUrl: ${{ secrets.TEAMS_WEBHOOK_URL }}
+          teamsWebhookUrl: ${{ env.TEAMS_WEBHOOK_URL }}
           mentions: '@(@{id = "859369bc-81d3-498d-a3a8-ceba4dd6c8a4"; name = "Andrew.Kubyshkin" })'
           title: 'New deprecation warnings found'
           workflowName: ${{ github.workflow }}
