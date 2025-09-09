@@ -18,6 +18,8 @@ jobs:
       - name: Collect deprecation warnings
         id: collect-deprecation-warnings
         shell: pwsh
+        env:
+          GITHUB_TOKEN: ${{ secrets.REPO_TOKEN }}
         run: |
           $repos = gh repo list VirtoCommerce --json name -q '.[].name'
           # [array]$repos = 'vc-platform', 'vc-build', 'vc-module-x-api'
