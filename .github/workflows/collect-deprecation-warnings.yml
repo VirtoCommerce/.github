@@ -7,7 +7,7 @@ on:
   push:
     branches:
       [VCST-2719]
-      
+
 jobs:
   collect-deprecation-warnings:
     runs-on: ubuntu-24.04
@@ -15,6 +15,7 @@ jobs:
       GITHUB_TOKEN: ${{ secrets.REPO_TOKEN }}
     steps:
       - name: Collect deprecation warnings
+        shell: pwsh
         run: |
           # $repos = gh repo list VirtoCommerce --json name -q '.[].name'
           [array]$repos = 'vc-platform', 'vc-build', 'vc-module-x-api'
@@ -60,6 +61,7 @@ jobs:
       GITHUB_TOKEN: ${{ secrets.REPO_TOKEN }}
     steps:
     - name: Process deprecation warnings
+      shell: pwsh
       run: |
         cat $env:RUNNER_TEMP/deprecation-warnings.json
 
