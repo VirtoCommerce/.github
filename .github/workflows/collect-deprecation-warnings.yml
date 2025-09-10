@@ -15,21 +15,13 @@ jobs:
       contents: read
       actions: read
       issues: read
-      # For private repos, you need these additional permissions:
-      # repository: read
-      # Or if you need write access:
-      # actions: write  # if you need to trigger workflows
-      # contents: write # if you need to modify files
     env:
-      GITHUB_TOKEN: ${{ secrets.REPO_TOKEN }}
       TEAMS_WEBHOOK_URL: ${{ secrets.TEAMS_WEBHOOK_URL }}
+      GITHUB_TOKEN: ${{ secrets.PAT_VCST_2719 }}
     steps:
       - name: Collect deprecation warnings
         id: collect-deprecation-warnings
         shell: pwsh
-        env:
-          # GITHUB_TOKEN: ${{ secrets.REPO_TOKEN }}
-          GITHUB_TOKEN: ${{ secrets.PAT_VCST_2719 }}
         run: |
           $repos = gh repo list VirtoCommerce --json name -q '.[].name'
           # [array]$repos = 'vc-platform', 'vc-build', 'vc-module-x-api'
@@ -95,22 +87,3 @@ jobs:
           workflowName: ${{ github.workflow }}
           buildId: ${{ github.run_id }}
           githubRepo: '${{ github.repository }}'
-    
-  #   - name: Run GraphQL Tests
-  #     uses: VirtoCommerce/vc-github-actions/run-graphql-tests@master
-  #     with:
-  #       vctestingRepo: ${{ inputs.vctestingRepo }}
-  #       vctestingRepoBranch: ${{ inputs.vctestingRepoBranch }}
-  #       vctestingPath: 'vc-testing-module'
-  #       baseUrl: ${{ inputs.baseUrl }}
-  #       backUrl: ${{ inputs.backUrl }}
-  #       adminUsername: ${{ inputs.adminUsername }}
-  #       adminPassword: ${{ inputs.adminPassword }}
-  #       adminToken: ${{ env.VC_ADMIN_TOKEN }}
-  #       userEmail: ${{ inputs.userEmail }}
-  #       frontAdmin: ${{ inputs.frontAdmin }}
-  #       password: ${{ inputs.password }}
-  #       apiKey: ${{ inputs.apiKey }}
-  #       storeId: ${{ inputs.storeId }}
-  #       playwrightHeadless: ${{ inputs.playwrightHeadless }}
-  #       browser: ${{ inputs.browser }}
