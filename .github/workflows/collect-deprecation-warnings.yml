@@ -37,7 +37,7 @@ jobs:
                   Write-Warning "Skipping $repo - no access or repo doesn't exist"
                   continue
               }
-              [array]$runs = gh run list -R VirtoCommerce/$repo --limit 5 --json $fields | ConvertFrom-Json
+              [array]$runs = gh run list -R VirtoCommerce/$repo --limit 1 --json $fields | ConvertFrom-Json
               foreach ($run in $runs) {
                   $runId = "$($run.databaseId)"
                   $deprecationWarnings = gh run view $runId -R VirtoCommerce/$repo | Select-String -Pattern "deprecated"
