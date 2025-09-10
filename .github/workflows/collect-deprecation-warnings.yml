@@ -77,7 +77,7 @@ jobs:
         with:
           name: deprecation-warnings
           path: |
-            $env:RUNNER_TEMP/deprecation-warnings.json
+            ${{ env.RUNNER_TEMP }}/deprecation-warnings.json
           retention-days: 30
           
       - name: Display deprecation warnings
