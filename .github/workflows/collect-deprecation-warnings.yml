@@ -11,6 +11,15 @@ on:
 jobs:
   collect-deprecation-warnings:
     runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+      actions: read
+      issues: read
+      # For private repos, you need these additional permissions:
+      # repository: read
+      # Or if you need write access:
+      # actions: write  # if you need to trigger workflows
+      # contents: write # if you need to modify files
     env:
       GITHUB_TOKEN: ${{ secrets.REPO_TOKEN }}
       TEAMS_WEBHOOK_URL: ${{ secrets.TEAMS_WEBHOOK_URL }}
