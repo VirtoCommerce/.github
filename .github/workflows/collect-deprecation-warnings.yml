@@ -23,7 +23,7 @@ jobs:
         id: collect-deprecation-warnings
         shell: pwsh
         run: |
-          $repos = gh repo list VirtoCommerce --json name -q '.[].name'
+          $repos = gh repo list VirtoCommerce --json name -q '.[].name' --limit 1000
           # [array]$repos = 'vc-platform', 'vc-build', 'vc-module-x-api'
           $fields = 'databaseId,name,conclusion'
           $result = @()
@@ -83,7 +83,7 @@ jobs:
         with:
           teamsWebhookUrl: ${{ env.TEAMS_WEBHOOK_URL }}
           mentions: '@(@{id = "859369bc-81d3-498d-a3a8-ceba4dd6c8a4"; name = "Andrew.Kubyshkin" })'
-          title: 'New deprecation warnings found'
+          title: 'New deprecation warning(s) found'
           workflowName: ${{ github.workflow }}
           buildId: ${{ github.run_id }}
           githubRepo: '${{ github.repository }}'
