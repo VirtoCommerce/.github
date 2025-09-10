@@ -30,7 +30,7 @@ jobs:
 
           foreach ($repo in $repos) {
               echo "Checking repo: $repo"
-              $testAccess = gh api "repos/VirtoCommerce/$repo" --silent --jq '.id'
+              $testAccess = gh api "repos/VirtoCommerce/$repo" --jq '.id'
               if ($LASTEXITCODE -ne 0) {
                   Write-Warning "Skipping $repo - no access or repo doesn't exist"
                   continue
