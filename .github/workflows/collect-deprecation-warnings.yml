@@ -43,7 +43,7 @@ jobs:
           if ("${{ inputs.repos }}" -eq 'all') {
             [array]$repos = gh repo list VirtoCommerce --json name -q '.[].name' --limit 1000
           } else {
-            [array]$repos = ${{ inputs.repos }}.Split(',')
+            [array]$repos = "${{ inputs.repos }}".Split(',')
           }
           $fields = 'databaseId,name,conclusion'
           $result = @()
