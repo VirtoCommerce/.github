@@ -40,7 +40,7 @@ jobs:
         id: collect-deprecation-warnings
         shell: pwsh
         run: |
-          if (${{ inputs.repos }} -eq 'all') {
+          if ("${{ inputs.repos }}" -eq 'all') {
             [array]$repos = gh repo list VirtoCommerce --json name -q '.[].name' --limit 1000
           } else {
             [array]$repos = ${{ inputs.repos }}.Split(',')
