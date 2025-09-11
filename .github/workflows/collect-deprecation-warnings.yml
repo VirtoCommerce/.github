@@ -1,12 +1,29 @@
 # v3.800.15
 # https://virtocommerce.atlassian.net/browse/VCST-3725
+
+# =======================================================================================
+# The workflow collects deprecation warnings from repos in the VirtoCommerce organization.
+# The list of repos can be specified in the workflow inputs.
+# The number of runs to check for deprecation warnings in each repo can be specified in the workflow inputs.
+# The workflow will collect deprecation warnings from the last ${{ inputs.numberOfRuns }} runs for each repo.
+# The workflow will skip repos that are not in the list of repos specified in the workflow inputs.
+# =======================================================================================
 name: Collect deprecation warnings
 
 on:
   workflow_dispatch:
-  push:
-    branches:
-      [VCST-2719]
+    inputs:
+      numberOfRuns:
+        description: 'Number of runs to check for deprecation warnings in each repo'
+        required: false
+        type: number
+        default: 5
+      repos:
+        description: 'Repos to check for deprecation warnings. Allowed values: "all" or comma separated list of repos'
+        required: false
+        type: string
+        default: 'all'
+    
 
 jobs:
   collect-deprecation-warnings:
@@ -23,8 +40,11 @@ jobs:
         id: collect-deprecation-warnings
         shell: pwsh
         run: |
-          # $repos = gh repo list VirtoCommerce --json name -q '.[].name' --limit 1000
-          [array]$repos = 'vc-platform', 'vc-build', 'vc-module-x-api'
+          if (${{ inputs.repos }} -eq 'all') {
+            [array]$repos = gh repo list VirtoCommerce --json name -q '.[].name' --limit 1000
+          } else {
+            [array]$repos = ${{ inputs.repos }}.Split(',')
+          }
           $fields = 'databaseId,name,conclusion'
           $result = @()
           # $skipValues = @('angular-cookies@1.8.3', 'angular-translate-loader-url@2.', 'glob@7.1.7')
@@ -37,7 +57,7 @@ jobs:
                   Write-Warning "Skipping $repo - no access or repo doesn't exist"
                   continue
               }
-              [array]$runs = gh run list -R VirtoCommerce/$repo --limit 5 --json $fields | ConvertFrom-Json
+              [array]$runs = gh run list -R VirtoCommerce/$repo --limit ${{ inputs.numberOfRuns }} --json $fields | ConvertFrom-Json
               foreach ($run in $runs) {
                   $runId = "$($run.databaseId)"
                   $deprecationWarnings = gh run view $runId -R VirtoCommerce/$repo | Select-String -Pattern "deprecated"
@@ -71,10 +91,13 @@ jobs:
               echo "result=false" >> $env:GITHUB_OUTPUT
           }
 
-          echo "ls -la ${{ runner.temp }}"
-          ls -la ${{ runner.temp }}
-      
-      - name: Upload deprecation warnings
+      - name: Display deprecation warnings
+        if: ${{ steps.collect-deprecation-warnings.outputs.result == 'true' }}
+        shell: pwsh
+        run: |
+          cat $env:RUNNER_TEMP/deprecation-warnings.json
+
+      - name: Upload deprecation warnings list
         if: ${{ steps.collect-deprecation-warnings.outputs.result == 'true' }}
         uses: actions/upload-artifact@v4
         with:
@@ -82,12 +105,6 @@ jobs:
           path: ${{ runner.temp }}/deprecation-warnings.json
           retention-days: 30
         continue-on-error: true
-          
-      - name: Display deprecation warnings
-        if: ${{ steps.collect-deprecation-warnings.outputs.result == 'true' }}
-        shell: pwsh
-        run: |
-          cat $env:RUNNER_TEMP/deprecation-warnings.json
 
       - name: Teams notification
         if: ${{ steps.collect-deprecation-warnings.outputs.result == 'true' }}
