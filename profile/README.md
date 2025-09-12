@@ -1,5 +1,4 @@
-
-![Virto Commerce  NET eCommerce Platform](https://user-images.githubusercontent.com/7566324/171011661-e42f6b80-84f6-4447-9b6b-01b51347de95.png)
+![Next-Gen eCommerce Solutions by Virto Commerce](https://github.com/user-attachments/assets/36fd9270-ee06-4583-81ec-16207691d33d)
 
 ## JOIN US NOW
 👉 [Explore Virto Commerce](https://virtocommerce.com/)
