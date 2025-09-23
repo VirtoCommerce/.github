@@ -91,6 +91,7 @@ jobs:
                   ,vc-module-x-catalog
                   ,vc-module-x-cms
                   ,vc-module-x-order
+                  ,vc-module-x-pickup
                   ,vc-module-x-recommend]
 
 # Module samples workflows
