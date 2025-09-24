@@ -24,6 +24,8 @@ on:
         type: string
         default: 'all'
     
+  schedule:
+    - cron: '0 0 7 * *' # monthly on the 7th day at 00:00
 
 jobs:
   collect-deprecation-warnings:
