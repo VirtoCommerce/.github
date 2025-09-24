@@ -239,8 +239,10 @@ jobs:
 
     - name: Check commit message for version number
       id: run-e2e
+      env:
+        COMMIT_MESSAGE: ${{ github.event.head_commit.message }}
       run: |
-        if [[ "${{ github.event.head_commit.message }}" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; 
+          if [[ "$COMMIT_MESSAGE" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; 
         then
           echo "result=false" >> $GITHUB_OUTPUT
         else
