@@ -76,6 +76,7 @@ jobs:
                   ,vc-module-seq-log
                   ,vc-module-shipping
                   ,vc-module-sitemaps
+                  ,vc-module-state-machine
                   ,vc-module-store
                   ,vc-module-subscription
                   ,vc-module-tax
