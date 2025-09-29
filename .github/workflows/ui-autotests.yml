@@ -52,7 +52,7 @@ on:
       frontendZipUrl:
         required: false
         type: string
-        default: 'https://github.com/VirtoCommerce/vc-frontend/releases/download/2.23.0/vc-theme-b2b-vue-2.23.0.zip'
+        default: 'latest'
       installCustomModule:
         description: 'Enable or disable "Install Custom Modules" step'
         required: false
