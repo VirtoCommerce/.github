@@ -157,12 +157,5 @@ jobs:
         backUrl: ${{ inputs.backUrl }}
         adminUsername: ${{ inputs.adminUsername }}
         adminPassword: ${{ inputs.adminPassword }}
-        adminToken: ${{ env.VC_ADMIN_TOKEN }}
-        userEmail: ${{ inputs.userEmail }}
-        frontAdmin: ${{ inputs.frontAdmin }}
-        password: ${{ inputs.password }}
-        apiKey: ${{ inputs.apiKey }}
-        storeId: ${{ inputs.storeId }}
-        playwrightHeadless: ${{ inputs.playwrightHeadless }}
         browser: ${{ inputs.browser }}
         testSecretEnvFile: ${{ secrets.testSecretEnvFile}}
