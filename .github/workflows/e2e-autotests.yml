@@ -116,9 +116,9 @@ jobs:
         customModuleId: ${{ inputs.customModuleId }}
         customModuleUrl: ${{ inputs.customModuleUrl }}
         frontendZipUrl: ${{ inputs.frontendZipUrl }}
-        installCustomModule: ${{ inputs.installCustomModule }}
-        installModules: ${{ inputs.installModules }}
-        platformDockerTag: ${{ inputs.platformDockerTag }}
+        installModules: 'true'
+        installCustomModule: 'false'
+        platformDockerTag: 'dev-linux-latest'
         testSecretEnvFile: ${{ secrets.testSecretEnvFile }}
     
     - name: Run E2E Tests
