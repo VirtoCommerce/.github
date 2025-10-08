@@ -296,13 +296,16 @@ jobs:
     needs: 'ci'
     if: ${{ ((github.ref == 'refs/heads/dev') && (github.event_name == 'push') && (needs.ci.outputs.run-e2e == 'true')) ||
         (github.event_name == 'workflow_dispatch') || (github.base_ref == 'dev') && (github.event_name == 'pull_request') }}
-    uses: VirtoCommerce/.github/.github/workflows/ui-autotests.yml@v3.800.13  
+    uses: VirtoCommerce/.github/.github/workflows/ui-autotests.yml@v3.800.16  
     with:
       installModules: 'true'
       installCustomModule: 'false'
       platformDockerTag: ${{ needs.ci.outputs.tag }}
+      vctestingRepoBranch: 'dev'
+      frontendZipUrl: 'latest'
     secrets:
       envPAT: ${{ secrets.REPO_TOKEN }}
+      testSecretEnvFile: ${{ secrets.VC_TESTING_MODULE_ENV_FILE }}
 
   platform-katalon-tests:
     needs: 'ci'

@@ -47,7 +47,7 @@ on:
       frontendZipUrl:
         required: false
         type: string
-        default: 'https://github.com/VirtoCommerce/vc-frontend/releases/download/2.23.0/vc-theme-b2b-vue-2.23.0.zip'
+        default: 'latest'
       installCustomModule:
         description: 'Enable or disable "Install Custom Modules" step'
         required: false
@@ -111,7 +111,7 @@ jobs:
       uses: VirtoCommerce/vc-github-actions/setup-vcbuild@master
 
     - name: Docker Env Full
-      uses: VirtoCommerce/vc-github-actions/docker-env-full@VCST-2789-1 #master
+      uses: VirtoCommerce/vc-github-actions/docker-env-full@master
       with:
         customModuleId: ${{ inputs.customModuleId }}
         customModuleUrl: ${{ inputs.customModuleUrl }}
@@ -122,7 +122,7 @@ jobs:
         testSecretEnvFile: ${{ secrets.testSecretEnvFile }}
     
     - name: Run GraphQL Tests
-      uses: VirtoCommerce/vc-github-actions/run-graphql-tests@VCST-2789-1
+      uses: VirtoCommerce/vc-github-actions/run-graphql-tests@master
       with:
         adminPassword: ${{ inputs.adminPassword }}
         adminUsername: ${{ inputs.adminUsername }}
