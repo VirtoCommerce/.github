@@ -113,8 +113,6 @@ jobs:
     - name: Docker Env Full
       uses: VirtoCommerce/vc-github-actions/docker-env-full@VCST-4078 #master
       with:
-        customModuleId: ${{ inputs.customModuleId }}
-        customModuleUrl: ${{ inputs.customModuleUrl }}
         frontendZipUrl: ${{ inputs.frontendZipUrl }}
         installModules: 'true'
         installCustomModule: 'false'
