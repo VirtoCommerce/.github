@@ -1,5 +1,4 @@
-
-![Virto Commerce  NET eCommerce Platform](https://user-images.githubusercontent.com/7566324/171011661-e42f6b80-84f6-4447-9b6b-01b51347de95.png)
+![Next-Gen eCommerce Solutions by Virto Commerce](https://github.com/user-attachments/assets/36fd9270-ee06-4583-81ec-16207691d33d)
 
 ## JOIN US NOW
 👉 [Explore Virto Commerce](https://virtocommerce.com/)
@@ -19,7 +18,11 @@ As a Microsoft Gold Partner, Virto serves over 100 companies worldwide and has o
 At Virto Commerce, we pride ourselves on being proactive technology innovators deeply dedicated to creating flexible, agile commerce software solutions that improve business and accelerate digital adoption. All this requires a special mindset and a lot of collaborative effort to make complex things simple. We believe in the uniting power of technology, teamwork and spirit, and we take personal responsibility for every project we undertake.
 
 ## FAQ
+👨‍💻 [Ask Virto Oz – Your Conversational AI Copilot](https://virtocommerce.com/)
+
 👨‍💻 [What are the skills required for Virto Commerce Developer?](https://www.virtocommerce.org/t/what-are-the-skills-required-for-virto-commerce-developer/90)
+
+👨‍💻 [Virto Commerce Dev Training Program](https://www.virtocommerce.org/t/virto-commerce-dev-training-program/786/1)
 
 👨‍💻 [Virto Commerce Atomic Architecture](https://www.virtocommerce.org/t/virto-commerce-atomic-architecture-in-action/408)
 

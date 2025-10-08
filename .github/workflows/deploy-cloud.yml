@@ -1,5 +1,5 @@
-# v3.800.13
-# https://virtocommerce.atlassian.net/browse/VCST-2789
+# v3.800.16
+# https://virtocommerce.atlassian.net/browse/VCST-3881
 name: VC cloud deployment
 
 on:
@@ -65,7 +65,6 @@ jobs:
       SLEEP_TIME: '3m'
 
     steps: 
-
       - name: Set forceCommit value #Create deployment commit instead of Pull request to a deployment repo
         id: forceCommit
         shell: pwsh

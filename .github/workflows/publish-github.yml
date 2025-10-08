@@ -1,5 +1,5 @@
-# v3.800.13
-# https://virtocommerce.atlassian.net/browse/VCST-2789
+# v3.800.16
+# https://virtocommerce.atlassian.net/browse/VCST-3881
 name: VC Publish Github release and Nuget package
 
 on:
@@ -109,3 +109,30 @@ jobs:
       with:
         blobSAS: ${{ secrets.BLOB_TOKEN }}
         blobUrl: ${{ vars.BLOB_URL }}
+
+    - name: Get PR number
+      id: getPrNumber
+      if: ${{ inputs.forceBlob }}
+      uses: VirtoCommerce/vc-github-actions/get-pr-number@master
+      with:
+        repo: "${{ github.repository }}"
+        branch: "${{ github.ref_name }}"
+
+    - name: Update blob URL in PR body
+      if: ${{ inputs.forceBlob && steps.getPrNumber.outputs.prNumber != '' && steps.getPrNumber.outputs.prNumber != null }}
+      shell: pwsh
+      run: |
+        $prBody = $(gh pr view ${{ steps.getPrNumber.outputs.prNumber }} --repo ${{ github.repository }} --json body | ConvertFrom-Json).body
+        if ($prBody -match 'https:\/\/vc3prerelease.blob.core.windows.net\/packages\/(\S+)') {
+            $prUpdatedBody = $prBody.Replace($matches[0], "${{ steps.blobRelease.outputs.packageUrl }}")
+            Write-Host "Updated PR #${{ steps.getPrNumber.outputs.prNumber }} body with new blob URL: ${{ steps.blobRelease.outputs.packageUrl }}"
+        } else {
+            Write-Warning "No blob URL found in PR body. Skipping update."
+            exit 0
+        }
+        gh pr edit ${{ steps.getPrNumber.outputs.prNumber }} --repo ${{ github.repository }} --body $prUpdatedBody
+        if ($lastExitCode -ne 0) {
+            Write-Host "Error: Failed to update PR body"
+            exit 1
+        }
+
