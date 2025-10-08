@@ -1,0 +1,135 @@
+# v3.800.17
+# https://virtocommerce.atlassian.net/browse/VCST-2789
+name: Common E2E tests
+
+on:
+  workflow_call:
+    inputs:
+      adminPassword:
+        description: 'Admin Password'
+        required: false
+        type: string
+        default: 'Password3'
+      adminUsername:
+        description: 'Admin Username'
+        required: false
+        type: string
+        default: 'admin'
+      apiKey:
+        description: 'API Key'
+        required: false
+        type: string
+        default: '1add83ea-2235-41fe-b623-825070824059'
+      backUrl:
+        description: 'Back URL'
+        required: false
+        type: string
+        default: 'http://localhost:8090'
+      baseUrl:
+        description: 'Base URL'
+        required: false
+        type: string
+        default: 'http://localhost'
+      browser:
+        required: false
+        type: string
+        default: 'chromium'
+      customModuleId:
+        description: 'Custom Module id'
+        required: false
+        type: string
+        default: ''
+      customModuleUrl:
+        description: 'Custom module Module url'
+        required: false
+        type: string
+        default: ''
+      frontendZipUrl:
+        required: false
+        type: string
+        default: 'latest'
+      installCustomModule:
+        description: 'Enable or disable "Install Custom Modules" step'
+        required: false
+        type: string
+        default: 'false'
+      installModules:
+        description: 'Enable or disable "Install Modules" step'
+        required: false
+        type: string
+        default: 'true'
+      platformDockerTag:
+        description: 'Platform docker tag'
+        required: false
+        type: string
+        default: 'local-latest'
+      runTests:
+        description: 'Run tests'
+        required: false
+        type: string
+        default: 'true'
+      vctestingPath:
+        description: 'UI tests path'
+        required: false
+        type: string
+        default: 'vc-testing-module'
+      vctestingRepo:
+        description: 'UI tests repository'
+        required: false
+        type: string
+        default: 'VirtoCommerce/vc-testing-module'
+      vctestingRepoBranch:
+        description: 'UI tests repository branch'
+        required: false
+        type: string
+        default: 'dev'
+
+    secrets:
+      envPAT:
+        required: true
+      testSecretEnvFile:
+        required: true
+
+jobs:
+  dry-run:
+    if: ${{ inputs.runTests == 'false' }}
+    runs-on: ubuntu-22.04
+    steps:
+      - name: Check if runTests is enabled
+        run: |
+          echo "RunTests is disabled"
+
+  e2e-autotests:
+    if: ${{ inputs.runTests == 'true' }}
+    runs-on: ubuntu-22.04
+
+    env:
+      GITHUB_TOKEN: ${{ secrets.envPAT }}
+
+    steps:
+    - name: Install VirtoCommerce.GlobalTool
+      uses: VirtoCommerce/vc-github-actions/setup-vcbuild@VCST-4078 #master
+
+    - name: Docker Env Full
+      uses: VirtoCommerce/vc-github-actions/docker-env-full@VCST-4078 #master
+      with:
+        customModuleId: ${{ inputs.customModuleId }}
+        customModuleUrl: ${{ inputs.customModuleUrl }}
+        frontendZipUrl: ${{ inputs.frontendZipUrl }}
+        installCustomModule: ${{ inputs.installCustomModule }}
+        installModules: ${{ inputs.installModules }}
+        platformDockerTag: ${{ inputs.platformDockerTag }}
+        testSecretEnvFile: ${{ secrets.testSecretEnvFile }}
+    
+    - name: Run E2E Tests
+      uses: VirtoCommerce/vc-github-actions/run-e2e-tests@VCST-4078 #master
+      with:
+        adminPassword: ${{ inputs.adminPassword }}
+        adminUsername: ${{ inputs.adminUsername }}
+        backUrl: ${{ inputs.backUrl }}
+        baseUrl: ${{ inputs.baseUrl }}
+        browser: ${{ inputs.browser }}
+        testSecretEnvFile: ${{ secrets.testSecretEnvFile }}
+        vctestingPath: 'vc-testing-module'
+        vctestingRepo: ${{ inputs.vctestingRepo }}
+        vctestingRepoBranch: ${{ inputs.vctestingRepoBranch }}
