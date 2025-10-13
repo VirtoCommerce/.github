@@ -40,6 +40,9 @@ jobs:
     steps:
       - name: Collect deprecation warnings
         id: collect-deprecation-warnings
+        env:
+          NUMBER_OF_RUNS: ${{ github.event.inputs.numberOfRuns || 5 }}
+          REPOS: ${{ github.event.inputs.repos || 'all' }}
         shell: pwsh
         run: |
           if ("${{ inputs.repos }}" -eq 'all') {
