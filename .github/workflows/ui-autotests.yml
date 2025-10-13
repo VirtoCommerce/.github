@@ -1,5 +1,5 @@
-# v3.800.16
-# https://virtocommerce.atlassian.net/browse/VCST-3881
+# v3.800.17
+# https://virtocommerce.atlassian.net/browse/VCST-2789
 name: Common UI tests
 
 on:
@@ -24,12 +24,12 @@ on:
         description: 'Back URL'
         required: false
         type: string
-        default: 'localhost:8090'
+        default: 'http://localhost:8090'
       baseUrl:
         description: 'Base URL'
         required: false
         type: string
-        default: 'localhost'
+        default: 'http://localhost'
       browser:
         required: false
         type: string
@@ -44,11 +44,6 @@ on:
         required: false
         type: string
         default: ''
-      frontAdmin:
-        description: 'Front Admin'
-        required: false
-        type: string
-        default: 'e2e-admin@test.com'
       frontendZipUrl:
         required: false
         type: string
@@ -63,16 +58,6 @@ on:
         required: false
         type: string
         default: 'true'
-      password:
-        description: 'Password'
-        required: false
-        type: string
-        default: 'Password1'
-      playwrightHeadless:
-        description: 'Playwright Headless'
-        required: false
-        type: string
-        default: 'true'
       platformDockerTag:
         description: 'Platform docker tag'
         required: false
@@ -83,16 +68,6 @@ on:
         required: false
         type: string
         default: 'true'
-      storeId:
-        description: 'Store ID'
-        required: false
-        type: string
-        default: 'B2B-store'
-      userEmail:
-        description: 'User Email'
-        required: false
-        type: string
-        default: 'b2badmin@test.com'
       vctestingPath:
         description: 'UI tests path'
         required: false
@@ -111,6 +86,8 @@ on:
 
     secrets:
       envPAT:
+        required: true
+      testSecretEnvFile:
         required: true
 
 jobs:
@@ -136,28 +113,23 @@ jobs:
     - name: Docker Env Full
       uses: VirtoCommerce/vc-github-actions/docker-env-full@master
       with:
-        platformDockerTag: ${{ inputs.platformDockerTag }}
-        installModules: ${{ inputs.installModules }}
-        installCustomModule: ${{ inputs.installCustomModule }}
         customModuleId: ${{ inputs.customModuleId }}
         customModuleUrl: ${{ inputs.customModuleUrl }}
         frontendZipUrl: ${{ inputs.frontendZipUrl }}
+        installCustomModule: ${{ inputs.installCustomModule }}
+        installModules: ${{ inputs.installModules }}
+        platformDockerTag: ${{ inputs.platformDockerTag }}
+        testSecretEnvFile: ${{ secrets.testSecretEnvFile }}
     
     - name: Run GraphQL Tests
       uses: VirtoCommerce/vc-github-actions/run-graphql-tests@master
       with:
+        adminPassword: ${{ inputs.adminPassword }}
+        adminUsername: ${{ inputs.adminUsername }}
+        backUrl: ${{ inputs.backUrl }}
+        baseUrl: ${{ inputs.baseUrl }}
+        browser: ${{ inputs.browser }}
+        testSecretEnvFile: ${{ secrets.testSecretEnvFile }}
+        vctestingPath: 'vc-testing-module'
         vctestingRepo: ${{ inputs.vctestingRepo }}
         vctestingRepoBranch: ${{ inputs.vctestingRepoBranch }}
-        vctestingPath: 'vc-testing-module'
-        baseUrl: ${{ inputs.baseUrl }}
-        backUrl: ${{ inputs.backUrl }}
-        adminUsername: ${{ inputs.adminUsername }}
-        adminPassword: ${{ inputs.adminPassword }}
-        adminToken: ${{ env.VC_ADMIN_TOKEN }}
-        userEmail: ${{ inputs.userEmail }}
-        frontAdmin: ${{ inputs.frontAdmin }}
-        password: ${{ inputs.password }}
-        apiKey: ${{ inputs.apiKey }}
-        storeId: ${{ inputs.storeId }}
-        playwrightHeadless: ${{ inputs.playwrightHeadless }}
-        browser: ${{ inputs.browser }}
