@@ -108,10 +108,10 @@ jobs:
 
     steps:
     - name: Install VirtoCommerce.GlobalTool
-      uses: VirtoCommerce/vc-github-actions/setup-vcbuild@VCST-4078 #master
+      uses: VirtoCommerce/vc-github-actions/setup-vcbuild@master
 
     - name: Docker Env Full
-      uses: VirtoCommerce/vc-github-actions/docker-env-full@VCST-4078 #master
+      uses: VirtoCommerce/vc-github-actions/docker-env-full@VCST-4078-1 #master
       with:
         frontendZipUrl: ${{ inputs.frontendZipUrl }}
         installModules: 'true'
@@ -120,7 +120,7 @@ jobs:
         testSecretEnvFile: ${{ secrets.testSecretEnvFile }}
     
     - name: Run E2E Tests
-      uses: VirtoCommerce/vc-github-actions/run-e2e-tests@VCST-4078 #master
+      uses: VirtoCommerce/vc-github-actions/run-e2e-tests@VCST-4078-1 #master
       with:
         adminPassword: ${{ inputs.adminPassword }}
         adminUsername: ${{ inputs.adminUsername }}
