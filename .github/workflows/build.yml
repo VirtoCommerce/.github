@@ -126,7 +126,7 @@ jobs:
         versionSuffix: ${{ env.VERSION_SUFFIX }}
 
     - name: Packaging
-      run: vc-build Compress+Pack -skip Test
+      run: vc-build Compress+Pack -skip MatchVersions+Test
 
     - name: Get cache key
       uses: VirtoCommerce/vc-github-actions/cache-get-key@master
