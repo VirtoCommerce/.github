@@ -25,7 +25,7 @@ on:
         default: 'all'
     
   schedule:
-    - cron: '0 0 7 * *' # monthly on the 7th day at 00:00
+    - cron: '0 0 15 * *' # monthly on the 15th day at 00:00
 
 jobs:
   collect-deprecation-warnings:
@@ -45,10 +45,10 @@ jobs:
           REPOS: ${{ github.event.inputs.repos || 'all' }}
         shell: pwsh
         run: |
-          if ("${{ inputs.repos }}" -eq 'all') {
+          if ("${{ env.REPOS }}" -eq 'all') {
             [array]$repos = gh repo list VirtoCommerce --json name -q '.[].name' --limit 1000
           } else {
-            [array]$repos = "${{ inputs.repos }}".Split(',')
+            [array]$repos = "${{ env.REPOS }}".Split(',')
           }
           $fields = 'databaseId,name,conclusion'
           $result = @()
@@ -62,7 +62,7 @@ jobs:
                   Write-Warning "Skipping $repo - no access or repo doesn't exist"
                   continue
               }
-              [array]$runs = gh run list -R VirtoCommerce/$repo --limit ${{ inputs.numberOfRuns }} --json $fields | ConvertFrom-Json
+              [array]$runs = gh run list -R VirtoCommerce/$repo --limit ${{ env.NUMBER_OF_RUNS}} --json $fields | ConvertFrom-Json
               foreach ($run in $runs) {
                   $runId = "$($run.databaseId)"
                   $deprecationWarnings = gh run view $runId -R VirtoCommerce/$repo | Select-String -Pattern "deprecated"
