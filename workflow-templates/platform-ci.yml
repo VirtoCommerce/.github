@@ -134,7 +134,7 @@ jobs:
       shell: pwsh
       run: |
         $vulnSkipList = @()
-        $skipList = (Get-Content ./trivyScan-ignore.json | ConvertFrom-Json)
+        $skipList = (Get-Content ./cve-ignore.json | ConvertFrom-Json)
         foreach ($vulnerability in $skipList.PSObject.Properties.Name){
           echo "Adding '$vulnerability' with '$($skipList.$vulnerability.Severity)' severity entry to trivy scan ignore list"
           $vulnSkipList += $($skipList.$vulnerability.VulnerabilityID)
