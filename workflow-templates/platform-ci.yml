@@ -134,14 +134,20 @@ jobs:
       shell: pwsh
       run: |
         $vulnSkipList = @()
-        $skipList = (Get-Content ./cve-ignore.json | ConvertFrom-Json)
-        foreach ($vulnerability in $skipList.PSObject.Properties.Name){
-          echo "Adding '$vulnerability' with '$($skipList.$vulnerability.Severity)' severity entry to trivy scan ignore list"
-          $vulnSkipList += $($skipList.$vulnerability.VulnerabilityID)
+        if (Test-Path ./cve-ignore.json) {
+          Write-Host "'cve-ignore.json' file found"
+          $skipList = (Get-Content ./cve-ignore.json | ConvertFrom-Json)
+          foreach ($vulnerability in $skipList.PSObject.Properties.Name){
+            echo "Adding '$vulnerability' with '$($skipList.$vulnerability.Severity)' severity entry to trivy scan ignore list"
+            $vulnSkipList += $($skipList.$vulnerability.VulnerabilityID)
+          }
+          $stringSkipList = $vulnSkipList -join ","
+          echo "vulnSkipList=$stringSkipList" >> $env:GITHUB_OUTPUT
         }
-        $stringSkipList = $vulnSkipList -join ","
-        echo "vulnSkipList=$stringSkipList" >> $env:GITHUB_OUTPUT
-
+        else {
+          Write-Warning "'cve-ignore.json' file not found. Using empty skip list."
+          echo "vulnSkipList=$vulnSkipList" >> $env:GITHUB_OUTPUT
+        }
     - name: Add version suffix
       if: ${{ github.ref != 'refs/heads/master' || github.ref != 'refs/heads/main' }}
       uses: VirtoCommerce/vc-github-actions/add-version-suffix@master
