@@ -23,6 +23,11 @@ on:
         required: false
         type: string
         default: 'all'
+      dateThreshold:
+        description: 'Date threshold for checking deprecation warnings in days'
+        required: false
+        type: string
+        default: '30'
     
   schedule:
     - cron: '0 0 15 * *' # monthly on the 15th day at 00:00
@@ -50,11 +55,11 @@ jobs:
           } else {
             [array]$repos = "${{ env.REPOS }}".Split(',')
           }
-          $fields = 'databaseId,name,conclusion'
+          $fields = 'databaseId,name,conclusion,createdAt'
           $result = @()
           $skipValues = @('set-output', 'angular@1.8.3', 'angular-cookies@1.8.3', 'angular-resource@1.8.3', 'angular-translate-loader-url@2.19.1', 'angular-translate-storage-cookie@2.15.2', 'glob@7.1.7', 'har-validator@5.1.5', 'inflight@1.0.6', 'request@2.88.2', 'rimraf@2.7.1', 'angular-translate-storage-local@2.19.1')
-          # $skipValues = @('qwerty')
-
+          $timeThreshold = (Get-Date).AddDays(-${{ github.event.inputs.dateThreshold || 30 }})
+          $deprecationWarnings = @()
           foreach ($repo in $repos) {
               echo "Checking repo: $repo"
               $testAccess = gh api "repos/VirtoCommerce/$repo" --jq '.id'
@@ -63,6 +68,7 @@ jobs:
                   continue
               }
               [array]$runs = gh run list -R VirtoCommerce/$repo --limit ${{ env.NUMBER_OF_RUNS}} --json $fields | ConvertFrom-Json
+              $runs = $runs | Where-Object { $_.createdAt -gt $timeThreshold }
               foreach ($run in $runs) {
                   $runId = "$($run.databaseId)"
                   $deprecationWarnings = gh run view $runId -R VirtoCommerce/$repo | Select-String -Pattern 'deprecated', 'obsolete'
