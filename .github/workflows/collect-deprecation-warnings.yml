@@ -114,22 +114,22 @@ jobs:
         run: |
           cat $env:RUNNER_TEMP/deprecation-warnings.json
 
-      - name: Upload deprecation warnings list
-        if: ${{ steps.collect-deprecation-warnings.outputs.result == 'true' }}
-        uses: actions/upload-artifact@v4
-        with:
-          name: deprecation-warnings
-          path: ${{ runner.temp }}/deprecation-warnings.json
-          retention-days: 30
-        continue-on-error: true
+      # - name: Upload deprecation warnings list
+      #   if: ${{ steps.collect-deprecation-warnings.outputs.result == 'true' }}
+      #   uses: actions/upload-artifact@v4
+      #   with:
+      #     name: deprecation-warnings
+      #     path: ${{ runner.temp }}/deprecation-warnings.json
+      #     retention-days: 30
+      #   continue-on-error: true
 
-      - name: Teams notification
-        if: ${{ steps.collect-deprecation-warnings.outputs.result == 'true' }}
-        uses: VirtoCommerce/vc-github-actions/publish-teams-webhook-notification@master
-        with:
-          teamsWebhookUrl: ${{ env.TEAMS_WEBHOOK_URL }}
-          mentions: '@(@{id = "859369bc-81d3-498d-a3a8-ceba4dd6c8a4"; name = "Andrew.Kubyshkin" })'
-          title: 'New deprecation warning(s) found'
-          workflowName: ${{ github.workflow }}
-          buildId: ${{ github.run_id }}
-          githubRepo: '${{ github.repository }}'
+      # - name: Teams notification
+      #   if: ${{ steps.collect-deprecation-warnings.outputs.result == 'true' }}
+      #   uses: VirtoCommerce/vc-github-actions/publish-teams-webhook-notification@master
+      #   with:
+      #     teamsWebhookUrl: ${{ env.TEAMS_WEBHOOK_URL }}
+      #     mentions: '@(@{id = "859369bc-81d3-498d-a3a8-ceba4dd6c8a4"; name = "Andrew.Kubyshkin" })'
+      #     title: 'New deprecation warning(s) found'
+      #     workflowName: ${{ github.workflow }}
+      #     buildId: ${{ github.run_id }}
+      #     githubRepo: '${{ github.repository }}'
