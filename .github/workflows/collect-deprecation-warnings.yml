@@ -68,7 +68,9 @@ jobs:
                   continue
               }
               [array]$runs = gh run list -R VirtoCommerce/$repo --limit ${{ env.NUMBER_OF_RUNS}} --json $fields | ConvertFrom-Json
+              echo "Runs before filtering: $runs"
               $runs = $runs | Where-Object { $_.createdAt -gt $timeThreshold }
+              echo "Runs after filtering: $runs"
               foreach ($run in $runs) {
                   $runId = "$($run.databaseId)"
                   $deprecationWarnings = gh run view $runId -R VirtoCommerce/$repo | Select-String -Pattern 'deprecated', 'obsolete'
