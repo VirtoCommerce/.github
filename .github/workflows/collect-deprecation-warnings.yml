@@ -2,10 +2,11 @@
 # https://virtocommerce.atlassian.net/browse/VCST-923
 
 # =======================================================================================
-# The workflow collects deprecation warnings from repos in the VirtoCommerce organization.
+# The workflow collects deprecation and obsolete warnings from repos in the VirtoCommerce organization.
 # The list of repos can be specified in the workflow inputs.
-# The number of runs to check for deprecation warnings in each repo can be specified in the workflow inputs.
-# The workflow will collect deprecation warnings from the last ${{ inputs.numberOfRuns }} runs for each repo.
+# The number of runs to check for deprecation and obsolete warnings in each repo can be specified in the workflow inputs.
+# The date threshold for checking deprecation and obsolete warnings in days can be specified in the workflow inputs. The runs older than the date threshold will be skipped.
+# The workflow will collect deprecation and obsolete warnings from the last ${{ inputs.numberOfRuns }} runs for each repo.
 # The workflow will skip repos that are not in the list of repos specified in the workflow inputs.
 # =======================================================================================
 name: Collect deprecation warnings
@@ -14,15 +15,20 @@ on:
   workflow_dispatch:
     inputs:
       numberOfRuns:
-        description: 'Number of runs to check for deprecation warnings in each repo'
+        description: 'Number of runs to check for deprecation and obsolete warnings in each repo'
         required: false
         type: number
         default: 5
       repos:
-        description: 'Repos to check for deprecation warnings. Allowed values: "all" or comma separated list of repos'
+        description: 'Repos to check for deprecation and obsolete warnings. Allowed values: "all" or comma separated list of repos'
         required: false
         type: string
         default: 'all'
+      dateThreshold:
+        description: 'Date threshold for checking deprecation and obsolete warnings in days'
+        required: false
+        type: string
+        default: '30'
     
   schedule:
     - cron: '0 0 15 * *' # monthly on the 15th day at 00:00
@@ -50,11 +56,11 @@ jobs:
           } else {
             [array]$repos = "${{ env.REPOS }}".Split(',')
           }
-          $fields = 'databaseId,name,conclusion'
+          $fields = 'databaseId,name,conclusion,createdAt'
           $result = @()
           $skipValues = @('set-output', 'angular@1.8.3', 'angular-cookies@1.8.3', 'angular-resource@1.8.3', 'angular-translate-loader-url@2.19.1', 'angular-translate-storage-cookie@2.15.2', 'glob@7.1.7', 'har-validator@5.1.5', 'inflight@1.0.6', 'request@2.88.2', 'rimraf@2.7.1', 'angular-translate-storage-local@2.19.1')
-          # $skipValues = @('qwerty')
-
+          $timeThreshold = (Get-Date).AddDays(-${{ github.event.inputs.dateThreshold || 30 }})
+          $deprecationWarnings = @()
           foreach ($repo in $repos) {
               echo "Checking repo: $repo"
               $testAccess = gh api "repos/VirtoCommerce/$repo" --jq '.id'
@@ -63,6 +69,11 @@ jobs:
                   continue
               }
               [array]$runs = gh run list -R VirtoCommerce/$repo --limit ${{ env.NUMBER_OF_RUNS}} --json $fields | ConvertFrom-Json
+              echo "Runs before filtering:"
+              $runs
+              $runs = $runs | Where-Object { $_.createdAt -gt $timeThreshold }
+              echo "Runs after filtering:"
+              $runs
               foreach ($run in $runs) {
                   $runId = "$($run.databaseId)"
                   $deprecationWarnings = gh run view $runId -R VirtoCommerce/$repo | Select-String -Pattern 'deprecated', 'obsolete'
