@@ -119,11 +119,13 @@ jobs:
       uses: VirtoCommerce/vc-github-actions/docker-env-full@VCST-4086 #master
       with:
         frontendZipUrl: ${{ inputs.frontendZipUrl }}
-        installModules: 'true'
-        installCustomModule: 'false'
-        platformDockerTag: 'dev-linux-latest'
+        installModules: ${{ inputs.installModules }} #'true'
+        installCustomModule: ${{ inputs.installCustomModule }} #'false'
+        platformDockerTag: ${{ inputs.platformDockerTag }} #'dev-linux-latest'
         testSecretEnvFile: ${{ secrets.testSecretEnvFile }}
         customPackagesJsonUrl: ${{ inputs.customPackagesJsonUrl }}
+        customModuleId: ${{ inputs.customModuleId }}
+        customModuleUrl: ${{ inputs.customModuleUrl }}
     
     - name: Run E2E Tests
       uses: VirtoCommerce/vc-github-actions/run-e2e-tests@master
