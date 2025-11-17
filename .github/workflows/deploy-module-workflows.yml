@@ -37,6 +37,7 @@ jobs:
                   ,vc-module-customer
                   ,vc-module-customer-export-import
                   ,vc-module-customer-review
+                  ,vc-module-datatrans
                   ,vc-module-dynamic-associations
                   ,vc-module-elastic-app-search
                   ,vc-module-elastic-search
