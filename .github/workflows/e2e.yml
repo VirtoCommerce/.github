@@ -35,6 +35,11 @@ on:
         required: false
         type: string
         default: ''
+      customModuleListUrl:
+        description: 'Custom module list url'
+        required: false
+        type: string
+        default: ''
       customModuleUrl:
         description: 'Custom module Module url'
         required: false
@@ -81,7 +86,7 @@ jobs:
         path: ${{ env.KATALON_PATH }}
 
     - name: Docker Env
-      uses: VirtoCommerce/vc-github-actions/docker-env@master
+      uses: VirtoCommerce/vc-github-actions/docker-env@VCST-4203 #master
       with:
         githubUser: ${{ env.GITHUB_ACTOR }}
         githubToken: ${{ env.GITHUB_TOKEN }}
@@ -92,6 +97,7 @@ jobs:
         installCustomModule: ${{ inputs.installCustomModule }}
         customModuleId: ${{ inputs.customModuleId }}
         customModuleUrl: ${{ inputs.customModuleUrl }}
+        customModuleListUrl: ${{ inputs.customModuleListUrl }}
         envDir: '${{ github.workspace }}'
         
     - name: Setup Java
