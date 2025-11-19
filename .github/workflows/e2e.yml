@@ -35,8 +35,8 @@ on:
         required: false
         type: string
         default: ''
-      customModuleListUrl:
-        description: 'Custom module list url'
+      requiredModulesListUrl:
+        description: 'The URL of the JSON file with the required modules list'
         required: false
         type: string
         default: ''
@@ -97,7 +97,7 @@ jobs:
         installCustomModule: ${{ inputs.installCustomModule }}
         customModuleId: ${{ inputs.customModuleId }}
         customModuleUrl: ${{ inputs.customModuleUrl }}
-        customModuleListUrl: ${{ inputs.customModuleListUrl }}
+        requiredModulesListUrl: ${{ inputs.requiredModulesListUrl }}
         envDir: '${{ github.workspace }}'
         
     - name: Setup Java
