@@ -116,11 +116,11 @@ jobs:
       uses: VirtoCommerce/vc-github-actions/setup-vcbuild@master
 
     - name: Docker Env Full
-      uses: VirtoCommerce/vc-github-actions/docker-env-full@VCST-4086 #master
+      uses: VirtoCommerce/vc-github-actions/docker-env-full@master
       with:
         frontendZipUrl: ${{ inputs.frontendZipUrl }}
-        installModules: ${{ inputs.installModules }} #'true'
-        installCustomModule: ${{ inputs.installCustomModule }} #'false'
+        installModules: ${{ inputs.installModules }}
+        installCustomModule: ${{ inputs.installCustomModule }}
         platformDockerTag: ${{ inputs.platformDockerTag }} #'dev-linux-latest'
         testSecretEnvFile: ${{ secrets.testSecretEnvFile }}
         customPackagesJsonUrl: ${{ inputs.customPackagesJsonUrl }}
