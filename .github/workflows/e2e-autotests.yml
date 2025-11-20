@@ -44,6 +44,11 @@ on:
         required: false
         type: string
         default: ''
+      customPackagesJsonUrl:
+        description: 'Custom packages.json url'
+        required: false
+        type: string
+        default: ''
       frontendZipUrl:
         required: false
         type: string
@@ -114,10 +119,13 @@ jobs:
       uses: VirtoCommerce/vc-github-actions/docker-env-full@master
       with:
         frontendZipUrl: ${{ inputs.frontendZipUrl }}
-        installModules: 'true'
-        installCustomModule: 'false'
+        installModules: ${{ inputs.installModules }}
+        installCustomModule: ${{ inputs.installCustomModule }}
         platformDockerTag: 'dev-linux-latest'
         testSecretEnvFile: ${{ secrets.testSecretEnvFile }}
+        customPackagesJsonUrl: ${{ inputs.customPackagesJsonUrl }}
+        customModuleId: ${{ inputs.customModuleId }}
+        customModuleUrl: ${{ inputs.customModuleUrl }}
     
     - name: Run E2E Tests
       uses: VirtoCommerce/vc-github-actions/run-e2e-tests@master
