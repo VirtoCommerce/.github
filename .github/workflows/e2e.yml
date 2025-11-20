@@ -1,5 +1,5 @@
-# v3.800.19
-# https://virtocommerce.atlassian.net/browse/VCST-923
+# v3.800.20
+# https://virtocommerce.atlassian.net/browse/VCST-4203
 name: Common katalon tests
 
 on:
@@ -35,6 +35,11 @@ on:
         required: false
         type: string
         default: ''
+      requiredModulesListUrl:
+        description: 'The URL of the JSON file with the required modules list'
+        required: false
+        type: string
+        default: ''
       customModuleUrl:
         description: 'Custom module Module url'
         required: false
@@ -59,7 +64,7 @@ on:
 
 jobs:
   e2e-tests:
-    runs-on: ubuntu-22.04 # katalon action runs correctly on ubuntu-18.04
+    runs-on: ubuntu-22.04
 
     env:
       GITHUB_TOKEN: ${{ secrets.envPAT }}
@@ -92,6 +97,7 @@ jobs:
         installCustomModule: ${{ inputs.installCustomModule }}
         customModuleId: ${{ inputs.customModuleId }}
         customModuleUrl: ${{ inputs.customModuleUrl }}
+        requiredModulesListUrl: ${{ inputs.requiredModulesListUrl }}
         envDir: '${{ github.workspace }}'
         
     - name: Setup Java
