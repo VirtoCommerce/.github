@@ -121,7 +121,7 @@ jobs:
         frontendZipUrl: ${{ inputs.frontendZipUrl }}
         installModules: ${{ inputs.installModules }}
         installCustomModule: ${{ inputs.installCustomModule }}
-        platformDockerTag: ${{ inputs.platformDockerTag }} #'dev-linux-latest'
+        platformDockerTag: 'dev-linux-latest'
         testSecretEnvFile: ${{ secrets.testSecretEnvFile }}
         customPackagesJsonUrl: ${{ inputs.customPackagesJsonUrl }}
         customModuleId: ${{ inputs.customModuleId }}
