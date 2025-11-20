@@ -1,5 +1,5 @@
-# v3.800.21
-# https://virtocommerce.atlassian.net/browse/VCST-4086
+# v3.800.22
+# https://virtocommerce.atlassian.net/browse/VCST-4203
 name: VC Publish Github release and Nuget package
 
 on:
