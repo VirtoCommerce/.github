@@ -65,6 +65,7 @@ jobs:
                   ,vc-module-order
                   ,vc-module-order-management
                   ,vc-module-payment
+                  ,vc-module-pages
                   ,vc-module-power-bi-reports
                   ,vc-module-price-export-import
                   ,vc-module-pricing
