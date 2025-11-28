@@ -122,7 +122,7 @@ jobs:
         installModules: ${{ inputs.installModules }}
         platformDockerTag: ${{ inputs.platformDockerTag }}
         testSecretEnvFile: ${{ secrets.testSecretEnvFile }}
-        sendgridApiKey: ${{ secrets.sendgrid-apikey-4e2e-autotests }}
+        sendgridApiKey: ${{ secrets.sendgridApiKey }}
     
     - name: Run GraphQL Tests
       uses: VirtoCommerce/vc-github-actions/run-graphql-tests@master
