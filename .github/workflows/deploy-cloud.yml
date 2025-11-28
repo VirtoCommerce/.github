@@ -5,10 +5,6 @@ name: VC cloud deployment
 on:
   workflow_call:
     inputs:
-      argoServer:
-        required: false
-        default: 'argo.virtocommerce.cloud'
-        type: string
       releaseSource:
         description: 'Deployment source. Allowed values: platform, module'
         required: true
@@ -48,6 +44,11 @@ on:
         default: ''
         required: false
         type: string
+      cloudUrl:
+        description: 'URL for Virtocloud'
+        default: 'https://portal.virtocommerce.cloud'
+        required: false
+        type: string
 
 jobs:
   Deploy:
@@ -61,8 +62,6 @@ jobs:
       CLIENT_ID: ${{secrets.CLIENT_ID}}
       CLIENT_SECRET: ${{secrets.CLIENT_SECRET}}
       GITHUB_TOKEN: ${{ secrets.REPO_TOKEN }}
-      ARGO_SERVER: ${{ inputs.argoServer }}
-      SLEEP_TIME: '3m'
 
     steps: 
       - name: Set forceCommit value #Create deployment commit instead of Pull request to a deployment repo
@@ -109,20 +108,14 @@ jobs:
           forceCommit: ${{ steps.forceCommit.outputs.value }}
           configPath: ${{ steps.deployConfig.outputs.cmPath }}
 
-      - name: Sleep for ${{ env.SLEEP_TIME }}
-        if: ${{ steps.forceCommit.outputs.value == 'true' }}
-        run: sleep ${{ env.SLEEP_TIME }}
-        shell: bash
-
       - name: Wait for environment is up
         if: ${{ steps.forceCommit.outputs.value == 'true' }}
-        timeout-minutes: 5
-        uses: VirtoCommerce/vc-github-actions/vc-argocd-cli@master
-        with:
-          server: ${{env.ARGO_SERVER}}
-          username: ${{ secrets.VIRTOCLOUD_LOGIN }}
-          password: ${{ secrets.VIRTOCLOUD_PASSWORD }}
-          command: app wait ${{ steps.deployConfig.outputs.deployAppName }}
+        run: |
+          dotnet tool install --global VirtoCommerce.GlobalTool
+          echo '### Check for deployment start...'
+          vc-build CloudEnvStatus -CloudUrl ${{ inputs.cloudUrl }} -CloudToken ${{ secrets.CLOUD_TOKEN }} -EnvironmentName ${{ steps.deployConfig.outputs.deployAppName }} -HealthStatus Progressing
+          echo '### Check for deployment complete...'
+          vc-build CloudEnvStatus -CloudUrl ${{ inputs.cloudUrl }} -CloudToken ${{ secrets.CLOUD_TOKEN }} -EnvironmentName ${{ steps.deployConfig.outputs.deployAppName }} -HealthStatus Healthy -SyncStatus Synced
 
       - name: DEPLOY_STATE::successful
         if: success()
