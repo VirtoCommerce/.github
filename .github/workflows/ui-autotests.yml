@@ -1,5 +1,5 @@
-# v3.800.22
-# https://virtocommerce.atlassian.net/browse/VCST-4203
+# v3.800.23
+# https://virtocommerce.atlassian.net/browse/VCST-3056
 name: Common UI tests
 
 on:
@@ -87,6 +87,8 @@ on:
     secrets:
       envPAT:
         required: true
+      sendgridApiKey:
+        required: true
       testSecretEnvFile:
         required: true
 
@@ -120,6 +122,7 @@ jobs:
         installModules: ${{ inputs.installModules }}
         platformDockerTag: ${{ inputs.platformDockerTag }}
         testSecretEnvFile: ${{ secrets.testSecretEnvFile }}
+        sendgridApiKey: ${{ secrets.sendgridApiKey }}
     
     - name: Run GraphQL Tests
       uses: VirtoCommerce/vc-github-actions/run-graphql-tests@master
