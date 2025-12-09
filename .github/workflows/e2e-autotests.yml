@@ -92,6 +92,8 @@ on:
     secrets:
       envPAT:
         required: true
+      sendgridApiKey:
+        required: true
       testSecretEnvFile:
         required: true
 
