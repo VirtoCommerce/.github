@@ -126,6 +126,7 @@ jobs:
         customPackagesJsonUrl: ${{ inputs.customPackagesJsonUrl }}
         customModuleId: ${{ inputs.customModuleId }}
         customModuleUrl: ${{ inputs.customModuleUrl }}
+        sendgridApiKey: ${{ secrets.sendgridApiKey }}
     
     - name: Run E2E Tests
       uses: VirtoCommerce/vc-github-actions/run-e2e-tests@master
