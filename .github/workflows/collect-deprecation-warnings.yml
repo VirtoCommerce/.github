@@ -58,7 +58,7 @@ jobs:
           }
           $fields = 'databaseId,name,conclusion,createdAt'
           $result = @()
-          $skipValues = @('angular@1.8.3', 'angular-cookies@1.8.3', 'angular-resource@1.8.3', 'angular-translate-loader-url@2.19.1', 'angular-translate-storage-cookie@2.15.2', 'glob@7.1.7', 'har-validator@5.1.5', 'inflight@1.0.6', 'request@2.88.2', 'rimraf@2.7.1', 'angular-translate-storage-local@2.19.1')
+          $skipValues = @('angular@1.8.3', 'angular-cookies@1.8.3', 'angular-resource@1.8.3', 'angular-translate-loader-url@2.19.1', 'angular-translate-storage-cookie@2.15.2', 'glob@7.1.7', 'har-validator@5.1.5', 'inflight@1.0.6', 'request@2.88.2', 'rimraf@2.7.1', 'angular-translate-storage-local@2.19.1', 'angular-translate-storage-cookie@2.19.1', 'uuid@3.4.0', 'angular-animate@1.8.3')
           $timeThreshold = (Get-Date).AddDays(-${{ github.event.inputs.dateThreshold || 30 }})
           $deprecationWarnings = @()
           foreach ($repo in $repos) {
