@@ -154,11 +154,19 @@ jobs:
           blobSAS: ${{ secrets.BLOB_TOKEN }}
           blobUrl: ${{ vars.BLOB_URL }}
 
+      - name: Sanitize branch name
+        if: ${{ github.event_name == 'pull_request' }}
+        id: sanitize_branch
+        run: |
+          # Keep only alphanumeric, hyphens, underscores, and forward slashes and limit length to 255 characters.
+          SANITIZED_BRANCH=$(echo "${{ github.head_ref }}" | sed 's/[^a-zA-Z0-9_\/-]//g' | cut -c1-255)
+          echo "branchName=$SANITIZED_BRANCH" >> $GITHUB_OUTPUT
+
       - name: Add Jira link
         if: ${{ github.event_name == 'pull_request' }}
         uses: VirtoCommerce/vc-github-actions/publish-jira-link@master
         with:
-          branchName: ${{ github.head_ref }}
+          branchName: ${{ steps.sanitize_branch.outputs.branchName }}
           repoOrg: ${{ github.repository_owner }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
