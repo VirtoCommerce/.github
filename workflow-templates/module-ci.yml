@@ -161,7 +161,7 @@ jobs:
           BRANCH_NAME: ${{ github.head_ref }}
         run: |
           # Keep only alphanumeric, hyphens, underscores, and forward slashes and limit length to 255 characters.
-          SANITIZED_BRANCH=$(echo "$BRANCH_NAME" | sed 's/[^-a-zA-Z0-9_/]//g' | cut -c1-255)
+          SANITIZED_BRANCH=$(printf '%s\n' "$BRANCH_NAME" | sed 's/[^-a-zA-Z0-9_/]//g' | cut -c1-255)
           if [ -z "$SANITIZED_BRANCH" ]; then
             echo "branch name is empty"
             exit 1
