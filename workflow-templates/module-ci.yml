@@ -159,11 +159,16 @@ jobs:
         id: sanitize_branch
         run: |
           # Keep only alphanumeric, hyphens, underscores, and forward slashes and limit length to 255 characters.
-          SANITIZED_BRANCH=$(echo "${{ github.head_ref }}" | sed 's/[^a-zA-Z0-9_\/-]//g' | cut -c1-255)
-          echo "branchName=$SANITIZED_BRANCH" >> $GITHUB_OUTPUT
+          SANITIZED_BRANCH=$(echo "${{ github.head_ref }}" | sed 's/[^-a-zA-Z0-9_/]//g' | cut -c1-255)
+          if [ -z "$SANITIZED_BRANCH" ]; then
+            echo "branch name is empty"
+            exit 1
+          else
+            echo "branchName=$SANITIZED_BRANCH" >> $GITHUB_OUTPUT
+          fi
 
       - name: Add Jira link
-        if: ${{ github.event_name == 'pull_request' }}
+        if: ${{ github.event_name == 'pull_request' && steps.sanitize_branch.outcome == 'success' }}
         uses: VirtoCommerce/vc-github-actions/publish-jira-link@master
         with:
           branchName: ${{ steps.sanitize_branch.outputs.branchName }}
