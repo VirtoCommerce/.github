@@ -168,7 +168,7 @@ jobs:
           fi
 
       - name: Add Jira link
-        if: ${{ github.event_name == 'pull_request' && steps.sanitize_branch.outcome == 'success' }}
+        if: ${{ github.event_name == 'pull_request' }}
         uses: VirtoCommerce/vc-github-actions/publish-jira-link@master
         with:
           branchName: ${{ steps.sanitize_branch.outputs.branchName }}
