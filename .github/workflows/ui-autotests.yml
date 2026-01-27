@@ -113,7 +113,7 @@ jobs:
       uses: VirtoCommerce/vc-github-actions/setup-vcbuild@master
 
     - name: Docker Env Full
-      uses: VirtoCommerce/vc-github-actions/docker-env-full@master
+      uses: VirtoCommerce/vc-github-actions/docker-env-full@VCST-4552 #master
       with:
         customModuleId: ${{ inputs.customModuleId }}
         customModuleUrl: ${{ inputs.customModuleUrl }}
@@ -125,7 +125,7 @@ jobs:
         sendgridApiKey: ${{ secrets.sendgridApiKey }}
     
     - name: Run GraphQL Tests
-      uses: VirtoCommerce/vc-github-actions/run-graphql-tests@master
+      uses: VirtoCommerce/vc-github-actions/run-graphql-tests@VCST-4552 #master
       with:
         adminPassword: ${{ inputs.adminPassword }}
         adminUsername: ${{ inputs.adminUsername }}
