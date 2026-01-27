@@ -118,7 +118,7 @@ jobs:
       uses: VirtoCommerce/vc-github-actions/setup-vcbuild@master
 
     - name: Docker Env Full
-      uses: VirtoCommerce/vc-github-actions/docker-env-full@master
+      uses: VirtoCommerce/vc-github-actions/docker-env-full@VCST-4552 #master
       with:
         frontendZipUrl: ${{ inputs.frontendZipUrl }}
         installModules: ${{ inputs.installModules }}
@@ -131,7 +131,7 @@ jobs:
         sendgridApiKey: ${{ secrets.sendgridApiKey }}
     
     - name: Run E2E Tests
-      uses: VirtoCommerce/vc-github-actions/run-e2e-tests@master
+      uses: VirtoCommerce/vc-github-actions/run-e2e-tests@VCST-4552 #master
       with:
         adminPassword: ${{ inputs.adminPassword }}
         adminUsername: ${{ inputs.adminUsername }}
