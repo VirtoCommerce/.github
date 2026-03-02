@@ -63,6 +63,11 @@ on:
         required: false
         type: string
         default: 'local-latest'
+      requiredModulesListUrl:
+        description: 'The URL of the JSON file with the required modules list'
+        required: false
+        type: string
+        default: ''
       runTests:
         description: 'Run tests'
         required: false
@@ -113,7 +118,7 @@ jobs:
       uses: VirtoCommerce/vc-github-actions/setup-vcbuild@master
 
     - name: Docker Env Full
-      uses: VirtoCommerce/vc-github-actions/docker-env-full@master
+      uses: VirtoCommerce/vc-github-actions/docker-env-full@VCST-4391 #master
       with:
         customModuleId: ${{ inputs.customModuleId }}
         customModuleUrl: ${{ inputs.customModuleUrl }}
@@ -121,6 +126,7 @@ jobs:
         installCustomModule: ${{ inputs.installCustomModule }}
         installModules: ${{ inputs.installModules }}
         platformDockerTag: ${{ inputs.platformDockerTag }}
+        requiredModulesListUrl: ${{ inputs.requiredModulesListUrl }}
         testSecretEnvFile: ${{ secrets.testSecretEnvFile }}
         sendgridApiKey: ${{ secrets.sendgridApiKey }}
     
