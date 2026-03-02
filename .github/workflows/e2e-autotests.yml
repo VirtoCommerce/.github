@@ -118,18 +118,19 @@ jobs:
       uses: VirtoCommerce/vc-github-actions/setup-vcbuild@master
 
     - name: Docker Env Full
-      uses: VirtoCommerce/vc-github-actions/docker-env-full@master
+      uses: VirtoCommerce/vc-github-actions/docker-env-full@VCST-4391 #master
       with:
+        customPackagesJsonUrl: ${{ inputs.customPackagesJsonUrl }}
+        customModuleId: ${{ inputs.customModuleId }}
+        customModuleUrl: ${{ inputs.customModuleUrl }}
         frontendZipUrl: ${{ inputs.frontendZipUrl }}
         installModules: ${{ inputs.installModules }}
         installCustomModule: ${{ inputs.installCustomModule }}
         platformDockerTag: ${{ inputs.platformDockerTag }} #'dev-linux-latest'
-        testSecretEnvFile: ${{ secrets.testSecretEnvFile }}
-        customPackagesJsonUrl: ${{ inputs.customPackagesJsonUrl }}
-        customModuleId: ${{ inputs.customModuleId }}
-        customModuleUrl: ${{ inputs.customModuleUrl }}
+        requiredModulesListUrl: ${{ inputs.requiredModulesListUrl }}
         sendgridApiKey: ${{ secrets.sendgridApiKey }}
-    
+        testSecretEnvFile: ${{ secrets.testSecretEnvFile }}
+        
     - name: Run E2E Tests
       uses: VirtoCommerce/vc-github-actions/run-e2e-tests@master
       with:
