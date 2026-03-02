@@ -68,6 +68,11 @@ on:
         required: false
         type: string
         default: 'local-latest'
+      requiredModulesListUrl:
+        description: 'The URL of the JSON file with the required modules list'
+        required: false
+        type: string
+        default: ''
       runTests:
         description: 'Run tests'
         required: false
