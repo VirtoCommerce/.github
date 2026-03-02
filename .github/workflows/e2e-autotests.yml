@@ -68,11 +68,6 @@ on:
         required: false
         type: string
         default: 'local-latest'
-      requiredModulesListUrl:
-        description: 'The URL of the JSON file with the required modules list'
-        required: false
-        type: string
-        default: ''
       runTests:
         description: 'Run tests'
         required: false
@@ -125,17 +120,16 @@ jobs:
     - name: Docker Env Full
       uses: VirtoCommerce/vc-github-actions/docker-env-full@master
       with:
-        customPackagesJsonUrl: ${{ inputs.customPackagesJsonUrl }}
-        customModuleId: ${{ inputs.customModuleId }}
-        customModuleUrl: ${{ inputs.customModuleUrl }}
         frontendZipUrl: ${{ inputs.frontendZipUrl }}
         installModules: ${{ inputs.installModules }}
         installCustomModule: ${{ inputs.installCustomModule }}
         platformDockerTag: ${{ inputs.platformDockerTag }} #'dev-linux-latest'
-        requiredModulesListUrl: ${{ inputs.requiredModulesListUrl }}
-        sendgridApiKey: ${{ secrets.sendgridApiKey }}
         testSecretEnvFile: ${{ secrets.testSecretEnvFile }}
-        
+        customPackagesJsonUrl: ${{ inputs.customPackagesJsonUrl }}
+        customModuleId: ${{ inputs.customModuleId }}
+        customModuleUrl: ${{ inputs.customModuleUrl }}
+        sendgridApiKey: ${{ secrets.sendgridApiKey }}
+    
     - name: Run E2E Tests
       uses: VirtoCommerce/vc-github-actions/run-e2e-tests@master
       with:
