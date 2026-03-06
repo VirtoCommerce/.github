@@ -21,17 +21,17 @@ on:
         description: 'Initial module version'
         required: false
         type: string
-        default: '3.800.0'
+        default: '3.1000.0'
       platformVersion:
         description: 'Required platform version'
         required: false
         type: string
-        default: '3.876.0'
+        default: '3.1000.0'
       coreVersion:
         description: 'Required core module version'
         required: false
         type: string
-        default: '3.800.0'
+        default: '3.1000.0'
       template:
         description: 'Module code template'
         required: false
