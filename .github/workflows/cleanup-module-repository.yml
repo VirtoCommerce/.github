@@ -1,0 +1,160 @@
+name: Cleanup Module Repository
+
+# Use this workflow to delete a module repository and its SonarCloud project.
+#
+# IMPORTANT: This workflow can only delete repositories that were created by
+# the 'Create Module Repository' workflow and have a tracking issue in this
+# repository. The target repo and SonarCloud key are extracted directly from
+# the issue body — no free-form repo name input is accepted.
+#
+# Typical use cases:
+#   - Removing a repository created by a failed or misconfigured run of
+#     'Create Module Repository' that automatic cleanup could not handle.
+#   - Decommissioning a module that is no longer needed.
+#
+# Prerequisites:
+#   - REPO_TOKEN secret with org Administration: write + Members: write
+#   - SONAR_TOKEN and SONAR_ORG_KEY secrets (only needed if SonarCloud line is in issue)
+#   - 'module-repository-management' environment with required reviewers configured
+#     at: Settings → Environments → module-repository-management
+
+on:
+  workflow_dispatch:
+    inputs:
+      issueNumber:
+        description: 'Tracking issue number created by "Create Module Repository" (e.g. 42)'
+        required: true
+        type: string
+      deleteSonarCloud:
+        description: 'Delete the SonarCloud project referenced in the issue (if present)'
+        required: false
+        type: boolean
+        default: true
+      reason:
+        description: 'Reason for deletion — recorded in the audit trail'
+        required: true
+        type: string
+
+env:
+  GH_TOKEN: ${{ secrets.REPO_TOKEN }}
+
+concurrency:
+  group: module-repository-cleanup-issue-${{ inputs.issueNumber }}
+  cancel-in-progress: false
+
+jobs:
+
+  cleanup:
+    runs-on: ubuntu-latest
+    # Requires manual approval before any destructive action is taken.
+    # Configure required reviewers at: Settings → Environments → module-repository-management
+    environment: module-repository-management
+    steps:
+
+      - name: Read tracking issue and extract targets
+        id: targets
+        run: |
+          # Fetch the issue body
+          BODY=$(gh issue view ${{ inputs.issueNumber }} \
+            --repo "${{ github.repository }}" \
+            --json title,body,state \
+            --jq '.')
+
+          # Verify the issue exists and is a module creation record
+          TITLE=$(echo "$BODY" | jq -r '.title')
+          if ! echo "$TITLE" | grep -qE '^New module: VirtoCommerce/vc-module-'; then
+            echo "::error::Issue #${{ inputs.issueNumber }} does not appear to be a module creation tracking issue (title: '$TITLE')."
+            exit 1
+          fi
+
+          ISSUE_BODY=$(echo "$BODY" | jq -r '.body')
+
+          # Extract repository name from the Repository row of the issue table
+          # Expected format: | **Repository** | [VirtoCommerce/vc-module-xxx](...) |
+          REPO_NAME=$(echo "$ISSUE_BODY" | grep -oE 'VirtoCommerce/vc-module-[a-z0-9-]+' | head -1 | sed 's|VirtoCommerce/||')
+          if [ -z "$REPO_NAME" ]; then
+            echo "::error::Could not extract repository name from issue #${{ inputs.issueNumber }}."
+            exit 1
+          fi
+
+          # Extract SonarCloud project key if present (public repos only)
+          # Expected format: | **SonarCloud** | [VirtoCommerce_vc-module-xxx](...) |
+          SONAR_KEY=$(echo "$ISSUE_BODY" | grep '\*\*SonarCloud\*\*' | grep -oE '[A-Za-z]+_vc-module-[a-z0-9-]+' | head -1)
+
+          echo "repoName=$REPO_NAME" >> $GITHUB_OUTPUT
+          echo "sonarProjectKey=$SONAR_KEY" >> $GITHUB_OUTPUT
+          echo "Target repository:    VirtoCommerce/$REPO_NAME"
+          echo "Target SonarCloud:    ${SONAR_KEY:-'(not in issue — skipping)'}"
+
+      - name: Delete GitHub repository
+        env:
+          REPO_NAME: ${{ steps.targets.outputs.repoName }}
+        run: |
+          if gh api /repos/VirtoCommerce/${{ env.REPO_NAME }} --silent 2>/dev/null; then
+            echo "Deleting repository VirtoCommerce/${{ env.REPO_NAME }}..."
+            gh api --method DELETE /repos/VirtoCommerce/${{ env.REPO_NAME }}
+            echo "Repository deleted."
+          else
+            echo "Repository VirtoCommerce/${{ env.REPO_NAME }} does not exist — skipping."
+          fi
+
+      - name: Delete SonarCloud project
+        # Only runs if deleteSonarCloud is true AND the issue contained a SonarCloud key
+        if: ${{ inputs.deleteSonarCloud && steps.targets.outputs.sonarProjectKey != '' }}
+        env:
+          SONAR_PROJECT_KEY: ${{ steps.targets.outputs.sonarProjectKey }}
+        run: |
+          RESPONSE=$(curl -s \
+            -H "Authorization: Bearer ${{ secrets.SONAR_TOKEN }}" \
+            "https://sonarcloud.io/api/projects/search?projects=${{ env.SONAR_PROJECT_KEY }}&organization=${{ secrets.SONAR_ORG_KEY }}" \
+            2>/dev/null || echo '{}')
+          TOTAL=$(echo "$RESPONSE" | grep -o '"total":[0-9]*' | cut -d: -f2)
+          if [ "${TOTAL:-0}" -gt "0" ]; then
+            echo "Deleting SonarCloud project ${{ env.SONAR_PROJECT_KEY }}..."
+            curl -sf -X POST \
+              -H "Authorization: Bearer ${{ secrets.SONAR_TOKEN }}" \
+              "https://sonarcloud.io/api/projects/delete" \
+              --data-urlencode "project=${{ env.SONAR_PROJECT_KEY }}"
+            echo "SonarCloud project deleted."
+          else
+            echo "SonarCloud project ${{ env.SONAR_PROJECT_KEY }} does not exist — skipping."
+          fi
+
+      - name: Close tracking issue
+        env:
+          REPO_NAME: ${{ steps.targets.outputs.repoName }}
+          REASON: ${{ inputs.reason }}
+        run: |
+          gh issue close ${{ inputs.issueNumber }} \
+            --repo "${{ github.repository }}" \
+            --comment "Repository **VirtoCommerce/${{ env.REPO_NAME }}** deleted by @${{ github.actor }}. Reason: $REASON"
+
+      - name: Create audit issue
+        env:
+          REPO_NAME: ${{ steps.targets.outputs.repoName }}
+          SONAR_PROJECT_KEY: ${{ steps.targets.outputs.sonarProjectKey }}
+        run: |
+          RUN_URL="${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+
+          cat > /tmp/audit-body.md << EOF
+          ## Module Repository Deleted
+
+          | Field | Value |
+          |-------|-------|
+          | **Repository** | VirtoCommerce/${{ env.REPO_NAME }} |
+          | **SonarCloud deleted** | ${{ inputs.deleteSonarCloud }} |
+          | **Tracking issue** | #${{ inputs.issueNumber }} |
+          | **Deleted by** | @${{ github.actor }} |
+          | **Date** | $(date -u '+%Y-%m-%d %H:%M UTC') |
+          | **Reason** | ${{ inputs.reason }} |
+          | **Workflow run** | [Run #${{ github.run_number }}]($RUN_URL) |
+          EOF
+
+          if [ -n "${{ env.SONAR_PROJECT_KEY }}" ]; then
+            echo "| **SonarCloud key** | ${{ env.SONAR_PROJECT_KEY }} |" >> /tmp/audit-body.md
+          fi
+
+          gh issue create \
+            --repo "${{ github.repository }}" \
+            --title "Deleted module: VirtoCommerce/${{ env.REPO_NAME }}" \
+            --body-file /tmp/audit-body.md

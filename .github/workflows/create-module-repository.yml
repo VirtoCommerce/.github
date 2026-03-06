@@ -54,6 +54,12 @@ on:
 env:
   GH_TOKEN: ${{ secrets.REPO_TOKEN }}
 
+# Prevent concurrent runs for the same module name to avoid race conditions
+# on existence checks and resource creation.
+concurrency:
+  group: module-repository-${{ inputs.moduleName }}-${{ inputs.companyName }}
+  cancel-in-progress: false
+
 jobs:
 
   preflight:
@@ -147,6 +153,9 @@ jobs:
   create-repository:
     runs-on: ubuntu-latest
     needs: preflight
+    # Requires manual approval from a designated reviewer before any resources are created.
+    # Configure required reviewers at: Settings → Environments → module-repository-management
+    environment: module-repository-management
     # Pass preflight outputs through so downstream jobs have a single source via create-repository
     outputs:
       repoName: ${{ needs.preflight.outputs.repoName }}
@@ -459,6 +468,58 @@ jobs:
 #           set_setting "sonar.exclusions"          "**/Migrations/**,**/Scripts/**,**/node_modules/**,**/*.Designer.cs"
 #           set_setting "sonar.coverage.exclusions" "**/Migrations/**,**/Tests/**,**/*.Designer.cs"
 #           set_setting "sonar.cs.opencover.reportsPaths" "artifacts/tests/**/*.xml"
+
+  notify:
+    runs-on: ubuntu-latest
+    # Runs only when all main jobs succeed. Issue creation failure does not
+    # fail the overall workflow — repo setup is already complete at this point.
+    needs: [create-repository, populate-repository, configure-branch-protection] #, configure-sonarcloud]
+    continue-on-error: true
+    env:
+      REPO_NAME: ${{ needs.create-repository.outputs.repoName }}
+      MODULE_ID: ${{ needs.create-repository.outputs.moduleId }}
+    steps:
+
+      - name: Create tracking issue
+        run: |
+          RUN_URL="${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+          REPO_URL="https://github.com/VirtoCommerce/${{ env.REPO_NAME }}"
+
+          cat > /tmp/issue-body.md << EOF
+          ## Module Repository Created
+
+          | Field | Value |
+          |-------|-------|
+          | **Repository** | [VirtoCommerce/${{ env.REPO_NAME }}]($REPO_URL) |
+          | **Module ID** | ${{ env.MODULE_ID }} |
+          | **Template** | ${{ inputs.template }} |
+          | **Visibility** | ${{ inputs.visibility }} |
+          | **Module version** | ${{ inputs.moduleVersion }} |
+          | **Platform version** | ${{ inputs.platformVersion }} |
+          | **Core version** | ${{ inputs.coreVersion }} |
+          | **Author** | ${{ inputs.author }} |
+          | **Triggered by** | @${{ github.actor }} |
+          | **Workflow run** | [Run #${{ github.run_number }}]($RUN_URL) |
+          EOF
+
+          if [ "${{ inputs.visibility }}" = "public" ]; then
+            SONAR_URL="https://sonarcloud.io/project/overview?id=${{ needs.create-repository.outputs.sonarProjectKey }}"
+            echo "| **SonarCloud** | [${{ needs.create-repository.outputs.sonarProjectKey }}]($SONAR_URL) |" >> /tmp/issue-body.md
+          fi
+
+          cat >> /tmp/issue-body.md << 'EOF'
+
+          ## Next steps
+          - [ ] Verify team access: `platform` (write), `virto-commerce` (maintain), `virto-operations` (admin)
+          - [ ] Push to `dev` to trigger the first CI run — registers required status check names for branch protection
+          - [ ] Update `README.md` with module description
+          - [ ] Configure SonarCloud project (if visibility is public and not done automatically)
+          EOF
+
+          gh issue create \
+            --repo "${{ github.repository }}" \
+            --title "New module: VirtoCommerce/${{ env.REPO_NAME }}" \
+            --body-file /tmp/issue-body.md
 
   cleanup:
     runs-on: ubuntu-latest
