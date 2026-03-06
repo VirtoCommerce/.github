@@ -463,7 +463,7 @@ jobs:
   cleanup:
     runs-on: ubuntu-latest
     if: ${{ failure() }}
-    needs: [preflight, create-repository, populate-repository, configure-branch-protection, configure-sonarcloud]
+    needs: [preflight, create-repository, populate-repository, configure-branch-protection] #, configure-sonarcloud]
     env:
       REPO_NAME: ${{ needs.preflight.outputs.repoName }}
       SONAR_PROJECT_KEY: ${{ needs.preflight.outputs.sonarProjectKey }}
