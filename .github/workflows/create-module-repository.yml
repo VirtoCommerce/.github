@@ -87,25 +87,25 @@ jobs:
           }
           echo "Organization access confirmed."
 
-      - name: Validate SONAR_TOKEN and SONAR_ORG_KEY
-        if: ${{ inputs.visibility == 'public' }}
-        run: |
-          if [ -z "${{ secrets.SONAR_TOKEN }}" ]; then
-            echo "::error::SONAR_TOKEN secret is not set."
-            exit 1
-          fi
-          if [ -z "${{ secrets.SONAR_ORG_KEY }}" ]; then
-            echo "::error::SONAR_ORG_KEY secret is not set."
-            exit 1
-          fi
-          RESPONSE=$(curl -s \
-            -H "Authorization: Bearer ${{ secrets.SONAR_TOKEN }}" \
-            "https://sonarcloud.io/api/authentication/validate")
-          if ! echo "$RESPONSE" | grep -q '"valid":true'; then
-            echo "::error::SONAR_TOKEN is invalid."
-            exit 1
-          fi
-          echo "SONAR_TOKEN is valid."
+    #   - name: Validate SONAR_TOKEN and SONAR_ORG_KEY
+    #     if: ${{ inputs.visibility == 'public' }}
+    #     run: |
+    #       if [ -z "${{ secrets.SONAR_TOKEN }}" ]; then
+    #         echo "::error::SONAR_TOKEN secret is not set."
+    #         exit 1
+    #       fi
+    #       if [ -z "${{ secrets.SONAR_ORG_KEY }}" ]; then
+    #         echo "::error::SONAR_ORG_KEY secret is not set."
+    #         exit 1
+    #       fi
+    #       RESPONSE=$(curl -s \
+    #         -H "Authorization: Bearer ${{ secrets.SONAR_TOKEN }}" \
+    #         "https://sonarcloud.io/api/authentication/validate")
+    #       if ! echo "$RESPONSE" | grep -q '"valid":true'; then
+    #         echo "::error::SONAR_TOKEN is invalid."
+    #         exit 1
+    #       fi
+    #       echo "SONAR_TOKEN is valid."
 
       - name: Compute names
         id: names
@@ -132,17 +132,17 @@ jobs:
             exit 1
           fi
 
-      - name: Check SonarCloud project does not exist
-        if: ${{ inputs.visibility == 'public' }}
-        run: |
-          RESPONSE=$(curl -s \
-            -H "Authorization: Bearer ${{ secrets.SONAR_TOKEN }}" \
-            "https://sonarcloud.io/api/projects/search?projects=${{ steps.names.outputs.sonarProjectKey }}&organization=${{ secrets.SONAR_ORG_KEY }}")
-          TOTAL=$(echo "$RESPONSE" | grep -o '"total":[0-9]*' | cut -d: -f2)
-          if [ "${TOTAL:-0}" -gt "0" ]; then
-            echo "::error::SonarCloud project '${{ steps.names.outputs.sonarProjectKey }}' already exists."
-            exit 1
-          fi
+    #   - name: Check SonarCloud project does not exist
+    #     if: ${{ inputs.visibility == 'public' }}
+    #     run: |
+    #       RESPONSE=$(curl -s \
+    #         -H "Authorization: Bearer ${{ secrets.SONAR_TOKEN }}" \
+    #         "https://sonarcloud.io/api/projects/search?projects=${{ steps.names.outputs.sonarProjectKey }}&organization=${{ secrets.SONAR_ORG_KEY }}")
+    #       TOTAL=$(echo "$RESPONSE" | grep -o '"total":[0-9]*' | cut -d: -f2)
+    #       if [ "${TOTAL:-0}" -gt "0" ]; then
+    #         echo "::error::SonarCloud project '${{ steps.names.outputs.sonarProjectKey }}' already exists."
+    #         exit 1
+    #       fi
 
   create-repository:
     runs-on: ubuntu-latest
@@ -414,51 +414,51 @@ jobs:
           }
           EOF
 
-  configure-sonarcloud:
-    runs-on: ubuntu-latest
-    if: ${{ inputs.visibility == 'public' }}
-    needs: create-repository
-    env:
-      SONAR_PROJECT_KEY: ${{ needs.create-repository.outputs.sonarProjectKey }}
-      SONAR_PROJECT_NAME: ${{ needs.create-repository.outputs.repoName }}
-    steps:
+#   configure-sonarcloud:
+#     runs-on: ubuntu-latest
+#     if: ${{ inputs.visibility == 'public' }}
+#     needs: create-repository
+#     env:
+#       SONAR_PROJECT_KEY: ${{ needs.create-repository.outputs.sonarProjectKey }}
+#       SONAR_PROJECT_NAME: ${{ needs.create-repository.outputs.repoName }}
+#     steps:
 
-      - name: Create SonarCloud project
-        run: |
-          curl -sf -X POST \
-            -H "Authorization: Bearer ${{ secrets.SONAR_TOKEN }}" \
-            "https://sonarcloud.io/api/projects/create" \
-            --data-urlencode "organization=${{ secrets.SONAR_ORG_KEY }}" \
-            --data-urlencode "project=${{ env.SONAR_PROJECT_KEY }}" \
-            --data-urlencode "name=${{ env.SONAR_PROJECT_NAME }}" \
-            --data-urlencode "visibility=public"
+#       - name: Create SonarCloud project
+#         run: |
+#           curl -sf -X POST \
+#             -H "Authorization: Bearer ${{ secrets.SONAR_TOKEN }}" \
+#             "https://sonarcloud.io/api/projects/create" \
+#             --data-urlencode "organization=${{ secrets.SONAR_ORG_KEY }}" \
+#             --data-urlencode "project=${{ env.SONAR_PROJECT_KEY }}" \
+#             --data-urlencode "name=${{ env.SONAR_PROJECT_NAME }}" \
+#             --data-urlencode "visibility=public"
 
-      - name: Turn off Automatic Analysis
-        # Removes the GitHub ALM binding which disables Automatic Analysis,
-        # ensuring CI-based analysis (dotnet-sonarscanner in module-ci.yml) is used instead.
-        run: |
-          curl -sf -X POST \
-            -H "Authorization: Bearer ${{ secrets.SONAR_TOKEN }}" \
-            "https://sonarcloud.io/api/alm_settings/delete_project_binding" \
-            --data-urlencode "project=${{ env.SONAR_PROJECT_KEY }}" \
-            || echo "No ALM binding found — Automatic Analysis was not enabled"
+#       - name: Turn off Automatic Analysis
+#         # Removes the GitHub ALM binding which disables Automatic Analysis,
+#         # ensuring CI-based analysis (dotnet-sonarscanner in module-ci.yml) is used instead.
+#         run: |
+#           curl -sf -X POST \
+#             -H "Authorization: Bearer ${{ secrets.SONAR_TOKEN }}" \
+#             "https://sonarcloud.io/api/alm_settings/delete_project_binding" \
+#             --data-urlencode "project=${{ env.SONAR_PROJECT_KEY }}" \
+#             || echo "No ALM binding found — Automatic Analysis was not enabled"
 
-      - name: Configure analysis scope
-        run: |
-          set_setting() {
-            curl -sf -X POST \
-              -H "Authorization: Bearer ${{ secrets.SONAR_TOKEN }}" \
-              "https://sonarcloud.io/api/settings/set" \
-              --data-urlencode "component=${{ env.SONAR_PROJECT_KEY }}" \
-              --data-urlencode "key=$1" \
-              --data-urlencode "value=$2"
-          }
+#       - name: Configure analysis scope
+#         run: |
+#           set_setting() {
+#             curl -sf -X POST \
+#               -H "Authorization: Bearer ${{ secrets.SONAR_TOKEN }}" \
+#               "https://sonarcloud.io/api/settings/set" \
+#               --data-urlencode "component=${{ env.SONAR_PROJECT_KEY }}" \
+#               --data-urlencode "key=$1" \
+#               --data-urlencode "value=$2"
+#           }
 
-          set_setting "sonar.sources"              "src"
-          set_setting "sonar.tests"               "tests"
-          set_setting "sonar.exclusions"          "**/Migrations/**,**/Scripts/**,**/node_modules/**,**/*.Designer.cs"
-          set_setting "sonar.coverage.exclusions" "**/Migrations/**,**/Tests/**,**/*.Designer.cs"
-          set_setting "sonar.cs.opencover.reportsPaths" "artifacts/tests/**/*.xml"
+#           set_setting "sonar.sources"              "src"
+#           set_setting "sonar.tests"               "tests"
+#           set_setting "sonar.exclusions"          "**/Migrations/**,**/Scripts/**,**/node_modules/**,**/*.Designer.cs"
+#           set_setting "sonar.coverage.exclusions" "**/Migrations/**,**/Tests/**,**/*.Designer.cs"
+#           set_setting "sonar.cs.opencover.reportsPaths" "artifacts/tests/**/*.xml"
 
   cleanup:
     runs-on: ubuntu-latest
@@ -483,24 +483,24 @@ jobs:
             echo "Repository does not exist — nothing to clean up."
           fi
 
-      - name: Delete SonarCloud project
-        if: ${{ inputs.visibility == 'public' }}
-        run: |
-          if [ -z "${{ env.SONAR_PROJECT_KEY }}" ]; then
-            echo "SonarCloud project key not available (preflight failed before computing names) — nothing to clean up."
-            exit 0
-          fi
-          RESPONSE=$(curl -s \
-            -H "Authorization: Bearer ${{ secrets.SONAR_TOKEN }}" \
-            "https://sonarcloud.io/api/projects/search?projects=${{ env.SONAR_PROJECT_KEY }}&organization=${{ secrets.SONAR_ORG_KEY }}" 2>/dev/null || echo '{}')
-          TOTAL=$(echo "$RESPONSE" | grep -o '"total":[0-9]*' | cut -d: -f2)
-          if [ "${TOTAL:-0}" -gt "0" ]; then
-            echo "Deleting SonarCloud project ${{ env.SONAR_PROJECT_KEY }}..."
-            curl -sf -X POST \
-              -H "Authorization: Bearer ${{ secrets.SONAR_TOKEN }}" \
-              "https://sonarcloud.io/api/projects/delete" \
-              --data-urlencode "project=${{ env.SONAR_PROJECT_KEY }}"
-            echo "SonarCloud project deleted."
-          else
-            echo "SonarCloud project does not exist — nothing to clean up."
-          fi
+    #   - name: Delete SonarCloud project
+    #     if: ${{ inputs.visibility == 'public' }}
+    #     run: |
+    #       if [ -z "${{ env.SONAR_PROJECT_KEY }}" ]; then
+    #         echo "SonarCloud project key not available (preflight failed before computing names) — nothing to clean up."
+    #         exit 0
+    #       fi
+    #       RESPONSE=$(curl -s \
+    #         -H "Authorization: Bearer ${{ secrets.SONAR_TOKEN }}" \
+    #         "https://sonarcloud.io/api/projects/search?projects=${{ env.SONAR_PROJECT_KEY }}&organization=${{ secrets.SONAR_ORG_KEY }}" 2>/dev/null || echo '{}')
+    #       TOTAL=$(echo "$RESPONSE" | grep -o '"total":[0-9]*' | cut -d: -f2)
+    #       if [ "${TOTAL:-0}" -gt "0" ]; then
+    #         echo "Deleting SonarCloud project ${{ env.SONAR_PROJECT_KEY }}..."
+    #         curl -sf -X POST \
+    #           -H "Authorization: Bearer ${{ secrets.SONAR_TOKEN }}" \
+    #           "https://sonarcloud.io/api/projects/delete" \
+    #           --data-urlencode "project=${{ env.SONAR_PROJECT_KEY }}"
+    #         echo "SonarCloud project deleted."
+    #       else
+    #         echo "SonarCloud project does not exist — nothing to clean up."
+    #       fi
