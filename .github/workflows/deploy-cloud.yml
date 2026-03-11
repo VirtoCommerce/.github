@@ -35,7 +35,7 @@ on:
         type: string
       matrix:
         description: 'Stringified JSON object listing target deployment parameters'
-        default: '{"include":[{"envName": "dev", "confPath": ".deployment/module/cloudDeploy.json", "forceCommit": "true", "releaseType": "AzureBlob"]}'
+        default: '{"include":[{"envName": "dev", "confPath": ".deployment/module/cloudDeploy.json", "forceCommit": "true", "releaseType": "AzureBlob"}]}'
         required: false
         type: string
       taskNumber:
@@ -115,16 +115,17 @@ jobs:
       #     forceCommit: ${{ steps.forceCommit.outputs.value }}
       #     configPath: ${{ steps.deployConfig.outputs.cmPath }}
 
-      # - name: Sleep for ${{ env.SLEEP_TIME }}
-      #   if: ${{ steps.forceCommit.outputs.value == 'true' }}
-      #   run: sleep ${{ env.SLEEP_TIME }}
-      #   shell: bash
+      - name: Install vc-build and sleep for ${{ env.SLEEP_TIME }}
+        # if: ${{ steps.forceCommit.outputs.value == 'true' }}
+        run: |
+            dotnet tool install --global VirtoCommerce.GlobalTool
+            # sleep ${{ env.SLEEP_TIME }}
+        shell: bash
 
       - name: Check deployment status
         # if: ${{ steps.forceCommit.outputs.value == 'true' }}
         run: |
-          dotnet tool install --global VirtoCommerce.GlobalTool
-          vc-build CloudEnvStatus -CloudUrl $(cloudUrl) -CloudToken ${{ secrets.VIRTOCLOUD_KEY_VCPT_VCST }} -EnvironmentName ${{ steps.deployConfig.outputs.deployAppName }} -HealthStatus Healthy -SyncStatus Synced
+          vc-build CloudEnvStatus -CloudUrl ${{ env.CLOUD_URL }} -CloudToken ${{ secrets.VIRTOCLOUD_KEY_VCPT_VCST }} -EnvironmentName ${{ steps.deployConfig.outputs.deployAppName }} -HealthStatus Healthy -SyncStatus Synced
         shell: bash
 
       # - name: DEPLOY_STATE::successful
