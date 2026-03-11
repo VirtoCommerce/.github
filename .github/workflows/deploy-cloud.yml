@@ -119,7 +119,7 @@ jobs:
       - name: Check deployment status
         if: ${{ steps.forceCommit.outputs.value == 'true' }}
         run: |
-          dotnet tool install --global VirtoCommerce.GlobalTool
+          dotnet tool install --global VirtoCommerce.GlobalTool || true
           vc-build CloudEnvStatus -CloudUrl ${{ env.CLOUD_URL }} -CloudToken ${{ secrets.VIRTOCLOUD_KEY_VCPT_VCST }} -EnvironmentName ${{ steps.deployConfig.outputs.deployAppName }} -HealthStatus Healthy -SyncStatus Synced
         shell: bash
 
