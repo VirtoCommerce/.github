@@ -63,7 +63,6 @@ jobs:
       GITHUB_TOKEN: ${{ secrets.REPO_TOKEN }}
       ARGO_SERVER: ${{ inputs.argoServer }}
       SLEEP_TIME: '3m'
-      CLOUD_URL: 'https://portal.virtocommerce.cloud'
 
     steps: 
       # - name: Set forceCommit value #Create deployment commit instead of Pull request to a deployment repo
@@ -119,7 +118,7 @@ jobs:
         # if: ${{ steps.forceCommit.outputs.value == 'true' }}
         run: |
           dotnet tool install --global VirtoCommerce.GlobalTool
-          vc-build CloudEnvStatus -CloudUrl $(cloudUrl) -CloudToken ${{ secrets.VIRTOCLOUD_PASSWORD }} -EnvironmentName ${{ steps.deployConfig.outputs.deployAppName }} -HealthStatus Healthy -SyncStatus Synced
+          vc-build CloudEnvStatus -CloudUrl ${{ secrets.VIRTOCLOUD_KEY_VCPT_VCST }} -CloudToken ${{ secrets.VIRTOCLOUD_PASSWORD }} -EnvironmentName ${{ steps.deployConfig.outputs.deployAppName }} -HealthStatus Healthy -SyncStatus Synced
         shell: bash
 
       # - name: DEPLOY_STATE::successful
