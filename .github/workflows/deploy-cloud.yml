@@ -48,6 +48,11 @@ on:
         default: ''
         required: false
         type: string
+      cloudUrl:
+        description: 'Cloud URL for checking status'
+        default: 'https://portal.virtocommerce.cloud'
+        required: false
+        type: string
 
 jobs:
   Deploy:
@@ -63,7 +68,7 @@ jobs:
       GITHUB_TOKEN: ${{ secrets.REPO_TOKEN }}
       ARGO_SERVER: ${{ inputs.argoServer }}
       SLEEP_TIME: '3m'
-      CLOUD_URL: 'https://portal.virtocommerce.cloud'
+      CLOUD_URL: ${{ inputs.cloudUrl }}
 
     steps: 
       # - name: Set forceCommit value #Create deployment commit instead of Pull request to a deployment repo
