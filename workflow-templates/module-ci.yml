@@ -371,6 +371,5 @@ jobs:
       moduleVer: ${{ needs.ci.outputs.version }}
       moduleBlob: ${{ needs.ci.outputs.blobId }}
       jiraKeys: ${{ needs.ci.outputs.jira-keys }}
-      argoServer: 'argo.virtocommerce.cloud'
       matrix: '{"include":${{ needs.ci.outputs.matrix }}}'
     secrets: inherit
