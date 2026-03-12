@@ -29,10 +29,6 @@ on:
         required: false
         type: string
 
-    secrets:
-      envPAT:
-        required: true
-
 jobs:
   Deploy:
     strategy:
