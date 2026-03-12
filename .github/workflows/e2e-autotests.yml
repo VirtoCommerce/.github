@@ -1,5 +1,5 @@
-# v3.800.25
-# https://virtocommerce.atlassian.net/browse/VCST-4391
+# v3.800.26
+# https://virtocommerce.atlassian.net/browse/VCST-4746
 name: Common E2E tests
 
 on:
