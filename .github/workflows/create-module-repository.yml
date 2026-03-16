@@ -201,9 +201,9 @@ jobs:
           gh repo create ${{ env.REPO_FULL_NAME }} \
             --${{ inputs.visibility }} \
             --description "${{ env.ORG_NAME }} ${{ inputs.moduleName }} module"
+          echo "created=true" >> $GITHUB_OUTPUT
           REPO_ID=$(gh api repos/${{ env.REPO_FULL_NAME }} --jq '.id')
           echo "repoId=$REPO_ID" >> $GITHUB_OUTPUT
-          echo "created=true" >> $GITHUB_OUTPUT
           echo "Repository created: https://github.com/${{ env.REPO_FULL_NAME }}"
 
       - name: Configure repository settings
