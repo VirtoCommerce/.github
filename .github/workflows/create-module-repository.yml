@@ -1,4 +1,5 @@
 name: Create Module Repository
+run-name: "Create module: ${{ github.repository_owner }} / ${{ inputs.moduleName }}"
 
 on:
   workflow_dispatch:
@@ -7,8 +8,17 @@ on:
         description: 'PascalCase module name (e.g. News). Repository will be named vc-module-{kebab}'
         required: true
         type: string
+      template:
+        description: 'Module code template'
+        required: false
+        type: choice
+        options:
+          - vc-module-dba
+          - vc-module-dba-xapi
+          - vc-module-xapi
+        default: 'vc-module-dba'
       companyName:
-        description: 'Company namespace prefix'
+        description: 'Company namespace prefix, used for module template compiling'
         required: false
         type: string
         default: 'VirtoCommerce'
@@ -18,30 +28,29 @@ on:
         type: string
         default: 'VirtoCommerce'
       moduleVersion:
-        description: 'Initial module version'
+        description: '(Optional) Initial module version'
         required: false
         type: string
-        default: '3.800.0'
       platformVersion:
-        description: 'Required platform version'
+        description: '(Optional) PLATFORM version'
         required: false
         type: string
-        default: '3.876.0'
       coreVersion:
-        description: 'Required core module version'
+        description: '(Optional) CORE module version (vc-module-dba, vc-module-dba-xapi)'
         required: false
         type: string
-        default: '3.800.0'
-      template:
-        description: 'Module code template'
+      xapiVersion:
+        description: '(Optional) XAPI module version (vc-module-xapi, vc-module-dba-xapi)'
+        required: false
+        type: string
+      templateVersion:
+        description: '(Optional) VirtoCommerce.Module.Template (VirtoCommerce/vc-cli-module-template) version (empty = latest)'
         required: false
         type: choice
         options:
-          - vc-module-dba
-          - vc-module-dba-xapi
-          - vc-module-xapi
-          - vc-crud
-        default: 'vc-module-dba'
+          - ''
+          - '3.809.0'
+        default: ''
       visibility:
         description: 'Repository visibility'
         required: false
@@ -51,20 +60,22 @@ on:
           - private
         default: 'public'
 
-env:
-  GH_TOKEN: ${{ secrets.REPO_TOKEN }}
+# Prevent concurrent runs for the same module name to avoid race conditions
+# on existence checks and resource creation.
+concurrency:
+  group: module-repository-${{ inputs.moduleName }}-${{ github.repository_owner }}
+  cancel-in-progress: false
 
 jobs:
 
-  preflight:
+  summarize-inputs:
     runs-on: ubuntu-latest
     outputs:
-      repoName: ${{ steps.names.outputs.repoName }}
-      moduleId: ${{ steps.names.outputs.moduleId }}
+      repoName:        ${{ steps.names.outputs.repoName }}
+      moduleId:        ${{ steps.names.outputs.moduleId }}
       sonarProjectKey: ${{ steps.names.outputs.sonarProjectKey }}
     steps:
-
-      - name: Validate inputs
+      - name: Validate module name
         env:
           MODULE_NAME: ${{ inputs.moduleName }}
         run: |
@@ -73,100 +84,133 @@ jobs:
             echo "::error::moduleName '$MODULE_NAME' is invalid. Must start with an uppercase letter and contain only letters and digits (e.g. 'News', 'NewsArticle')."
             exit 1
           fi
+          echo "moduleName '$MODULE_NAME' is valid."
 
-      - name: Validate REPO_TOKEN permissions
+      - name: Validate template parameters
+        env:
+          TEMPLATE: ${{ inputs.template }}
+          MODULE_VERSION: ${{ inputs.moduleVersion }}
+          PLATFORM_VERSION: ${{ inputs.platformVersion }}
+          XAPI_VERSION: ${{ inputs.xapiVersion }}
+          CORE_VERSION: ${{ inputs.coreVersion }}
         run: |
-          LOGIN=$(gh api /user --jq '.login' 2>/dev/null) || {
-            echo "::error::REPO_TOKEN is invalid or missing."
-            exit 1
-          }
-          echo "Authenticated as: $LOGIN"
-          gh api /orgs/VirtoCommerce --jq '.login' 2>/dev/null || {
-            echo "::error::REPO_TOKEN cannot access VirtoCommerce organization. Ensure the token has 'repo' and 'read:org' scopes."
-            exit 1
-          }
-          echo "Organization access confirmed."
+          SEMVER_RE='^[0-9]+\.[0-9]+\.[0-9]+$'
+          ERRORS=0
 
-      - name: Validate SONAR_TOKEN and SONAR_ORG_KEY
-        if: ${{ inputs.visibility == 'public' }}
-        run: |
-          if [ -z "${{ secrets.SONAR_TOKEN }}" ]; then
-            echo "::error::SONAR_TOKEN secret is not set."
-            exit 1
-          fi
-          if [ -z "${{ secrets.SONAR_ORG_KEY }}" ]; then
-            echo "::error::SONAR_ORG_KEY secret is not set."
-            exit 1
-          fi
-          RESPONSE=$(curl -s \
-            -H "Authorization: Bearer ${{ secrets.SONAR_TOKEN }}" \
-            "https://sonarcloud.io/api/authentication/validate")
-          if ! echo "$RESPONSE" | grep -q '"valid":true'; then
-            echo "::error::SONAR_TOKEN is invalid."
-            exit 1
-          fi
-          echo "SONAR_TOKEN is valid."
+          check_version() {
+            local name="$1"
+            local value="$2"
+            if [ -n "$value" ] && ! [[ "$value" =~ $SEMVER_RE ]]; then
+              echo "::error::$name '$value' is not a valid version (expected x.x.x)."
+              ERRORS=$((ERRORS + 1))
+            fi
+          }
 
-      - name: Compute names
+          check_version "moduleVersion"   "$MODULE_VERSION"
+          check_version "platformVersion" "$PLATFORM_VERSION"
+          check_version "xapiVersion"     "$XAPI_VERSION"
+          check_version "coreVersion"     "$CORE_VERSION"
+
+          if [ "$ERRORS" -gt 0 ]; then exit 1; fi
+          echo "All version inputs are valid."
+
+      - name: Compute and print names
         id: names
         env:
           MODULE_NAME: ${{ inputs.moduleName }}
           COMPANY_NAME: ${{ inputs.companyName }}
+          ORG_NAME: ${{ github.repository_owner }}
+          TEMPLATE_VERSION: ${{ inputs.templateVersion }}
         run: |
-          # Convert PascalCase to kebab-case (e.g. NewsArticle → news-article)
           KEBAB=$(echo "$MODULE_NAME" | sed 's/\([A-Z]\)/-\1/g' | sed 's/^-//' | tr '[:upper:]' '[:lower:]')
           REPO_NAME="vc-module-${KEBAB}"
           MODULE_ID="${COMPANY_NAME}.${MODULE_NAME}"
-          SONAR_KEY="${COMPANY_NAME}_${REPO_NAME}"
-          echo "repoName=${REPO_NAME}" >> $GITHUB_OUTPUT
-          echo "moduleId=${MODULE_ID}" >> $GITHUB_OUTPUT
+          SONAR_KEY="${ORG_NAME}_${REPO_NAME}"
+          echo "repoName=${REPO_NAME}"        >> $GITHUB_OUTPUT
+          echo "moduleId=${MODULE_ID}"        >> $GITHUB_OUTPUT
           echo "sonarProjectKey=${SONAR_KEY}" >> $GITHUB_OUTPUT
-          echo "Repository:       ${REPO_NAME}"
-          echo "Module ID:        ${MODULE_ID}"
-          echo "SonarCloud key:   ${SONAR_KEY}"
+
+          echo "### Inputs"                                          >> $GITHUB_STEP_SUMMARY
+          echo "| Parameter       | Value |"                        >> $GITHUB_STEP_SUMMARY
+          echo "|-----------------|-------|"                        >> $GITHUB_STEP_SUMMARY
+          echo "| moduleName      | ${{ inputs.moduleName }} |"     >> $GITHUB_STEP_SUMMARY
+          echo "| companyName     | ${{ inputs.companyName }} |"    >> $GITHUB_STEP_SUMMARY
+          echo "| author          | ${{ inputs.author }} |"         >> $GITHUB_STEP_SUMMARY
+          echo "| moduleVersion   | ${{ inputs.moduleVersion }} |"  >> $GITHUB_STEP_SUMMARY
+          echo "| platformVersion | ${{ inputs.platformVersion }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| coreVersion     | ${{ inputs.coreVersion }} |"    >> $GITHUB_STEP_SUMMARY
+          echo "| xapiVersion     | ${{ inputs.xapiVersion }} |"    >> $GITHUB_STEP_SUMMARY
+          echo "| templateVersion | ${TEMPLATE_VERSION:-latest} |" >> $GITHUB_STEP_SUMMARY
+          echo "| template        | ${{ inputs.template }} |"       >> $GITHUB_STEP_SUMMARY
+          echo "| visibility      | ${{ inputs.visibility }} |"     >> $GITHUB_STEP_SUMMARY
+          echo ""                                                    >> $GITHUB_STEP_SUMMARY
+          echo "### Computed names"                                           >> $GITHUB_STEP_SUMMARY
+          echo "| Name              | Value |"                           >> $GITHUB_STEP_SUMMARY
+          echo "|-------------------|-------|"                           >> $GITHUB_STEP_SUMMARY
+          echo "| Repository        | ${{ github.repository_owner }}/${REPO_NAME} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Module ID         | ${MODULE_ID} |"                   >> $GITHUB_STEP_SUMMARY
+          echo "| SonarCloud key    | ${SONAR_KEY} |"       >> $GITHUB_STEP_SUMMARY
+
+  create-module-repository:
+    needs: summarize-inputs
+    runs-on: ubuntu-latest
+    # Requires manual approval from a designated reviewer before any resources are created.
+    # Configure required reviewers at: Settings → Environments → create-org-repo
+    environment: create-org-repo
+    env:
+      GH_TOKEN: ${{ secrets.MODULE_REPO_MGMT_TOKEN }}
+      ORG_NAME: ${{ github.repository_owner }}
+      REPO_NAME: ${{ needs.summarize-inputs.outputs.repoName }}
+      REPO_FULL_NAME: ${{ github.repository_owner }}/${{ needs.summarize-inputs.outputs.repoName }}
+      MODULE_ID: ${{ needs.summarize-inputs.outputs.moduleId }}
+      SONAR_PROJECT_KEY: ${{ needs.summarize-inputs.outputs.sonarProjectKey }}
+
+    steps:
 
       - name: Check repository does not exist
         run: |
-          if gh api /repos/VirtoCommerce/${{ steps.names.outputs.repoName }} --silent 2>/dev/null; then
-            echo "::error::Repository VirtoCommerce/${{ steps.names.outputs.repoName }} already exists."
+          if gh api /repos/${{ env.REPO_FULL_NAME }} --silent 2>/dev/null; then
+            echo "::error::Repository ${{ env.REPO_FULL_NAME }} already exists."
             exit 1
           fi
+          echo "Repository ${{ env.REPO_FULL_NAME }} does not exist — proceeding."
 
       - name: Check SonarCloud project does not exist
         if: ${{ inputs.visibility == 'public' }}
         run: |
-          RESPONSE=$(curl -s \
+          RESPONSE=$(curl -s -w "\n%{http_code}" \
             -H "Authorization: Bearer ${{ secrets.SONAR_TOKEN }}" \
-            "https://sonarcloud.io/api/projects/search?projects=${{ steps.names.outputs.sonarProjectKey }}&organization=${{ secrets.SONAR_ORG_KEY }}")
-          TOTAL=$(echo "$RESPONSE" | grep -o '"total":[0-9]*' | cut -d: -f2)
+            "https://sonarcloud.io/api/projects/search?projects=$SONAR_PROJECT_KEY&organization=${{ vars.SONAR_ORG_KEY }}")
+          HTTP_CODE=$(echo "$RESPONSE" | tail -1)
+          BODY=$(echo "$RESPONSE" | head -n -1)
+          echo "HTTP $HTTP_CODE: $BODY"
+          if [ "$HTTP_CODE" -ge 400 ]; then
+            echo "::error::SonarCloud project search failed (HTTP $HTTP_CODE): $BODY"
+            exit 1
+          fi
+          TOTAL=$(echo "$BODY" | grep -o '"total":[0-9]*' | cut -d: -f2)
+          echo "Projects found: ${TOTAL:-0}"
           if [ "${TOTAL:-0}" -gt "0" ]; then
-            echo "::error::SonarCloud project '${{ steps.names.outputs.sonarProjectKey }}' already exists."
+            echo "::error::SonarCloud project '$SONAR_PROJECT_KEY' already exists."
             exit 1
           fi
 
-  create-repository:
-    runs-on: ubuntu-latest
-    needs: preflight
-    # Pass preflight outputs through so downstream jobs have a single source via create-repository
-    outputs:
-      repoName: ${{ needs.preflight.outputs.repoName }}
-      moduleId: ${{ needs.preflight.outputs.moduleId }}
-      sonarProjectKey: ${{ needs.preflight.outputs.sonarProjectKey }}
-    env:
-      REPO_NAME: ${{ needs.preflight.outputs.repoName }}
-    steps:
-
       - name: Create repository
+        id: create-repo
         run: |
-          gh repo create VirtoCommerce/${{ env.REPO_NAME }} \
+          gh repo create ${{ env.REPO_FULL_NAME }} \
             --${{ inputs.visibility }} \
-            --description "${{ inputs.companyName }} ${{ inputs.moduleName }} module"
+            --description "${{ env.ORG_NAME }} ${{ inputs.moduleName }} module"
+          REPO_ID=$(gh api repos/${{ env.REPO_FULL_NAME }} --jq '.id')
+          echo "repoId=$REPO_ID" >> $GITHUB_OUTPUT
+          echo "created=true" >> $GITHUB_OUTPUT
+          echo "Repository created: https://github.com/${{ env.REPO_FULL_NAME }}"
 
       - name: Configure repository settings
         run: |
           gh api \
             --method PATCH \
-            /repos/VirtoCommerce/${{ env.REPO_NAME }} \
+            /repos/${{ env.REPO_FULL_NAME }} \
             --field allow_merge_commit=false \
             --field allow_squash_merge=true \
             --field squash_merge_commit_title=PR_TITLE \
@@ -174,63 +218,64 @@ jobs:
             --field allow_rebase_merge=false \
             --field allow_update_branch=true \
             --field delete_branch_on_merge=true
-
-      - name: Add team - platform (write)
-        run: |
           gh api \
             --method PUT \
-            /orgs/VirtoCommerce/teams/platform/repos/VirtoCommerce/${{ env.REPO_NAME }} \
-            --field permission=push
+            /repos/${{ env.REPO_FULL_NAME }}/actions/permissions \
+            --field enabled=true \
+            --field allowed_actions=all
 
-      - name: Add team - virto-commerce (maintain)
+      - name: Configure teams
         run: |
-          gh api \
-            --method PUT \
-            /orgs/VirtoCommerce/teams/virto-commerce/repos/VirtoCommerce/${{ env.REPO_NAME }} \
-            --field permission=maintain
-
-      - name: Add team - virto-operations (admin)
-        run: |
-          gh api \
-            --method PUT \
-            /orgs/VirtoCommerce/teams/virto-operations/repos/VirtoCommerce/${{ env.REPO_NAME }} \
-            --field permission=admin
-
-  populate-repository:
-    runs-on: ubuntu-latest
-    needs: create-repository
-    env:
-      REPO_NAME: ${{ needs.create-repository.outputs.repoName }}
-      MODULE_ID: ${{ needs.create-repository.outputs.moduleId }}
-    steps:
+          declare -A TEAMS=([platform]=push [virto-commerce]=maintain [virto-operations]=admin)
+          for TEAM in "${!TEAMS[@]}"; do
+            echo "Adding team $TEAM (${TEAMS[$TEAM]})"
+            gh api \
+              --method PUT \
+              /orgs/$ORG_NAME/teams/$TEAM/repos/${{ env.REPO_FULL_NAME }} \
+              --field permission=${TEAMS[$TEAM]}
+          done
 
       - name: Checkout .github (workflow templates)
         uses: actions/checkout@v4
         with:
           path: dotgithub
-
-      - name: Set up .NET
-        uses: actions/setup-dotnet@v4
-        with:
-          dotnet-version: '8.x'
+          token: ${{ secrets.MODULE_REPO_MGMT_TOKEN }}
 
       - name: Install module template
-        run: dotnet new install VirtoCommerce.Module.Template
+        run: |
+          if [ -n "${{ inputs.templateVersion }}" ]; then
+            dotnet new install "VirtoCommerce.Module.Template::${{ inputs.templateVersion }}"
+          else
+            dotnet new install VirtoCommerce.Module.Template
+          fi
 
       - name: Generate module code
+        env:
+          TEMPLATE:          ${{ inputs.template }}
+          MODULE_NAME:       ${{ inputs.moduleName }}
+          COMPANY_NAME:      ${{ inputs.companyName }}
+          AUTHOR:            ${{ inputs.author }}
+          MODULE_VERSION:    ${{ inputs.moduleVersion }}
+          PLATFORM_VERSION:  ${{ inputs.platformVersion }}
+          CORE_VERSION:      ${{ inputs.coreVersion }}
+          XAPI_VERSION:      ${{ inputs.xapiVersion }}
         run: |
-          dotnet new ${{ inputs.template }} \
-            --output /tmp/generated \
-            --ModuleName "${{ inputs.moduleName }}" \
-            --CompanyName "${{ inputs.companyName }}" \
-            --Author "${{ inputs.author }}" \
-            --ModuleVersion "${{ inputs.moduleVersion }}" \
-            --PlatformVersion "${{ inputs.platformVersion }}" \
-            --CoreVersion "${{ inputs.coreVersion }}"
+          # Common args accepted by all module templates
+          ARGS=(
+            --output /tmp/generated
+            --ModuleName    "$MODULE_NAME"
+            --CompanyName   "$COMPANY_NAME"
+            --Author        "$AUTHOR"
+          )
+          [ -n "$MODULE_VERSION"   ] && ARGS+=(--ModuleVersion   "$MODULE_VERSION")
+          [ -n "$PLATFORM_VERSION" ] && ARGS+=(--PlatformVersion "$PLATFORM_VERSION")
+          [ -n "$CORE_VERSION"     ] && ARGS+=(--CoreVersion     "$CORE_VERSION")
+          [ -n "$XAPI_VERSION"     ] && ARGS+=(--XapiVersion     "$XAPI_VERSION")
+          dotnet new "$TEMPLATE" "${ARGS[@]}"
 
       - name: Clone new repository
         run: |
-          git clone https://x-access-token:${{ secrets.REPO_TOKEN }}@github.com/VirtoCommerce/${{ env.REPO_NAME }}.git repo
+          git clone https://x-access-token:${{ env.GH_TOKEN }}@github.com/${{ env.REPO_FULL_NAME }}.git repo
           # Ensure the default branch is 'main' regardless of org-level settings
           git -C repo symbolic-ref HEAD refs/heads/main
 
@@ -245,12 +290,12 @@ jobs:
           echo "Generated directory: $GENERATED_DIR"
           cp -r "$GENERATED_DIR/." repo/
 
-      - name: Add .deployment folder
+      - name: Add deployment config
         run: |
           mkdir -p repo/.deployment/module
           cat > repo/.deployment/module/cloudDeploy.json << EOF
           {
-              "artifactKey": "${{ env.MODULE_ID }}",
+              "artifactKey": "$MODULE_ID",
               "deployRepo": "vc-deploy-dev",
               "cmPath": "backend/packages.json",
               "dev": {
@@ -279,6 +324,7 @@ jobs:
               }
           }
           EOF
+          echo "Deployment config written to .deployment/module/cloudDeploy.json"
 
       - name: Add .github workflows
         run: |
@@ -287,19 +333,12 @@ jobs:
           cp dotgithub/workflow-templates/release.yml                repo/.github/workflows/
           cp dotgithub/workflow-templates/publish-nugets.yml         repo/.github/workflows/
           cp dotgithub/workflow-templates/module-release-hotfix.yml  repo/.github/workflows/
+          echo "Workflows added: module-ci.yml, release.yml, publish-nugets.yml, module-release-hotfix.yml"
 
       - name: Add .github community files
         run: |
           cat > repo/.github/CODEOWNERS << 'EOF'
-          # Common settings
-          .github/ @VirtoCommerce/platform
-          .gitignore @VirtoCommerce/platform
-          .dockerignore @VirtoCommerce/platform
-
-          # Main Code and Tests
-          src/* @VirtoCommerce/platform
-          tests/* @VirtoCommerce/platform
-          .editorconfig @VirtoCommerce/platform
+          * @VirtoCommerce/platform
           EOF
 
           cat > repo/.github/ISSUE_TEMPLATE.md << 'EOF'
@@ -329,7 +368,7 @@ jobs:
       - name: Setup Git credentials
         uses: VirtoCommerce/vc-github-actions/setup-git-credentials-github@master
         with:
-          githubToken: ${{ secrets.REPO_TOKEN }}
+          githubToken: ${{ env.GH_TOKEN }}
 
       - name: Commit and push main
         working-directory: repo
@@ -338,28 +377,16 @@ jobs:
           git commit -m "ci: Initialize module repository"
           git push -u origin main
 
-      - name: Set default branch to main
-        run: gh repo edit VirtoCommerce/${{ env.REPO_NAME }} --default-branch main
-
-      - name: Create and push dev branch
+      - name: Create and push default dev branch
         working-directory: repo
         run: |
           git checkout -b dev
           git push -u origin dev
+          gh repo edit ${{ env.REPO_FULL_NAME }} --default-branch dev
 
-  configure-branch-protection:
-    runs-on: ubuntu-latest
-    needs: [create-repository, populate-repository]
-    env:
-      REPO_NAME: ${{ needs.create-repository.outputs.repoName }}
-    steps:
-
-      - name: Protect main branch
+      - name: Protect branches
         run: |
-          gh api \
-            --method PUT \
-            /repos/VirtoCommerce/${{ env.REPO_NAME }}/branches/main/protection \
-            --input - << 'EOF'
+          POLICY=$(cat << 'EOF'
           {
             "required_status_checks": {
               "strict": false,
@@ -383,123 +410,186 @@ jobs:
             "required_conversation_resolution": false
           }
           EOF
+          )
+          for BRANCH in main dev; do
+            printf "Protecting branch: %s ... " "$BRANCH"
+            if echo "$POLICY" | gh api \
+              --method PUT \
+              /repos/${{ env.REPO_FULL_NAME }}/branches/$BRANCH/protection \
+              --input - > /dev/null; then
+              echo "OK"
+            else
+              echo "FAILED"
+              exit 1
+            fi
+          done
+          echo "Branches protected: main, dev"
 
-      - name: Protect dev branch
-        run: |
-          gh api \
-            --method PUT \
-            /repos/VirtoCommerce/${{ env.REPO_NAME }}/branches/dev/protection \
-            --input - << 'EOF'
-          {
-            "required_status_checks": {
-              "strict": false,
-              "contexts": [
-                "license/cla",
-                "ci",
-                "SonarCloud Code Analysis",
-                "module-katalon-tests / e2e-tests"
-              ]
-            },
-            "enforce_admins": false,
-            "required_pull_request_reviews": {
-              "dismiss_stale_reviews": false,
-              "require_code_owner_reviews": false,
-              "require_last_push_approval": false,
-              "required_approving_review_count": 1
-            },
-            "restrictions": null,
-            "allow_force_pushes": false,
-            "allow_deletions": false,
-            "required_conversation_resolution": false
-          }
-          EOF
-
-  configure-sonarcloud:
-    runs-on: ubuntu-latest
-    if: ${{ inputs.visibility == 'public' }}
-    needs: create-repository
-    env:
-      SONAR_PROJECT_KEY: ${{ needs.create-repository.outputs.sonarProjectKey }}
-      SONAR_PROJECT_NAME: ${{ needs.create-repository.outputs.repoName }}
-    steps:
-
-      - name: Create SonarCloud project
-        run: |
-          curl -sf -X POST \
-            -H "Authorization: Bearer ${{ secrets.SONAR_TOKEN }}" \
-            "https://sonarcloud.io/api/projects/create" \
-            --data-urlencode "organization=${{ secrets.SONAR_ORG_KEY }}" \
-            --data-urlencode "project=${{ env.SONAR_PROJECT_KEY }}" \
-            --data-urlencode "name=${{ env.SONAR_PROJECT_NAME }}" \
-            --data-urlencode "visibility=public"
-
-      - name: Turn off Automatic Analysis
-        # Removes the GitHub ALM binding which disables Automatic Analysis,
-        # ensuring CI-based analysis (dotnet-sonarscanner in module-ci.yml) is used instead.
-        run: |
-          curl -sf -X POST \
-            -H "Authorization: Bearer ${{ secrets.SONAR_TOKEN }}" \
-            "https://sonarcloud.io/api/alm_settings/delete_project_binding" \
-            --data-urlencode "project=${{ env.SONAR_PROJECT_KEY }}" \
-            || echo "No ALM binding found — Automatic Analysis was not enabled"
-
-      - name: Configure analysis scope
-        run: |
-          set_setting() {
-            curl -sf -X POST \
-              -H "Authorization: Bearer ${{ secrets.SONAR_TOKEN }}" \
-              "https://sonarcloud.io/api/settings/set" \
-              --data-urlencode "component=${{ env.SONAR_PROJECT_KEY }}" \
-              --data-urlencode "key=$1" \
-              --data-urlencode "value=$2"
-          }
-
-          set_setting "sonar.sources"              "src"
-          set_setting "sonar.tests"               "tests"
-          set_setting "sonar.exclusions"          "**/Migrations/**,**/Scripts/**,**/node_modules/**,**/*.Designer.cs"
-          set_setting "sonar.coverage.exclusions" "**/Migrations/**,**/Tests/**,**/*.Designer.cs"
-          set_setting "sonar.cs.opencover.reportsPaths" "artifacts/tests/**/*.xml"
-
-  cleanup:
-    runs-on: ubuntu-latest
-    if: ${{ failure() }}
-    needs: [preflight, create-repository, populate-repository, configure-branch-protection, configure-sonarcloud]
-    env:
-      REPO_NAME: ${{ needs.preflight.outputs.repoName }}
-      SONAR_PROJECT_KEY: ${{ needs.preflight.outputs.sonarProjectKey }}
-    steps:
-
-      - name: Delete GitHub repository
-        run: |
-          if [ -z "${{ env.REPO_NAME }}" ]; then
-            echo "Repository name not available (preflight failed before computing names) — nothing to clean up."
-            exit 0
-          fi
-          if gh api /repos/VirtoCommerce/${{ env.REPO_NAME }} --silent 2>/dev/null; then
-            echo "Deleting repository VirtoCommerce/${{ env.REPO_NAME }}..."
-            gh api --method DELETE /repos/VirtoCommerce/${{ env.REPO_NAME }}
-            echo "Repository deleted."
-          else
-            echo "Repository does not exist — nothing to clean up."
-          fi
-
-      - name: Delete SonarCloud project
+      - name: Configure SonarCloud project
+        id: create-sonarcloud
         if: ${{ inputs.visibility == 'public' }}
         run: |
-          if [ -z "${{ env.SONAR_PROJECT_KEY }}" ]; then
-            echo "SonarCloud project key not available (preflight failed before computing names) — nothing to clean up."
+          # sonar_post <label> <endpoint> [curl-args...]
+          sonar_post() {
+            local LABEL="$1" ENDPOINT="$2"; shift 2
+            RESPONSE=$(curl -s -w "\n%{http_code}" -X POST \
+              -H "Authorization: Bearer ${{ secrets.SONAR_TOKEN }}" \
+              "https://sonarcloud.io/$ENDPOINT" "$@")
+            HTTP_CODE=$(echo "$RESPONSE" | tail -1)
+            BODY=$(echo "$RESPONSE" | head -n -1)
+            echo "[$LABEL] HTTP $HTTP_CODE: $BODY"
+            if [ "$HTTP_CODE" -ge 400 ]; then
+              echo "::error::$LABEL failed (HTTP $HTTP_CODE): $BODY"
+              exit 1
+            fi
+          }
+
+          # Create project and bind to GitHub in one call.
+          # installationKeys format: {github-org}/{repo-name}|{github-repo-id}
+          INSTALLATION_KEY="${{ env.REPO_FULL_NAME }}|${{ steps.create-repo.outputs.repoId }}"
+          sonar_post "provision_projects" "api/alm_integration/provision_projects" \
+            --data-urlencode "installationKeys=$INSTALLATION_KEY" \
+            --data-urlencode "organization=${{ vars.SONAR_ORG_KEY }}"
+          echo "created=true" >> $GITHUB_OUTPUT
+
+          # Extract the actual project key assigned by SonarCloud and override SONAR_PROJECT_KEY
+          # for subsequent steps if it differs from our computed value.
+          PROVISIONED_KEY=$(echo "$BODY" | grep -o '"projectKey":"[^"]*"' | head -1 | cut -d'"' -f4)
+          if [ -n "$PROVISIONED_KEY" ] && [ "$PROVISIONED_KEY" != "$SONAR_PROJECT_KEY" ]; then
+            echo "::warning::Provisioned project key '$PROVISIONED_KEY' differs from computed '$SONAR_PROJECT_KEY'. Using provisioned key."
+            echo "SONAR_PROJECT_KEY=$PROVISIONED_KEY" >> $GITHUB_ENV
+            SONAR_PROJECT_KEY="$PROVISIONED_KEY"
+          fi
+          echo "SonarCloud project created and bound to GitHub: ${{ env.REPO_FULL_NAME }}"
+
+          # Rename default branch to main
+          sonar_post "project_branches/rename" "api/project_branches/rename" \
+            --data-urlencode "project=$SONAR_PROJECT_KEY" \
+            --data-urlencode "name=main"
+          echo "SonarCloud main branch renamed to: main"
+
+          # Disable Automatic Analysis — CI-based analysis (dotnet-sonarscanner) is used instead
+          sonar_post "autoscan/disable" "api/autoscan/activation" \
+            --data-urlencode "enable=false" \
+            --data-urlencode "projectKey=$SONAR_PROJECT_KEY"
+          echo "Automatic Analysis disabled."
+
+          # Set New Code definition to "Previous version"
+          for KEY in sonar.leak.period sonar.leak.period.type; do
+            sonar_post "$KEY" "api/settings/set" \
+              --data-urlencode "component=$SONAR_PROJECT_KEY" \
+              --data-urlencode "key=$KEY" \
+              --data-urlencode "value=previous_version"
+          done
+          echo "New Code definition set to: Previous version"
+
+      - name: Set repository custom properties
+        # Property schemas must be pre-defined in the org:
+        # Settings → Custom properties → New property
+        # Required properties: module-template, module-id, platform-version,
+        #   created-by, created-at, workflow-run
+        # Optional: sonar-key (set only for public repos)
+        # Failure here does not fail the workflow — repo setup is already complete.
+        continue-on-error: true
+        run: |
+          CREATED_AT=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
+          PROPS='{"properties":['
+          PROPS+='{"property_name":"module-template","value":"${{ inputs.template }}"}'
+          PROPS+=',{"property_name":"module-id","value":"'"$MODULE_ID"'"}'
+          PROPS+=',{"property_name":"platform-version","value":"${{ inputs.platformVersion }}"}'
+          PROPS+=',{"property_name":"created-by","value":"${{ github.actor }}"}'
+          PROPS+=',{"property_name":"created-at","value":"'"$CREATED_AT"'"}'
+          PROPS+=',{"property_name":"workflow-run","value":"${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"}'
+          if [ "${{ inputs.visibility }}" = "public" ]; then
+            PROPS+=',{"property_name":"sonar-key","value":"'"$SONAR_PROJECT_KEY"'"}'
+          fi
+          PROPS+=']}'
+          echo "$PROPS" | gh api \
+            --method PATCH \
+            /repos/${{ env.REPO_FULL_NAME }}/properties/values \
+            --input -
+          echo "Repository custom properties set."
+
+      - name: Register repository in deploy-module-workflows.yml
+        # Inserts the new repo into the sorted matrix list and commits back.
+        # Failure here does not fail the workflow — repo setup is already complete.
+        # Git user identity is already configured by the Setup Git credentials step.
+        continue-on-error: true
+        working-directory: dotgithub
+        run: |
+          NEW_REPO="$REPO_NAME"
+          FILE=".github/workflows/deploy-module-workflows.yml"
+
+          python3 - "$NEW_REPO" "$FILE" << 'PYEOF'
+          import sys, re
+          repo, path = sys.argv[1], sys.argv[2]
+          with open(path) as f:
+              content = f.read()
+          m = re.search(r'(        repoName: \[)([\s\S]*?)(\])', content)
+          if not m:
+              sys.exit('repoName list not found')
+          entries = [e.strip().lstrip(',') for e in m.group(2).splitlines() if e.strip()]
+          if repo in entries:
+              print(f'{repo} already in list — nothing to do')
+              sys.exit(0)
+          entries.append(repo)
+          entries.sort()
+          indent_match = re.search(r'\n( +),', m.group(2))
+          indent = indent_match.group(1) if indent_match else ' ' * (len(m.group(1)) - 1)
+          new_body = entries[0] + ''.join(f'\n{indent},{e}' for e in entries[1:])
+          new_content = content[:m.start()] + m.group(1) + new_body + '\n' + indent + m.group(3) + content[m.end():]
+          with open(path, 'w') as f:
+              f.write(new_content)
+          print(f'Added {repo}')
+          PYEOF
+
+          git add "$FILE"
+          if git diff --cached --quiet; then
+            echo "$NEW_REPO was already in deploy-module-workflows.yml — no commit needed."
+          else
+            git commit -m "ci: Add $NEW_REPO to deploy-module-workflows"
+            # Pull and rebase to handle concurrent pushes, then retry once.
+            if ! git push; then
+              echo "Push failed — pulling and rebasing..."
+              if git pull --rebase && git push; then
+                echo "$NEW_REPO registered in deploy-module-workflows.yml."
+              else
+                echo "::warning::Could not register $NEW_REPO in deploy-module-workflows.yml after rebase — add it manually."
+              fi
+            else
+              echo "$NEW_REPO registered in deploy-module-workflows.yml."
+            fi
+          fi
+
+      - name: Delete GitHub repository (rollback)
+        if: failure() && steps.create-repo.outputs.created == 'true'
+        run: |
+          if DELETE_OUTPUT=$(gh api --method DELETE /repos/${{ env.REPO_FULL_NAME }} 2>&1); then
+            echo "Repository ${{ env.REPO_FULL_NAME }} deleted."
+          elif echo "$DELETE_OUTPUT" | grep -qi "not found\|404"; then
+            echo "Repository does not exist — nothing to clean up."
+          else
+            echo "::warning::Delete attempt failed: $DELETE_OUTPUT"
+          fi
+
+      - name: Delete SonarCloud project (rollback)
+        if: failure() && steps.create-sonarcloud.outputs.created == 'true'
+        run: |
+          if [ -z "$SONAR_PROJECT_KEY" ]; then
+            echo "SonarCloud project key not available (failed before computing names) — nothing to clean up."
             exit 0
           fi
           RESPONSE=$(curl -s \
             -H "Authorization: Bearer ${{ secrets.SONAR_TOKEN }}" \
-            "https://sonarcloud.io/api/projects/search?projects=${{ env.SONAR_PROJECT_KEY }}&organization=${{ secrets.SONAR_ORG_KEY }}" 2>/dev/null || echo '{}')
+            "https://sonarcloud.io/api/projects/search?projects=$SONAR_PROJECT_KEY&organization=${{ vars.SONAR_ORG_KEY }}" \
+            2>/dev/null || echo '{}')
           TOTAL=$(echo "$RESPONSE" | grep -o '"total":[0-9]*' | cut -d: -f2)
           if [ "${TOTAL:-0}" -gt "0" ]; then
-            echo "Deleting SonarCloud project ${{ env.SONAR_PROJECT_KEY }}..."
+            echo "Deleting SonarCloud project $SONAR_PROJECT_KEY..."
             curl -sf -X POST \
               -H "Authorization: Bearer ${{ secrets.SONAR_TOKEN }}" \
               "https://sonarcloud.io/api/projects/delete" \
-              --data-urlencode "project=${{ env.SONAR_PROJECT_KEY }}"
+              --data-urlencode "project=$SONAR_PROJECT_KEY"
             echo "SonarCloud project deleted."
           else
             echo "SonarCloud project does not exist — nothing to clean up."
