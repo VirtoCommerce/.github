@@ -155,8 +155,8 @@ jobs:
     needs: summarize-inputs
     runs-on: ubuntu-latest
     # Requires manual approval from a designated reviewer before any resources are created.
-    # Configure required reviewers at: Settings → Environments → create-org-repo
-    environment: create-org-repo
+    # Configure required reviewers at: Settings → Environments → module-repository-management
+    environment: module-repository-management
     env:
       GH_TOKEN: ${{ secrets.MODULE_REPO_MGMT_TOKEN }}
       ORG_NAME: ${{ github.repository_owner }}
