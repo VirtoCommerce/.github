@@ -70,14 +70,23 @@ jobs:
 
   summarize-inputs:
     runs-on: ubuntu-latest
+    env:
+      MODULE_NAME:      ${{ inputs.moduleName }}
+      COMPANY_NAME:     ${{ inputs.companyName }}
+      AUTHOR:           ${{ inputs.author }}
+      MODULE_VERSION:   ${{ inputs.moduleVersion }}
+      PLATFORM_VERSION: ${{ inputs.platformVersion }}
+      CORE_VERSION:     ${{ inputs.coreVersion }}
+      XAPI_VERSION:     ${{ inputs.xapiVersion }}
+      TEMPLATE_VERSION: ${{ inputs.templateVersion }}
+      TEMPLATE:         ${{ inputs.template }}
+      VISIBILITY:       ${{ inputs.visibility }}
     outputs:
       repoName:        ${{ steps.names.outputs.repoName }}
       moduleId:        ${{ steps.names.outputs.moduleId }}
       sonarProjectKey: ${{ steps.names.outputs.sonarProjectKey }}
     steps:
       - name: Validate module name
-        env:
-          MODULE_NAME: ${{ inputs.moduleName }}
         run: |
           # Must start with an uppercase letter and contain only letters and digits
           if ! echo "$MODULE_NAME" | grep -qE '^[A-Z][a-zA-Z0-9]+$'; then
@@ -87,12 +96,6 @@ jobs:
           echo "moduleName '$MODULE_NAME' is valid."
 
       - name: Validate template parameters
-        env:
-          TEMPLATE: ${{ inputs.template }}
-          MODULE_VERSION: ${{ inputs.moduleVersion }}
-          PLATFORM_VERSION: ${{ inputs.platformVersion }}
-          XAPI_VERSION: ${{ inputs.xapiVersion }}
-          CORE_VERSION: ${{ inputs.coreVersion }}
         run: |
           SEMVER_RE='^[0-9]+\.[0-9]+\.[0-9]+$'
           ERRORS=0
@@ -116,40 +119,35 @@ jobs:
 
       - name: Compute and print names
         id: names
-        env:
-          MODULE_NAME: ${{ inputs.moduleName }}
-          COMPANY_NAME: ${{ inputs.companyName }}
-          ORG_NAME: ${{ github.repository_owner }}
-          TEMPLATE_VERSION: ${{ inputs.templateVersion }}
         run: |
           KEBAB=$(echo "$MODULE_NAME" | sed 's/\([A-Z]\)/-\1/g' | sed 's/^-//' | tr '[:upper:]' '[:lower:]')
           REPO_NAME="vc-module-${KEBAB}"
           MODULE_ID="${COMPANY_NAME}.${MODULE_NAME}"
-          SONAR_KEY="${ORG_NAME}_${REPO_NAME}"
+          SONAR_KEY="${GITHUB_REPOSITORY_OWNER}_${REPO_NAME}"
           echo "repoName=${REPO_NAME}"        >> $GITHUB_OUTPUT
           echo "moduleId=${MODULE_ID}"        >> $GITHUB_OUTPUT
           echo "sonarProjectKey=${SONAR_KEY}" >> $GITHUB_OUTPUT
 
-          echo "### Inputs"                                          >> $GITHUB_STEP_SUMMARY
-          echo "| Parameter       | Value |"                        >> $GITHUB_STEP_SUMMARY
-          echo "|-----------------|-------|"                        >> $GITHUB_STEP_SUMMARY
-          echo "| moduleName      | ${{ inputs.moduleName }} |"     >> $GITHUB_STEP_SUMMARY
-          echo "| companyName     | ${{ inputs.companyName }} |"    >> $GITHUB_STEP_SUMMARY
-          echo "| author          | ${{ inputs.author }} |"         >> $GITHUB_STEP_SUMMARY
-          echo "| moduleVersion   | ${{ inputs.moduleVersion }} |"  >> $GITHUB_STEP_SUMMARY
-          echo "| platformVersion | ${{ inputs.platformVersion }} |" >> $GITHUB_STEP_SUMMARY
-          echo "| coreVersion     | ${{ inputs.coreVersion }} |"    >> $GITHUB_STEP_SUMMARY
-          echo "| xapiVersion     | ${{ inputs.xapiVersion }} |"    >> $GITHUB_STEP_SUMMARY
-          echo "| templateVersion | ${TEMPLATE_VERSION:-latest} |" >> $GITHUB_STEP_SUMMARY
-          echo "| template        | ${{ inputs.template }} |"       >> $GITHUB_STEP_SUMMARY
-          echo "| visibility      | ${{ inputs.visibility }} |"     >> $GITHUB_STEP_SUMMARY
-          echo ""                                                    >> $GITHUB_STEP_SUMMARY
-          echo "### Computed names"                                           >> $GITHUB_STEP_SUMMARY
-          echo "| Name              | Value |"                           >> $GITHUB_STEP_SUMMARY
-          echo "|-------------------|-------|"                           >> $GITHUB_STEP_SUMMARY
-          echo "| Repository        | ${{ github.repository_owner }}/${REPO_NAME} |" >> $GITHUB_STEP_SUMMARY
-          echo "| Module ID         | ${MODULE_ID} |"                   >> $GITHUB_STEP_SUMMARY
-          echo "| SonarCloud key    | ${SONAR_KEY} |"       >> $GITHUB_STEP_SUMMARY
+          echo "### Inputs"                                                              >> $GITHUB_STEP_SUMMARY
+          echo "| Parameter       | Value |"                                            >> $GITHUB_STEP_SUMMARY
+          echo "|-----------------|-------|"                                            >> $GITHUB_STEP_SUMMARY
+          echo "| moduleName      | $MODULE_NAME |"                                    >> $GITHUB_STEP_SUMMARY
+          echo "| companyName     | $COMPANY_NAME |"                                   >> $GITHUB_STEP_SUMMARY
+          echo "| author          | $AUTHOR |"                                         >> $GITHUB_STEP_SUMMARY
+          echo "| moduleVersion   | $MODULE_VERSION |"                                 >> $GITHUB_STEP_SUMMARY
+          echo "| platformVersion | $PLATFORM_VERSION |"                               >> $GITHUB_STEP_SUMMARY
+          echo "| coreVersion     | $CORE_VERSION |"                                   >> $GITHUB_STEP_SUMMARY
+          echo "| xapiVersion     | $XAPI_VERSION |"                                   >> $GITHUB_STEP_SUMMARY
+          echo "| templateVersion | ${TEMPLATE_VERSION:-latest} |"                     >> $GITHUB_STEP_SUMMARY
+          echo "| template        | $TEMPLATE |"                                       >> $GITHUB_STEP_SUMMARY
+          echo "| visibility      | $VISIBILITY |"                                     >> $GITHUB_STEP_SUMMARY
+          echo ""                                                                        >> $GITHUB_STEP_SUMMARY
+          echo "### Computed names"                                                     >> $GITHUB_STEP_SUMMARY
+          echo "| Name           | Value |"                                             >> $GITHUB_STEP_SUMMARY
+          echo "|----------------|-------|"                                             >> $GITHUB_STEP_SUMMARY
+          echo "| Repository     | ${GITHUB_REPOSITORY_OWNER}/${REPO_NAME} |"          >> $GITHUB_STEP_SUMMARY
+          echo "| Module ID      | ${MODULE_ID} |"                                     >> $GITHUB_STEP_SUMMARY
+          echo "| SonarCloud key | ${SONAR_KEY} |"                                     >> $GITHUB_STEP_SUMMARY
 
   create-module-repository:
     needs: summarize-inputs
@@ -158,29 +156,41 @@ jobs:
     # Configure required reviewers at: Settings → Environments → module-repository-management
     environment: module-repository-management
     env:
-      GH_TOKEN: ${{ secrets.MODULE_REPO_MGMT_TOKEN }}
-      ORG_NAME: ${{ github.repository_owner }}
-      REPO_NAME: ${{ needs.summarize-inputs.outputs.repoName }}
-      REPO_FULL_NAME: ${{ github.repository_owner }}/${{ needs.summarize-inputs.outputs.repoName }}
-      MODULE_ID: ${{ needs.summarize-inputs.outputs.moduleId }}
+      GH_TOKEN:         ${{ secrets.MODULE_REPO_MGMT_TOKEN }}
+      SONAR_TOKEN:      ${{ secrets.SONAR_TOKEN }}
+      SONAR_ORG_KEY:    ${{ vars.SONAR_ORG_KEY }}
+      ORG_NAME:         ${{ github.repository_owner }}
+      REPO_NAME:        ${{ needs.summarize-inputs.outputs.repoName }}
+      REPO_FULL_NAME:   ${{ github.repository_owner }}/${{ needs.summarize-inputs.outputs.repoName }}
+      MODULE_ID:        ${{ needs.summarize-inputs.outputs.moduleId }}
       SONAR_PROJECT_KEY: ${{ needs.summarize-inputs.outputs.sonarProjectKey }}
+      VISIBILITY:       ${{ inputs.visibility }}
+      MODULE_NAME:      ${{ inputs.moduleName }}
+      COMPANY_NAME:     ${{ inputs.companyName }}
+      AUTHOR:           ${{ inputs.author }}
+      TEMPLATE:         ${{ inputs.template }}
+      TEMPLATE_VERSION: ${{ inputs.templateVersion }}
+      MODULE_VERSION:   ${{ inputs.moduleVersion }}
+      PLATFORM_VERSION: ${{ inputs.platformVersion }}
+      CORE_VERSION:     ${{ inputs.coreVersion }}
+      XAPI_VERSION:     ${{ inputs.xapiVersion }}
 
     steps:
 
       - name: Check repository does not exist
         run: |
-          if gh api /repos/${{ env.REPO_FULL_NAME }} --silent 2>/dev/null; then
-            echo "::error::Repository ${{ env.REPO_FULL_NAME }} already exists."
+          if gh api /repos/$REPO_FULL_NAME --silent 2>/dev/null; then
+            echo "::error::Repository $REPO_FULL_NAME already exists."
             exit 1
           fi
-          echo "Repository ${{ env.REPO_FULL_NAME }} does not exist — proceeding."
+          echo "Repository $REPO_FULL_NAME does not exist — proceeding."
 
       - name: Check SonarCloud project does not exist
-        if: ${{ inputs.visibility == 'public' }}
+        if: ${{ env.VISIBILITY == 'public' }}
         run: |
           RESPONSE=$(curl -s -w "\n%{http_code}" \
-            -H "Authorization: Bearer ${{ secrets.SONAR_TOKEN }}" \
-            "https://sonarcloud.io/api/projects/search?projects=$SONAR_PROJECT_KEY&organization=${{ vars.SONAR_ORG_KEY }}")
+            -H "Authorization: Bearer $SONAR_TOKEN" \
+            "https://sonarcloud.io/api/projects/search?projects=$SONAR_PROJECT_KEY&organization=$SONAR_ORG_KEY")
           HTTP_CODE=$(echo "$RESPONSE" | tail -1)
           BODY=$(echo "$RESPONSE" | head -n -1)
           echo "HTTP $HTTP_CODE: $BODY"
@@ -198,19 +208,19 @@ jobs:
       - name: Create repository
         id: create-repo
         run: |
-          gh repo create ${{ env.REPO_FULL_NAME }} \
-            --${{ inputs.visibility }} \
-            --description "${{ env.ORG_NAME }} ${{ inputs.moduleName }} module"
+          gh repo create $REPO_FULL_NAME \
+            --$VISIBILITY \
+            --description "$ORG_NAME $MODULE_NAME module"
           echo "created=true" >> $GITHUB_OUTPUT
-          REPO_ID=$(gh api repos/${{ env.REPO_FULL_NAME }} --jq '.id')
+          REPO_ID=$(gh api repos/$REPO_FULL_NAME --jq '.id')
           echo "repoId=$REPO_ID" >> $GITHUB_OUTPUT
-          echo "Repository created: https://github.com/${{ env.REPO_FULL_NAME }}"
+          echo "Repository created: https://github.com/$REPO_FULL_NAME"
 
       - name: Configure repository settings
         run: |
           gh api \
             --method PATCH \
-            /repos/${{ env.REPO_FULL_NAME }} \
+            /repos/$REPO_FULL_NAME \
             --field allow_merge_commit=false \
             --field allow_squash_merge=true \
             --field squash_merge_commit_title=PR_TITLE \
@@ -220,7 +230,7 @@ jobs:
             --field delete_branch_on_merge=true
           gh api \
             --method PUT \
-            /repos/${{ env.REPO_FULL_NAME }}/actions/permissions \
+            /repos/$REPO_FULL_NAME/actions/permissions \
             --field enabled=true \
             --field allowed_actions=all
 
@@ -231,7 +241,7 @@ jobs:
             echo "Adding team $TEAM (${TEAMS[$TEAM]})"
             gh api \
               --method PUT \
-              /orgs/$ORG_NAME/teams/$TEAM/repos/${{ env.REPO_FULL_NAME }} \
+              /orgs/$ORG_NAME/teams/$TEAM/repos/$REPO_FULL_NAME \
               --field permission=${TEAMS[$TEAM]}
           done
 
@@ -239,26 +249,17 @@ jobs:
         uses: actions/checkout@v4
         with:
           path: dotgithub
-          token: ${{ secrets.MODULE_REPO_MGMT_TOKEN }}
+          token: ${{ env.GH_TOKEN }}
 
       - name: Install module template
         run: |
-          if [ -n "${{ inputs.templateVersion }}" ]; then
-            dotnet new install "VirtoCommerce.Module.Template::${{ inputs.templateVersion }}"
+          if [ -n "$TEMPLATE_VERSION" ]; then
+            dotnet new install "VirtoCommerce.Module.Template::$TEMPLATE_VERSION"
           else
             dotnet new install VirtoCommerce.Module.Template
           fi
 
       - name: Generate module code
-        env:
-          TEMPLATE:          ${{ inputs.template }}
-          MODULE_NAME:       ${{ inputs.moduleName }}
-          COMPANY_NAME:      ${{ inputs.companyName }}
-          AUTHOR:            ${{ inputs.author }}
-          MODULE_VERSION:    ${{ inputs.moduleVersion }}
-          PLATFORM_VERSION:  ${{ inputs.platformVersion }}
-          CORE_VERSION:      ${{ inputs.coreVersion }}
-          XAPI_VERSION:      ${{ inputs.xapiVersion }}
         run: |
           # Common args accepted by all module templates
           ARGS=(
@@ -275,7 +276,7 @@ jobs:
 
       - name: Clone new repository
         run: |
-          git clone https://x-access-token:${{ env.GH_TOKEN }}@github.com/${{ env.REPO_FULL_NAME }}.git repo
+          git clone https://x-access-token:$GH_TOKEN@github.com/$REPO_FULL_NAME.git repo
           # Ensure the default branch is 'main' regardless of org-level settings
           git -C repo symbolic-ref HEAD refs/heads/main
 
@@ -382,7 +383,7 @@ jobs:
         run: |
           git checkout -b dev
           git push -u origin dev
-          gh repo edit ${{ env.REPO_FULL_NAME }} --default-branch dev
+          gh repo edit $REPO_FULL_NAME --default-branch dev
 
       - name: Protect branches
         run: |
@@ -415,7 +416,7 @@ jobs:
             printf "Protecting branch: %s ... " "$BRANCH"
             if echo "$POLICY" | gh api \
               --method PUT \
-              /repos/${{ env.REPO_FULL_NAME }}/branches/$BRANCH/protection \
+              /repos/$REPO_FULL_NAME/branches/$BRANCH/protection \
               --input - > /dev/null; then
               echo "OK"
             else
@@ -427,13 +428,13 @@ jobs:
 
       - name: Configure SonarCloud project
         id: create-sonarcloud
-        if: ${{ inputs.visibility == 'public' }}
+        if: ${{ env.VISIBILITY == 'public' }}
         run: |
           # sonar_post <label> <endpoint> [curl-args...]
           sonar_post() {
             local LABEL="$1" ENDPOINT="$2"; shift 2
             RESPONSE=$(curl -s -w "\n%{http_code}" -X POST \
-              -H "Authorization: Bearer ${{ secrets.SONAR_TOKEN }}" \
+              -H "Authorization: Bearer $SONAR_TOKEN" \
               "https://sonarcloud.io/$ENDPOINT" "$@")
             HTTP_CODE=$(echo "$RESPONSE" | tail -1)
             BODY=$(echo "$RESPONSE" | head -n -1)
@@ -446,10 +447,10 @@ jobs:
 
           # Create project and bind to GitHub in one call.
           # installationKeys format: {github-org}/{repo-name}|{github-repo-id}
-          INSTALLATION_KEY="${{ env.REPO_FULL_NAME }}|${{ steps.create-repo.outputs.repoId }}"
+          INSTALLATION_KEY="$REPO_FULL_NAME|${{ steps.create-repo.outputs.repoId }}"
           sonar_post "provision_projects" "api/alm_integration/provision_projects" \
             --data-urlencode "installationKeys=$INSTALLATION_KEY" \
-            --data-urlencode "organization=${{ vars.SONAR_ORG_KEY }}"
+            --data-urlencode "organization=$SONAR_ORG_KEY"
           echo "created=true" >> $GITHUB_OUTPUT
 
           # Extract the actual project key assigned by SonarCloud and override SONAR_PROJECT_KEY
@@ -460,7 +461,7 @@ jobs:
             echo "SONAR_PROJECT_KEY=$PROVISIONED_KEY" >> $GITHUB_ENV
             SONAR_PROJECT_KEY="$PROVISIONED_KEY"
           fi
-          echo "SonarCloud project created and bound to GitHub: ${{ env.REPO_FULL_NAME }}"
+          echo "SonarCloud project created and bound to GitHub: $REPO_FULL_NAME"
 
           # Rename default branch to main
           sonar_post "project_branches/rename" "api/project_branches/rename" \
@@ -494,19 +495,19 @@ jobs:
         run: |
           CREATED_AT=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
           PROPS='{"properties":['
-          PROPS+='{"property_name":"module-template","value":"${{ inputs.template }}"}'
+          PROPS+='{"property_name":"module-template","value":"'"$TEMPLATE"'"}'
           PROPS+=',{"property_name":"module-id","value":"'"$MODULE_ID"'"}'
-          PROPS+=',{"property_name":"platform-version","value":"${{ inputs.platformVersion }}"}'
-          PROPS+=',{"property_name":"created-by","value":"${{ github.actor }}"}'
+          PROPS+=',{"property_name":"platform-version","value":"'"$PLATFORM_VERSION"'"}'
+          PROPS+=',{"property_name":"created-by","value":"'"$GITHUB_ACTOR"'"}'
           PROPS+=',{"property_name":"created-at","value":"'"$CREATED_AT"'"}'
-          PROPS+=',{"property_name":"workflow-run","value":"${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"}'
-          if [ "${{ inputs.visibility }}" = "public" ]; then
+          PROPS+=',{"property_name":"workflow-run","value":"'"$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID"'"}'
+          if [ "$VISIBILITY" = "public" ]; then
             PROPS+=',{"property_name":"sonar-key","value":"'"$SONAR_PROJECT_KEY"'"}'
           fi
           PROPS+=']}'
           echo "$PROPS" | gh api \
             --method PATCH \
-            /repos/${{ env.REPO_FULL_NAME }}/properties/values \
+            /repos/$REPO_FULL_NAME/properties/values \
             --input -
           echo "Repository custom properties set."
 
@@ -564,8 +565,8 @@ jobs:
       - name: Delete GitHub repository (rollback)
         if: failure() && steps.create-repo.outputs.created == 'true'
         run: |
-          if DELETE_OUTPUT=$(gh api --method DELETE /repos/${{ env.REPO_FULL_NAME }} 2>&1); then
-            echo "Repository ${{ env.REPO_FULL_NAME }} deleted."
+          if DELETE_OUTPUT=$(gh api --method DELETE /repos/$REPO_FULL_NAME 2>&1); then
+            echo "Repository $REPO_FULL_NAME deleted."
           elif echo "$DELETE_OUTPUT" | grep -qi "not found\|404"; then
             echo "Repository does not exist — nothing to clean up."
           else
@@ -580,14 +581,14 @@ jobs:
             exit 0
           fi
           RESPONSE=$(curl -s \
-            -H "Authorization: Bearer ${{ secrets.SONAR_TOKEN }}" \
-            "https://sonarcloud.io/api/projects/search?projects=$SONAR_PROJECT_KEY&organization=${{ vars.SONAR_ORG_KEY }}" \
+            -H "Authorization: Bearer $SONAR_TOKEN" \
+            "https://sonarcloud.io/api/projects/search?projects=$SONAR_PROJECT_KEY&organization=$SONAR_ORG_KEY" \
             2>/dev/null || echo '{}')
           TOTAL=$(echo "$RESPONSE" | grep -o '"total":[0-9]*' | cut -d: -f2)
           if [ "${TOTAL:-0}" -gt "0" ]; then
             echo "Deleting SonarCloud project $SONAR_PROJECT_KEY..."
             curl -sf -X POST \
-              -H "Authorization: Bearer ${{ secrets.SONAR_TOKEN }}" \
+              -H "Authorization: Bearer $SONAR_TOKEN" \
               "https://sonarcloud.io/api/projects/delete" \
               --data-urlencode "project=$SONAR_PROJECT_KEY"
             echo "SonarCloud project deleted."
