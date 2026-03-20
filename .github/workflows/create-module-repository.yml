@@ -157,7 +157,7 @@ jobs:
     environment: module-repository-management
     env:
       GH_TOKEN:         ${{ secrets.MODULE_REPO_MGMT_TOKEN }}
-      SONAR_TOKEN:      ${{ secrets.SONAR_TOKEN }}
+      SONAR_TOKEN:      ${{ secrets.SONARCLOUD_TOKEN }} #${{ secrets.SONAR_TOKEN }}
       SONAR_ORG_KEY:    ${{ vars.SONAR_ORG_KEY }}
       ORG_NAME:         ${{ github.repository_owner }}
       REPO_NAME:        ${{ needs.summarize-inputs.outputs.repoName }}
