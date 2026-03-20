@@ -16,7 +16,8 @@ jobs:
     strategy:
       matrix:
 # Module workflows
-        repoName: [vc-module-app-insights
+        repoName: [vc-module-algolia-search
+                  ,vc-module-app-insights
                   ,vc-module-assets
                   ,vc-module-authorize-net
                   ,vc-module-avatax
