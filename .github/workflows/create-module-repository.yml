@@ -463,22 +463,23 @@ jobs:
           fi
           echo "SonarCloud project created and bound to GitHub: $REPO_FULL_NAME"
 
-          # Wait for the project to become available — provisioning is asynchronous
-          echo "Waiting for SonarCloud project '$SONAR_PROJECT_KEY' to become available..."
+          # Wait for the branch service to recognise the project — provisioning is asynchronous
+          # project_branches/list uses the same internal service as project_branches/rename,
+          # so a 200 response here guarantees rename will succeed.
+          echo "Waiting for SonarCloud branch service to recognise project '$SONAR_PROJECT_KEY'..."
           for i in $(seq 1 12); do
-            SEARCH_RESPONSE=$(curl -s \
+            BRANCHES_HTTP=$(curl -s -o /dev/null -w "%{http_code}" \
               -H "Authorization: Bearer $SONAR_TOKEN" \
-              "https://sonarcloud.io/api/projects/search?projects=$SONAR_PROJECT_KEY&organization=$SONAR_ORG_KEY")
-            TOTAL=$(echo "$SEARCH_RESPONSE" | grep -o '"total":[0-9]*' | cut -d: -f2)
-            if [ "${TOTAL:-0}" -gt "0" ]; then
-              echo "Project available after attempt $i."
+              "https://sonarcloud.io/api/project_branches/list?project=$SONAR_PROJECT_KEY")
+            if [ "$BRANCHES_HTTP" -eq 200 ]; then
+              echo "Branch service ready after attempt $i."
               break
             fi
             if [ "$i" -eq 12 ]; then
-              echo "::error::SonarCloud project '$SONAR_PROJECT_KEY' did not become available after 60s."
+              echo "::error::SonarCloud branch service did not recognise '$SONAR_PROJECT_KEY' after 60s (last HTTP: $BRANCHES_HTTP)."
               exit 1
             fi
-            echo "Attempt $i: not ready yet — retrying in 5s..."
+            echo "Attempt $i: branch service returned HTTP $BRANCHES_HTTP — retrying in 5s..."
             sleep 5
           done
 
