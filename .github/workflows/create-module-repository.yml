@@ -469,6 +469,7 @@ jobs:
             -H "Authorization: Bearer $SONAR_TOKEN" \
             "https://sonarcloud.io/api/users/current" | grep -o '"login":"[^"]*"' | head -1 | cut -d'"' -f4)
           sonar_post "permissions/add_user" "api/permissions/add_user" \
+            --data-urlencode "organization=$SONAR_ORG_KEY" \
             --data-urlencode "projectKey=$SONAR_PROJECT_KEY" \
             --data-urlencode "login=$CURRENT_LOGIN" \
             --data-urlencode "permission=admin"
