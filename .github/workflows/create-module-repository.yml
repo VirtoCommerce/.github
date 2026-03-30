@@ -463,31 +463,16 @@ jobs:
           fi
           echo "SonarCloud project created and bound to GitHub: $REPO_FULL_NAME"
 
-          # Wait for the branch service to recognise the project — provisioning is asynchronous
-          # project_branches/list uses the same internal service as project_branches/rename,
-          # so a 200 response here guarantees rename will succeed.
-          echo "Waiting for SonarCloud branch service to recognise project '$SONAR_PROJECT_KEY'..."
-          for i in $(seq 1 12); do
-            BRANCHES_HTTP=$(curl -s -o /dev/null -w "%{http_code}" \
-              -H "Authorization: Bearer $SONAR_TOKEN" \
-              "https://sonarcloud.io/api/project_branches/list?project=$SONAR_PROJECT_KEY")
-            if [ "$BRANCHES_HTTP" -eq 200 ]; then
-              echo "Branch service ready after attempt $i."
-              break
-            fi
-            if [ "$i" -eq 12 ]; then
-              echo "::error::SonarCloud branch service did not recognise '$SONAR_PROJECT_KEY' after 60s (last HTTP: $BRANCHES_HTTP)."
-              exit 1
-            fi
-            echo "Attempt $i: branch service returned HTTP $BRANCHES_HTTP — retrying in 5s..."
-            sleep 5
-          done
-
-          # Rename default branch to main
-          sonar_post "project_branches/rename" "api/project_branches/rename" \
-            --data-urlencode "project=$SONAR_PROJECT_KEY" \
-            --data-urlencode "name=main"
-          echo "SonarCloud main branch renamed to: main"
+          # Grant the token user project-level admin so subsequent API calls succeed.
+          # Org-level "Administer" does not cascade to project-level permissions in SonarCloud.
+          CURRENT_LOGIN=$(curl -s \
+            -H "Authorization: Bearer $SONAR_TOKEN" \
+            "https://sonarcloud.io/api/users/current" | grep -o '"login":"[^"]*"' | head -1 | cut -d'"' -f4)
+          sonar_post "permissions/add_user" "api/permissions/add_user" \
+            --data-urlencode "projectKey=$SONAR_PROJECT_KEY" \
+            --data-urlencode "login=$CURRENT_LOGIN" \
+            --data-urlencode "permission=admin"
+          echo "Project-level admin granted to: $CURRENT_LOGIN"
 
           # Disable Automatic Analysis — CI-based analysis (dotnet-sonarscanner) is used instead
           sonar_post "autoscan/disable" "api/autoscan/activation" \
