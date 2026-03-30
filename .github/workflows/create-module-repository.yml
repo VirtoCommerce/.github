@@ -463,6 +463,25 @@ jobs:
           fi
           echo "SonarCloud project created and bound to GitHub: $REPO_FULL_NAME"
 
+          # Wait for the project to become available — provisioning is asynchronous
+          echo "Waiting for SonarCloud project '$SONAR_PROJECT_KEY' to become available..."
+          for i in $(seq 1 12); do
+            SEARCH_RESPONSE=$(curl -s \
+              -H "Authorization: Bearer $SONAR_TOKEN" \
+              "https://sonarcloud.io/api/projects/search?projects=$SONAR_PROJECT_KEY&organization=$SONAR_ORG_KEY")
+            TOTAL=$(echo "$SEARCH_RESPONSE" | grep -o '"total":[0-9]*' | cut -d: -f2)
+            if [ "${TOTAL:-0}" -gt "0" ]; then
+              echo "Project available after attempt $i."
+              break
+            fi
+            if [ "$i" -eq 12 ]; then
+              echo "::error::SonarCloud project '$SONAR_PROJECT_KEY' did not become available after 60s."
+              exit 1
+            fi
+            echo "Attempt $i: not ready yet — retrying in 5s..."
+            sleep 5
+          done
+
           # Rename default branch to main
           sonar_post "project_branches/rename" "api/project_branches/rename" \
             --data-urlencode "project=$SONAR_PROJECT_KEY" \
