@@ -71,6 +71,7 @@ jobs:
                   ,vc-module-power-bi-reports
                   ,vc-module-price-export-import
                   ,vc-module-pricing
+                  ,vc-module-product-snapshot
                   ,vc-module-profile-experience-api
                   ,vc-module-push-messages
                   ,vc-module-quote
