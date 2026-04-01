@@ -22,6 +22,7 @@ jobs:
                   ,vc-module-authorize-net
                   ,vc-module-avatax
                   ,vc-module-azure-ad
+                  ,vc-module-azure-app-configuration
                   ,vc-module-azure-search
                   ,vc-module-azureblob-assets
                   ,vc-module-back-in-stock
