@@ -11,7 +11,7 @@ Provisions a complete, standards-compliant VirtoCommerce module repository from 
 5. **Configures the repository**: merge strategy (squash-only), Actions permissions (`allowed_actions=all`), team permissions, branch structure (`main` + `dev`), and branch protection rules.
 6. **Generates module code** using the selected [vc-cli-module-template](https://github.com/VirtoCommerce/vc-cli-module-template) and commits it.
 7. **Wires up CI/CD**: copies workflow templates (`module-ci.yml`, `release.yml`, `publish-nugets.yml`, `module-release-hotfix.yml`) and writes the cloud deployment config.
-8. **Provisions SonarCloud** (public repos only): creates and binds the project to GitHub, renames the default branch to `main`, disables Automatic Analysis, and sets the New Code definition to "Previous version".
+8. **Provisions SonarCloud** (public repos only): creates and binds the project to GitHub, grants project-level admin to the token user, disables Automatic Analysis, and sets the New Code definition to "Previous version".
 9. **Tags the repository** with custom properties (template, module ID, creator, creation time, workflow run link).
 10. **Registers** the new repository in `deploy-module-workflows.yml`.
 11. **Rolls back** GitHub and SonarCloud resources automatically on failure.
@@ -23,7 +23,7 @@ Provisions a complete, standards-compliant VirtoCommerce module repository from 
 | Secret | Description |
 |--------|-------------|
 | `MODULE_REPO_MGMT_TOKEN` | PAT with `repo` and `admin:org` (team write) scopes. Used for all GitHub API calls and git operations. |
-| `SONAR_TOKEN` | SonarCloud user token with `Administer` permission on the organization. Required for public repos. |
+| `SONAR_TOKEN` | SonarCloud user token with `Administer` permission on the organization. The workflow self-grants project-level admin after provisioning, so the token does not need to belong to the org owner. Required for public repos. |
 
 ### Variables (Settings → Secrets and variables → Actions → Variables)
 
