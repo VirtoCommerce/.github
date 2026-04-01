@@ -20,9 +20,9 @@ jobs:
                   ,vc-module-assets
                   ,vc-module-authorize-net
                   ,vc-module-avatax
-                  ,vc-module-azureblob-assets
                   ,vc-module-azure-ad
                   ,vc-module-azure-search
+                  ,vc-module-azureblob-assets
                   ,vc-module-back-in-stock
                   ,vc-module-builder-io
                   ,vc-module-bulk-actions
@@ -47,8 +47,8 @@ jobs:
                   ,vc-module-event-bus
                   ,vc-module-experience-api
                   ,vc-module-export
-                  ,vc-module-filesystem-assets
                   ,vc-module-file-experience-api
+                  ,vc-module-filesystem-assets
                   ,vc-module-gdpr
                   ,vc-module-google-ecommerce-analytics
                   ,vc-module-google-sso
@@ -59,17 +59,19 @@ jobs:
                   ,vc-module-lucene-search
                   ,vc-module-marketing
                   ,vc-module-marketing-experience-api
+                  ,vc-module-native-payment-methods
                   ,vc-module-news
                   ,vc-module-notification
-                  ,vc-module-openid-connect
                   ,vc-module-open-search
+                  ,vc-module-openid-connect
                   ,vc-module-order
                   ,vc-module-order-management
-                  ,vc-module-payment
                   ,vc-module-pages
+                  ,vc-module-payment
                   ,vc-module-power-bi-reports
                   ,vc-module-price-export-import
                   ,vc-module-pricing
+                  ,vc-module-product-snapshot
                   ,vc-module-profile-experience-api
                   ,vc-module-push-messages
                   ,vc-module-quote
@@ -78,26 +80,27 @@ jobs:
                   ,vc-module-seo
                   ,vc-module-seq-log
                   ,vc-module-shipping
+                  ,vc-module-shipstation
                   ,vc-module-sitemaps
+                  ,vc-module-skyflow
+                  ,vc-module-sql-queries
                   ,vc-module-state-machine
                   ,vc-module-store
                   ,vc-module-subscription
-                  ,vc-module-tax
-                  ,vc-module-webhooks
-                  ,vc-module-native-payment-methods
-                  ,vc-module-skyflow
-                  ,vc-module-shipstation    
-                  ,vc-module-sql-queries
                   ,vc-module-task-management
+                  ,vc-module-tax
+                  ,vc-module-test-module
+                  ,vc-module-webhooks
                   ,vc-module-white-labeling
                   ,vc-module-x-api
                   ,vc-module-x-cart
                   ,vc-module-x-catalog
                   ,vc-module-x-cms
+                  ,vc-module-x-frontend
                   ,vc-module-x-order
                   ,vc-module-x-pickup
                   ,vc-module-x-recommend
-                  ,vc-module-x-frontend]
+                  ]
 
 # Module samples workflows
         # include:
