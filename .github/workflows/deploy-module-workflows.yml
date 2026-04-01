@@ -89,7 +89,6 @@ jobs:
                   ,vc-module-subscription
                   ,vc-module-task-management
                   ,vc-module-tax
-                  ,vc-module-test-module
                   ,vc-module-webhooks
                   ,vc-module-white-labeling
                   ,vc-module-x-api

@@ -23,7 +23,7 @@ Provisions a complete, standards-compliant VirtoCommerce module repository from 
 | Secret | Description |
 |--------|-------------|
 | `MODULE_REPO_MGMT_TOKEN` | PAT with `repo` and `admin:org` (team write) scopes. Used for all GitHub API calls and git operations. |
-| `SONAR_TOKEN` | SonarCloud user token with `Administer` permission on the organization. The workflow self-grants project-level admin after provisioning, so the token does not need to belong to the org owner. Required for public repos. |
+| `SONARCLOUD_TOKEN` | SonarCloud user token with `Administer` permission on the organization. The workflow self-grants project-level admin after provisioning, so the token does not need to belong to the org owner. Required for public repos. |
 
 ### Variables (Settings → Secrets and variables → Actions → Variables)
 
