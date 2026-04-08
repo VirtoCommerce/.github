@@ -89,6 +89,7 @@ jobs:
                   ,vc-module-state-machine
                   ,vc-module-store
                   ,vc-module-subscription
+                  ,vc-module-system-operations
                   ,vc-module-task-management
                   ,vc-module-tax
                   ,vc-module-webhooks
