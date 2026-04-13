@@ -68,11 +68,6 @@ on:
         required: false
         type: string
         default: ''
-      runTests:
-        description: 'Run tests'
-        required: false
-        type: string
-        default: 'true'
       vctestingPath:
         description: 'UI tests path'
         required: false
@@ -98,16 +93,7 @@ on:
         required: true
 
 jobs:
-  dry-run:
-    if: ${{ inputs.runTests == 'false' }}
-    runs-on: ubuntu-22.04
-    steps:
-      - name: Check if runTests is enabled
-        run: |
-          echo "RunTests is disabled"
-
   ui-autotests:
-    if: ${{ inputs.runTests == 'true' }}
     runs-on: ubuntu-22.04
 
     env:
