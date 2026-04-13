@@ -1,5 +1,5 @@
-# v3.800.27
-# https://virtocommerce.atlassian.net/browse/VCST-4746
+# v3.800.28
+# https://virtocommerce.atlassian.net/browse/VCST-4845
 name: VC Publish docker
 
 on:
