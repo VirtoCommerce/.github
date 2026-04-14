@@ -1,5 +1,5 @@
-# v3.800.28
-# https://virtocommerce.atlassian.net/browse/VCST-4845
+# v3.800.29
+# https://virtocommerce.atlassian.net/browse/VCST-4770
 name: Module deployment
 on:
   workflow_dispatch:
@@ -39,8 +39,8 @@ jobs:
         env: Development
         no_override: false
 
-    - name: Checkout ArgoCD repository 
-      uses: actions/checkout@v4
+    - name: Checkout ArgoCD repository
+      uses: actions/checkout@v6
       with:
         token: ${{ secrets.REPO_TOKEN }}
         repository: "${{ github.event.inputs.appDescriptionRepo }}"

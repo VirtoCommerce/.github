@@ -1,5 +1,5 @@
-# v3.800.28
-# https://virtocommerce.atlassian.net/browse/VCST-4845
+# v3.800.29
+# https://virtocommerce.atlassian.net/browse/VCST-4770
 
 # =======================================================================================
 # The workflow collects deprecation and obsolete warnings from repos in the VirtoCommerce organization.
@@ -117,7 +117,7 @@ jobs:
 
       - name: Upload deprecation warnings list
         if: ${{ steps.collect-deprecation-warnings.outputs.result == 'true' }}
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: deprecation-warnings
           path: ${{ runner.temp }}/deprecation-warnings.json

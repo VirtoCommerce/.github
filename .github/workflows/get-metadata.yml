@@ -1,5 +1,5 @@
-# v3.800.28
-# https://virtocommerce.atlassian.net/browse/VCST-4845
+# v3.800.29
+# https://virtocommerce.atlassian.net/browse/VCST-4770
 name: Get metadata
 
 on:
@@ -40,7 +40,7 @@ jobs:
       run: |
         echo "FETCH_DEPTH=0" >> $GITHUB_ENV
 
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v6
       with:
         fetch-depth: ${{ env.FETCH_DEPTH }}
 

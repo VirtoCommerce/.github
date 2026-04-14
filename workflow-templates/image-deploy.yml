@@ -25,7 +25,7 @@ jobs:
     steps: 
     
     - name: Start deployment
-      uses: VirtoCommerce/vc-github-actions/gh-deployments@master # uses node16 no node20 version available yet
+      uses: VirtoCommerce/vc-github-actions/gh-deployments@master
       id: deployment
       with:
         step: start
@@ -34,7 +34,7 @@ jobs:
         override: true
 
     - name: Checkout ArgoCD repository
-      uses: actions/checkout@v4
+      uses: actions/checkout@v6
       with:
         token: ${{ secrets.REPO_TOKEN }}
         repository: "${{ github.event.inputs.appDescriptionRepo }}"
@@ -87,7 +87,7 @@ jobs:
       run: echo "BUILD_STATE=failed"  >> $GITHUB_ENV
 
     - name: Update GitHub deployment status
-      uses: VirtoCommerce/vc-github-actions/gh-deployments@master # uses node16 no node20 version available yet
+      uses: VirtoCommerce/vc-github-actions/gh-deployments@master
       if: always()
       with:
         step: finish
