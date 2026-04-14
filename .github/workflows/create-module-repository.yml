@@ -246,7 +246,7 @@ jobs:
           done
 
       - name: Checkout .github (workflow templates)
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           path: dotgithub
           token: ${{ env.GH_TOKEN }}

@@ -60,7 +60,7 @@ jobs:
     - name: Install VirtoCommerce.GlobalTool
       uses: VirtoCommerce/vc-github-actions/setup-vcbuild@master
 
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v6
 
     - name: Increment Patch Version
       if: ${{ inputs.incrementPatch == 'true' }}
@@ -68,7 +68,7 @@ jobs:
         vc-build IncrementPatch
 
     - name: Get package from cache
-      uses: actions/cache@v4
+      uses: actions/cache@v5
       id: restore-build
       with:
         key: ${{ inputs.fullKey }}

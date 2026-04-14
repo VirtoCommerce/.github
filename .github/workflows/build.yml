@@ -74,12 +74,12 @@ jobs:
     steps: 
 
     - name: Set up Node 20
-      uses: actions/setup-node@v4
+      uses: actions/setup-node@v6
       with:
         node-version: '20'
 
     - name: Set up Java 17
-      uses: actions/setup-java@v4
+      uses: actions/setup-java@v5
       with:
         distribution: 'temurin'
         java-version: '17'
@@ -92,7 +92,7 @@ jobs:
       run: |
         echo "FETCH_DEPTH=0" >> $GITHUB_ENV
 
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v6
       with:
         fetch-depth: ${{ env.FETCH_DEPTH }}
 
@@ -137,7 +137,7 @@ jobs:
 
     - name: Cache build artifacts
       if: ${{ inputs.uploadPackage == 'true' }}
-      uses: actions/cache@v4
+      uses: actions/cache@v5
       with:
         key: ${{ steps.cache-key.outputs.packageFullKey }}
         path: |
@@ -161,7 +161,7 @@ jobs:
 
     - name: Cache Docker image
       if: ${{ inputs.uploadDocker == 'true' }}
-      uses: actions/cache@v4
+      uses: actions/cache@v5
       with:
         key: ${{ steps.cache-key.outputs.dockerFullKey }}
         path: |

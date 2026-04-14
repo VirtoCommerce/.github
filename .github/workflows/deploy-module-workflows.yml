@@ -121,13 +121,13 @@ jobs:
     steps:
 
     - name: Checkout .github
-      uses: actions/checkout@v4
+      uses: actions/checkout@v6
       with:
         ref: ${{ inputs.version }}
         path: ${{ env.TEMPLATE_REPO_FOLDER }}
 
     - name: Checkout ${{ env.DEPLOY_REPO }}
-      uses: actions/checkout@v4
+      uses: actions/checkout@v6
       with:
         repository: ${{ env.DEPLOY_REPO }}
         path: ${{ matrix.repoName }}

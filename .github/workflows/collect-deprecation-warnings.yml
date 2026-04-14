@@ -117,7 +117,7 @@ jobs:
 
       - name: Upload deprecation warnings list
         if: ${{ steps.collect-deprecation-warnings.outputs.result == 'true' }}
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: deprecation-warnings
           path: ${{ runner.temp }}/deprecation-warnings.json
