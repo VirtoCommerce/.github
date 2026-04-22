@@ -58,6 +58,7 @@ jobs:
                   ,vc-module-image-tools
                   ,vc-module-import
                   ,vc-module-inventory
+                  ,vc-module-loyalty
                   ,vc-module-lucene-search
                   ,vc-module-marketing
                   ,vc-module-marketing-experience-api
