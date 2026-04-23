@@ -1,6 +1,6 @@
 # v3.800.29
 # https://virtocommerce.atlassian.net/browse/VCST-4770
-name: Common tests
+name: Auto tests
 
 on:
   workflow_call:
@@ -121,7 +121,7 @@ jobs:
         customModuleUrl: ${{ inputs.customModuleUrl }}
         sendgridApiKey: ${{ secrets.sendgridApiKey }}
     
-    - name: Run Pytest Tests
+    - name: Run Auto Tests
       uses: VirtoCommerce/vc-github-actions/run-pytest-tests@VCST-4958
       with:
         testSecretEnvFile: ${{ secrets.testSecretEnvFile }}
