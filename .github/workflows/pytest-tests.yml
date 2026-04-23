@@ -98,7 +98,7 @@ on:
         required: true
 
 jobs:
-  e2e-autotests:
+  auto-autotests:
     runs-on: ubuntu-22.04
 
     env:
