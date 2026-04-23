@@ -68,6 +68,11 @@ on:
         required: false
         type: string
         default: 'local-latest'
+      testSuites:
+        description: 'Comma-separated list of suites to run. Any subset of: graphql, restapi, e2e'
+        required: false
+        default: 'graphql,restapi,e2e'
+        type: string
       vctestingPath:
         description: 'UI tests path'
         required: false
@@ -120,7 +125,7 @@ jobs:
       uses: VirtoCommerce/vc-github-actions/run-pytest-tests@VCST-4958
       with:
         testSecretEnvFile: ${{ secrets.testSecretEnvFile }}
-        testSuites: 'graphql'
+        testSuites: ${{ inputs.testSuites }}
         vctestingPath: ${{ inputs.vctestingPath }}
         vctestingRepo: ${{ inputs.vctestingRepo }}
         vctestingRepoBranch: ${{ inputs.vctestingRepoBranch }}
