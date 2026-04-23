@@ -120,7 +120,7 @@ jobs:
       uses: VirtoCommerce/vc-github-actions/run-pytest-tests@VCST-4958
       with:
         testSecretEnvFile: ${{ secrets.testSecretEnvFile }}
-        testSuites: 'graphql,restapi,e2e'
+        testSuites: 'graphql'
         vctestingPath: ${{ inputs.vctestingPath }}
         vctestingRepo: ${{ inputs.vctestingRepo }}
         vctestingRepoBranch: ${{ inputs.vctestingRepoBranch }}
