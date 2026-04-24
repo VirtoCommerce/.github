@@ -35,9 +35,9 @@ At Virto Commerce, we pride ourselves on being proactive technology innovators d
 
 | Month | Live deck | Source notes |
 | --- | --- | --- |
-| **April 2026** | [📊 View deck](https://virtocommerce.github.io/vc-release-notes/release-notes/2026-04/) | [Notes](https://www.virtocommerce.org/t/virto-s-release-notes-april-2026/847) |
-| **March 2026** | [📊 View deck](https://virtocommerce.github.io/vc-release-notes/release-notes/2026-03/) | [Notes](https://www.virtocommerce.org/t/virto-s-release-notes-march-2026/839) |
-| **February 2026** | [📊 View deck](https://virtocommerce.github.io/vc-release-notes/release-notes/2026-02/) | [Notes](https://www.virtocommerce.org/t/virto-s-release-notes-february-2026/834) |
-| **January 2026** | [📊 View deck](https://virtocommerce.github.io/vc-release-notes/release-notes/2026-01/) | [Notes](https://www.virtocommerce.org/t/virto-s-release-notes-january-2026/821) |
+| **April 2026** | [📊 View deck](https://virtocommerce.github.io/vc-release-notes/2026-04/) | [Notes](https://www.virtocommerce.org/t/virto-s-release-notes-april-2026/847) |
+| **March 2026** | [📊 View deck](https://virtocommerce.github.io/vc-release-notes/2026-03/) | [Notes](https://www.virtocommerce.org/t/virto-s-release-notes-march-2026/839) |
+| **February 2026** | [📊 View deck](https://virtocommerce.github.io/vc-release-notes/2026-02/) | [Notes](https://www.virtocommerce.org/t/virto-s-release-notes-february-2026/834) |
+| **January 2026** | [📊 View deck](https://virtocommerce.github.io/vc-release-notes/2026-01/) | [Notes](https://www.virtocommerce.org/t/virto-s-release-notes-january-2026/821) |
 
 [Previuos Releases](https://www.virtocommerce.org/c/news-digest/15) 
