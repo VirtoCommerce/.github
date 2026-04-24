@@ -19,15 +19,21 @@
 #>
 [CmdletBinding(SupportsShouldProcess = $true)]
 param(
-    [string]$Org = 'VirtoCommerce',
+    [string]$Org = 'AndrewEhloOrg', #'VirtoCommerce',
     [string[]]$Repos,
     [string[]]$Branches = @('main', 'dev'),
     [string]$OldCheck = 'module-katalon-tests / e2e-tests',
     [string]$NewCheck = 'auto-tests / auto-autotests',
-    [switch]$AddIfMissing
+    [switch]$AddIfMissing,
+    # PAT with repo admin on the target repos. If omitted, falls back to existing
+    # $env:GH_TOKEN or the ambient `gh auth login` session.
+    [string]$Token
 )
 
 $ErrorActionPreference = 'Stop'
+
+$priorGhToken = $env:GH_TOKEN
+if ($Token) { $env:GH_TOKEN = $Token }
 
 function Test-GhReady {
     $null = gh auth status 2>&1
@@ -151,44 +157,54 @@ function Update-BranchProtection {
     return [pscustomobject]@{ Status = 'OK'; Reason = $action }
 }
 
-Test-GhReady
+try {
+    Test-GhReady
 
-if (-not $Repos -or $Repos.Count -eq 0) {
-    Write-Host "Discovering vc-module-* repos in $Org ..."
-    $Repos = Get-ModuleRepos -Org $Org
-    Write-Host "Found $($Repos.Count) module repos."
-}
-else {
-    $Repos = $Repos | ForEach-Object { if ($_ -match '/') { $_ } else { "$Org/$_" } }
-}
+    if (-not $Repos -or $Repos.Count -eq 0) {
+        Write-Host "Discovering vc-module-* repos in $Org ..."
+        $Repos = Get-ModuleRepos -Org $Org
+        Write-Host "Found $($Repos.Count) module repos."
+    }
+    else {
+        $Repos = $Repos | ForEach-Object { if ($_ -match '/') { $_ } else { "$Org/$_" } }
+    }
 
-$results = foreach ($repo in $Repos) {
-    foreach ($branch in $Branches) {
-        $r = Update-BranchProtection `
-            -RepoFull $repo -Branch $branch `
-            -OldCheck $OldCheck -NewCheck $NewCheck `
-            -AddIfMissing:$AddIfMissing
-        $line = [pscustomobject]@{
-            Repo   = $repo
-            Branch = $branch
-            Status = $r.Status
-            Reason = $r.Reason
+    $results = foreach ($repo in $Repos) {
+        foreach ($branch in $Branches) {
+            $r = Update-BranchProtection `
+                -RepoFull $repo -Branch $branch `
+                -OldCheck $OldCheck -NewCheck $NewCheck `
+                -AddIfMissing:$AddIfMissing
+            $line = [pscustomobject]@{
+                Repo   = $repo
+                Branch = $branch
+                Status = $r.Status
+                Reason = $r.Reason
+            }
+            $color = switch ($r.Status) {
+                'OK'     { 'Green' }
+                'WHATIF' { 'Cyan' }
+                'SKIP'   { 'DarkGray' }
+                'ERROR'  { 'Red' }
+                default  { 'White' }
+            }
+            Write-Host ("[{0,-6}] {1}/{2}: {3}" -f $r.Status, $repo, $branch, $r.Reason) -ForegroundColor $color
+            $line
         }
-        $color = switch ($r.Status) {
-            'OK'     { 'Green' }
-            'WHATIF' { 'Cyan' }
-            'SKIP'   { 'DarkGray' }
-            'ERROR'  { 'Red' }
-            default  { 'White' }
-        }
-        Write-Host ("[{0,-6}] {1}/{2}: {3}" -f $r.Status, $repo, $branch, $r.Reason) -ForegroundColor $color
-        $line
+    }
+
+    Write-Host ''
+    Write-Host 'Summary:' -ForegroundColor Yellow
+    $results | Group-Object Status | Select-Object Name, Count | Format-Table -AutoSize
+
+    $errors = @($results | Where-Object Status -eq 'ERROR')
+    if ($errors.Count -gt 0) { exit 1 }
+}
+finally {
+    # Restore (or clear) GH_TOKEN so a -Token passed to this script doesn't leak
+    # into the caller's session when dot-sourced.
+    if ($Token) {
+        if ($null -ne $priorGhToken) { $env:GH_TOKEN = $priorGhToken }
+        else { Remove-Item Env:GH_TOKEN -ErrorAction SilentlyContinue }
     }
 }
-
-Write-Host ''
-Write-Host 'Summary:' -ForegroundColor Yellow
-$results | Group-Object Status | Select-Object Name, Count | Format-Table -AutoSize
-
-$errors = @($results | Where-Object Status -eq 'ERROR')
-if ($errors.Count -gt 0) { exit 1 }
