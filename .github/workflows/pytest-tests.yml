@@ -1,5 +1,5 @@
-# v3.800.29
-# https://virtocommerce.atlassian.net/browse/VCST-4770
+# v3.800.30
+# https://virtocommerce.atlassian.net/browse/VCST-4958
 name: Auto tests
 
 on:
