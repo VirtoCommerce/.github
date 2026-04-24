@@ -1,4 +1,5 @@
-![The Only B2B eCommerce Platform - You'll Ever Need](https://github.com/user-attachments/assets/6df4ed9b-9aa6-4623-97e1-ae7e55b09697)
+![The Only B2B eCommerce Platform - You'll Ever Need](https://github.com/user-attachments/assets/01be73ce-e578-4843-91cc-61543f7929c9)
+
 
 ## JOIN US NOW
 👉 [Explore Virto Commerce](https://virtocommerce.com/)
