@@ -40,4 +40,4 @@ At Virto Commerce, we pride ourselves on being proactive technology innovators d
 | **February 2026** | [📊 View deck](https://virtocommerce.github.io/vc-release-notes/release-notes/2026-02/) | [Notes](https://www.virtocommerce.org/t/virto-s-release-notes-february-2026/834) |
 | **January 2026** | [📊 View deck](https://virtocommerce.github.io/vc-release-notes/release-notes/2026-01/) | [Notes](https://www.virtocommerce.org/t/virto-s-release-notes-january-2026/821) |
 
-[Previuos Release](https://www.virtocommerce.org/c/news-digest/15) |
+[Previuos Releases](https://www.virtocommerce.org/c/news-digest/15) 
