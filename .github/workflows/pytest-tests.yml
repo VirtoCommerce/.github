@@ -1,6 +1,6 @@
 # v3.800.30
 # https://virtocommerce.atlassian.net/browse/VCST-4958
-name: Common UI tests
+name: Auto tests
 
 on:
   workflow_call:
@@ -44,6 +44,11 @@ on:
         required: false
         type: string
         default: ''
+      customPackagesJsonUrl:
+        description: 'Custom packages.json url'
+        required: false
+        type: string
+        default: ''
       frontendZipUrl:
         required: false
         type: string
@@ -68,6 +73,11 @@ on:
         required: false
         type: string
         default: ''
+      testSuites:
+        description: 'Comma-separated list of suites to run. Any subset of: graphql, restapi, e2e'
+        required: false
+        default: 'graphql,restapi,e2e'
+        type: string
       vctestingPath:
         description: 'UI tests path'
         required: false
@@ -93,7 +103,7 @@ on:
         required: true
 
 jobs:
-  ui-autotests:
+  auto-autotests:
     runs-on: ubuntu-22.04
 
     env:
@@ -106,25 +116,28 @@ jobs:
     - name: Docker Env Full
       uses: VirtoCommerce/vc-github-actions/docker-env-full@master
       with:
-        customModuleId: ${{ inputs.customModuleId }}
-        customModuleUrl: ${{ inputs.customModuleUrl }}
         frontendZipUrl: ${{ inputs.frontendZipUrl }}
-        installCustomModule: ${{ inputs.installCustomModule }}
         installModules: ${{ inputs.installModules }}
+        installCustomModule: ${{ inputs.installCustomModule }}
         platformDockerTag: ${{ inputs.platformDockerTag }}
         requiredModulesListUrl: ${{ inputs.requiredModulesListUrl }}
         testSecretEnvFile: ${{ secrets.testSecretEnvFile }}
+        customPackagesJsonUrl: ${{ inputs.customPackagesJsonUrl }}
+        customModuleId: ${{ inputs.customModuleId }}
+        customModuleUrl: ${{ inputs.customModuleUrl }}
         sendgridApiKey: ${{ secrets.sendgridApiKey }}
     
-    - name: Run GraphQL Tests
-      uses: VirtoCommerce/vc-github-actions/run-graphql-tests@master
+    - name: Run Auto Tests
+      uses: VirtoCommerce/vc-github-actions/run-pytest-tests@master
       with:
         adminPassword: ${{ inputs.adminPassword }}
         adminUsername: ${{ inputs.adminUsername }}
+        apiKey: ${{ inputs.apiKey }}
         backUrl: ${{ inputs.backUrl }}
         baseUrl: ${{ inputs.baseUrl }}
         browser: ${{ inputs.browser }}
         testSecretEnvFile: ${{ secrets.testSecretEnvFile }}
-        vctestingPath: 'vc-testing-module'
+        testSuites: ${{ inputs.testSuites }}
+        vctestingPath: ${{ inputs.vctestingPath }}
         vctestingRepo: ${{ inputs.vctestingRepo }}
         vctestingRepoBranch: ${{ inputs.vctestingRepoBranch }}
