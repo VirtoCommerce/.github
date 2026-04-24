@@ -130,6 +130,12 @@ jobs:
     - name: Run Auto Tests
       uses: VirtoCommerce/vc-github-actions/run-pytest-tests@master
       with:
+        adminPassword: ${{ inputs.adminPassword }}
+        adminUsername: ${{ inputs.adminUsername }}
+        apiKey: ${{ inputs.apiKey }}
+        backUrl: ${{ inputs.backUrl }}
+        baseUrl: ${{ inputs.baseUrl }}
+        browser: ${{ inputs.browser }}
         testSecretEnvFile: ${{ secrets.testSecretEnvFile }}
         testSuites: ${{ inputs.testSuites }}
         vctestingPath: ${{ inputs.vctestingPath }}

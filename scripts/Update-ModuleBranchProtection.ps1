@@ -19,7 +19,7 @@
 #>
 [CmdletBinding(SupportsShouldProcess = $true)]
 param(
-    [string]$Org = 'AndrewEhloOrg', #'VirtoCommerce',
+    [string]$Org = 'VirtoCommerce',
     [string[]]$Repos,
     [string[]]$Branches = @('main', 'dev'),
     [string]$OldCheck = 'module-katalon-tests / e2e-tests',
