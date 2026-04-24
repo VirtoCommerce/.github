@@ -1,4 +1,4 @@
-![Next-Gen eCommerce Solutions by Virto Commerce](https://github.com/user-attachments/assets/36fd9270-ee06-4583-81ec-16207691d33d)
+![The Only B2B eCommerce Platform - You'll Ever Need](https://github.com/user-attachments/assets/6df4ed9b-9aa6-4623-97e1-ae7e55b09697)
 
 ## JOIN US NOW
 👉 [Explore Virto Commerce](https://virtocommerce.com/)
@@ -27,3 +27,17 @@ At Virto Commerce, we pride ourselves on being proactive technology innovators d
 👨‍💻 [Virto Commerce Atomic Architecture](https://www.virtocommerce.org/t/virto-commerce-atomic-architecture-in-action/408)
 
 👨‍💻 [Virto Commerce Documentation](https://docs.virtocommerce.org/) 
+
+## Releases
+
+> [!TIP]
+> Open any deck via the links above, or clone the repo and open the `index.html` files directly in your browser. Press `B` to add a feature to your backlog, then navigate to the Backlog screen and click **Copy as Markdown**. Press `?` or hover the top-right hint to see keyboard shortcuts.
+
+| Month | Live deck | Source notes |
+| --- | --- | --- |
+| **April 2026** | [📊 View deck](https://virtocommerce.github.io/vc-release-notes/release-notes/2026-04/) | [Notes](https://www.virtocommerce.org/t/virto-s-release-notes-april-2026/847) |
+| **March 2026** | [📊 View deck](https://virtocommerce.github.io/vc-release-notes/release-notes/2026-03/) | [Notes](https://www.virtocommerce.org/t/virto-s-release-notes-march-2026/839) |
+| **February 2026** | [📊 View deck](https://virtocommerce.github.io/vc-release-notes/release-notes/2026-02/) | [Notes](https://www.virtocommerce.org/t/virto-s-release-notes-february-2026/834) |
+| **January 2026** | [📊 View deck](https://virtocommerce.github.io/vc-release-notes/release-notes/2026-01/) | [Notes](https://www.virtocommerce.org/t/virto-s-release-notes-january-2026/821) |
+
+[Previuos Release](https://www.virtocommerce.org/c/news-digest/15) |
