@@ -68,6 +68,11 @@ on:
         required: false
         type: string
         default: 'local-latest'
+      requiredModulesListUrl:
+        description: 'The URL of the JSON file with the required modules list'
+        required: false
+        type: string
+        default: ''
       testSuites:
         description: 'Comma-separated list of suites to run. Any subset of: graphql, restapi, e2e'
         required: false
@@ -115,6 +120,7 @@ jobs:
         installModules: ${{ inputs.installModules }}
         installCustomModule: ${{ inputs.installCustomModule }}
         platformDockerTag: ${{ inputs.platformDockerTag }}
+        requiredModulesListUrl: ${{ inputs.requiredModulesListUrl }}
         testSecretEnvFile: ${{ secrets.testSecretEnvFile }}
         customPackagesJsonUrl: ${{ inputs.customPackagesJsonUrl }}
         customModuleId: ${{ inputs.customModuleId }}
