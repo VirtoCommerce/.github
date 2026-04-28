@@ -395,7 +395,7 @@ jobs:
                 "license/cla",
                 "ci",
                 "SonarCloud Code Analysis",
-                "module-katalon-tests / e2e-tests"
+                "auto-tests / auto-autotests"
               ]
             },
             "enforce_admins": false,
