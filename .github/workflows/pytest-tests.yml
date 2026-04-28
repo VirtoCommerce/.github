@@ -128,7 +128,7 @@ jobs:
         sendgridApiKey: ${{ secrets.sendgridApiKey }}
     
     - name: Run Auto Tests
-      uses: VirtoCommerce/vc-github-actions/run-pytest-tests@VCST-4958 #master
+      uses: VirtoCommerce/vc-github-actions/run-pytest-tests@master
       with:
         adminPassword: ${{ inputs.adminPassword }}
         adminUsername: ${{ inputs.adminUsername }}
