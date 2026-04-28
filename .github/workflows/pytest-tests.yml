@@ -19,7 +19,7 @@ on:
         description: 'API Key'
         required: false
         type: string
-        default: '1add83ea-2235-41fe-b623-825070824059'
+        default: ''
       backUrl:
         description: 'Back URL'
         required: false
