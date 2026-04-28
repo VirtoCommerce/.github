@@ -9,7 +9,7 @@ on:
         description: 'Admin Password'
         required: false
         type: string
-        default: 'Password3'
+        default: ''
       adminUsername:
         description: 'Admin Username'
         required: false
