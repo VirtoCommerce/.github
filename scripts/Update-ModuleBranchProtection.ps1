@@ -14,6 +14,11 @@
     contexts list, and PUTs it back. Other settings (reviews, enforce_admins,
     restrictions, etc.) are preserved as-is.
 
+    With -AddIfMissing, the script also creates protection on branches that
+    exist but have no protection rules at all, mirroring the default policy
+    applied by the create-module-repository workflow. Branches that don't
+    exist are still skipped.
+
 .EXAMPLE
     pwsh ./Update-ModuleBranchProtection.ps1 -WhatIf
     pwsh ./Update-ModuleBranchProtection.ps1
@@ -66,6 +71,61 @@ function Get-Enabled {
     return $false
 }
 
+# Default protection policy for newly-created protection. Mirrors the
+# "Protect branches" step in .github/workflows/create-module-repository.yml.
+function New-DefaultProtectionPayload {
+    param([string]$NewCheck)
+    return [ordered]@{
+        required_status_checks = [ordered]@{
+            strict   = $false
+            contexts = @(
+                'license/cla',
+                'ci',
+                'SonarCloud Code Analysis',
+                $NewCheck
+            )
+        }
+        enforce_admins                = $false
+        required_pull_request_reviews = [ordered]@{
+            dismiss_stale_reviews           = $false
+            require_code_owner_reviews      = $false
+            require_last_push_approval      = $false
+            required_approving_review_count = 1
+        }
+        restrictions                     = $null
+        allow_force_pushes               = $false
+        allow_deletions                  = $false
+        required_conversation_resolution = $false
+    }
+}
+
+function Invoke-PutProtection {
+    [CmdletBinding(SupportsShouldProcess = $true)]
+    param(
+        [string]$RepoFull,
+        [string]$Branch,
+        [object]$Payload,
+        [string]$Action
+    )
+    if (-not $PSCmdlet.ShouldProcess("$RepoFull/$Branch", $Action)) {
+        return [pscustomobject]@{ Status = 'WHATIF'; Reason = $Action }
+    }
+    $json = $Payload | ConvertTo-Json -Depth 10 -Compress
+    $tmp  = New-TemporaryFile
+    try {
+        # UTF-8 without BOM; gh on Windows mishandles BOM in --input payloads.
+        [System.IO.File]::WriteAllText($tmp.FullName, $json, [System.Text.UTF8Encoding]::new($false))
+        $out = gh api --method PUT "/repos/$RepoFull/branches/$Branch/protection" --input $tmp.FullName 2>&1
+        if ($LASTEXITCODE -ne 0) {
+            return [pscustomobject]@{ Status = 'ERROR'; Reason = "$out" }
+        }
+    }
+    finally {
+        Remove-Item $tmp.FullName -ErrorAction SilentlyContinue
+    }
+    return [pscustomobject]@{ Status = 'OK'; Reason = $Action }
+}
+
 function Update-BranchProtection {
     [CmdletBinding(SupportsShouldProcess = $true)]
     param(
@@ -78,14 +138,32 @@ function Update-BranchProtection {
 
     $raw = gh api "/repos/$RepoFull/branches/$Branch/protection" 2>&1
     if ($LASTEXITCODE -ne 0) {
-        $reason = if ("$raw" -match 'Not Found|HTTP 404|Branch not protected') { 'no protection / branch missing' } else { "$raw" }
-        return [pscustomobject]@{ Status = 'SKIP'; Reason = $reason }
+        # "Branch not protected" = branch exists, no rules; create them under -AddIfMissing.
+        # "Not Found" without that phrase = branch itself doesn't exist; always skip.
+        if ("$raw" -match 'Branch not protected') {
+            if (-not $AddIfMissing) {
+                return [pscustomobject]@{ Status = 'SKIP'; Reason = 'no protection (use -AddIfMissing to create)' }
+            }
+            $payload = New-DefaultProtectionPayload -NewCheck $NewCheck
+            $action  = "create protection -> [$($payload.required_status_checks.contexts -join ', ')]"
+            return Invoke-PutProtection -RepoFull $RepoFull -Branch $Branch -Payload $payload -Action $action
+        }
+        if ("$raw" -match 'Not Found|HTTP 404') {
+            return [pscustomobject]@{ Status = 'SKIP'; Reason = 'branch missing' }
+        }
+        return [pscustomobject]@{ Status = 'SKIP'; Reason = "$raw" }
     }
 
     $p   = $raw | ConvertFrom-Json
     $rsc = $p.required_status_checks
     if (-not $rsc) {
-        return [pscustomobject]@{ Status = 'SKIP'; Reason = 'no required_status_checks' }
+        if (-not $AddIfMissing) {
+            return [pscustomobject]@{ Status = 'SKIP'; Reason = 'no required_status_checks (use -AddIfMissing to add)' }
+        }
+        # Branch is protected but status-check enforcement is off; synthesize an
+        # empty block so the add-new-check path below enables it without
+        # touching the rest of the existing protection.
+        $rsc = [pscustomobject]@{ strict = $false; contexts = @() }
     }
 
     $contexts   = @($rsc.contexts)
@@ -141,27 +219,8 @@ function Update-BranchProtection {
         }
     }
 
-    $target = "$RepoFull/$Branch"
     $action = "contexts -> [$($contexts -join ', ')]"
-    if (-not $PSCmdlet.ShouldProcess($target, $action)) {
-        return [pscustomobject]@{ Status = 'WHATIF'; Reason = $action }
-    }
-
-    $json = $payload | ConvertTo-Json -Depth 10 -Compress
-    $tmp  = New-TemporaryFile
-    try {
-        # UTF-8 without BOM; gh on Windows mishandles BOM in --input payloads.
-        [System.IO.File]::WriteAllText($tmp.FullName, $json, [System.Text.UTF8Encoding]::new($false))
-        $out = gh api --method PUT "/repos/$RepoFull/branches/$Branch/protection" --input $tmp.FullName 2>&1
-        if ($LASTEXITCODE -ne 0) {
-            return [pscustomobject]@{ Status = 'ERROR'; Reason = "$out" }
-        }
-    }
-    finally {
-        Remove-Item $tmp.FullName -ErrorAction SilentlyContinue
-    }
-
-    return [pscustomobject]@{ Status = 'OK'; Reason = $action }
+    return Invoke-PutProtection -RepoFull $RepoFull -Branch $Branch -Payload $payload -Action $action
 }
 
 try {
