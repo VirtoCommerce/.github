@@ -1,12 +1,14 @@
 #requires -Version 7.0
 <#
 .SYNOPSIS
-    Swap a required status check on protected branches of existing module repos.
+    Swap required status checks on protected branches of existing module repos.
 
 .DESCRIPTION
     Mirrors the change applied to new repos by
     .github/workflows/create-module-repository.yml (the "Protect branches" step):
-    replaces the old required status check with the new one on `main` and `dev`.
+    replaces the old required status checks with a single new one on `main` and
+    `dev`. Any of the configured old checks that are present get removed and
+    collapsed into the new check.
 
     Read-modify-write: fetches each branch's current protection, updates only the
     contexts list, and PUTs it back. Other settings (reviews, enforce_admins,
@@ -22,7 +24,11 @@ param(
     [string]$Org = 'VirtoCommerce',
     [string[]]$Repos,
     [string[]]$Branches = @('main', 'dev'),
-    [string]$OldCheck = 'module-katalon-tests / e2e-tests',
+    [string[]]$OldChecks = @(
+        'module-katalon-tests / e2e-tests',
+        'UI-auto-tests / ui-autotests',
+        'UI-auto-tests / dry-run'
+    ),
     [string]$NewCheck = 'auto-tests / auto-autotests',
     [switch]$AddIfMissing,
     # PAT with repo admin on the target repos. If omitted, falls back to existing
@@ -65,7 +71,7 @@ function Update-BranchProtection {
     param(
         [string]$RepoFull,
         [string]$Branch,
-        [string]$OldCheck,
+        [string[]]$OldChecks,
         [string]$NewCheck,
         [bool]$AddIfMissing
     )
@@ -82,19 +88,20 @@ function Update-BranchProtection {
         return [pscustomobject]@{ Status = 'SKIP'; Reason = 'no required_status_checks' }
     }
 
-    $contexts = @($rsc.contexts)
-    $hasOld   = $contexts -contains $OldCheck
-    $hasNew   = $contexts -contains $NewCheck
+    $contexts   = @($rsc.contexts)
+    $toRemove   = @($OldChecks | Where-Object { $contexts -contains $_ })
+    $hasAnyOld  = $toRemove.Count -gt 0
+    $hasNew     = $contexts -contains $NewCheck
 
-    if ($hasOld) {
-        $contexts = @($contexts | Where-Object { $_ -ne $OldCheck })
+    if ($hasAnyOld) {
+        $contexts = @($contexts | Where-Object { $toRemove -notcontains $_ })
         if (-not $hasNew) { $contexts += $NewCheck }
     }
     elseif ($AddIfMissing -and -not $hasNew) {
         $contexts += $NewCheck
     }
     else {
-        $reason = if ($hasNew) { 'already up to date' } else { 'old check not present (use -AddIfMissing to add anyway)' }
+        $reason = if ($hasNew) { 'already up to date' } else { 'no old checks present (use -AddIfMissing to add anyway)' }
         return [pscustomobject]@{ Status = 'SKIP'; Reason = $reason }
     }
 
@@ -173,7 +180,7 @@ try {
         foreach ($branch in $Branches) {
             $r = Update-BranchProtection `
                 -RepoFull $repo -Branch $branch `
-                -OldCheck $OldCheck -NewCheck $NewCheck `
+                -OldChecks $OldChecks -NewCheck $NewCheck `
                 -AddIfMissing:$AddIfMissing
             $line = [pscustomobject]@{
                 Repo   = $repo
