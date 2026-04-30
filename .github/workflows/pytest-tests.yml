@@ -68,6 +68,11 @@ on:
         required: false
         type: string
         default: 'local-latest'
+      prebuiltImageArtifact:
+        description: 'Name of a workflow artifact containing a docker save tar of the platform image. When set, the action downloads and loads it instead of building or pulling, and installModules / installCustomModule / customPackagesJsonUrl must be unset.'
+        required: false
+        type: string
+        default: ''
       requiredModulesListUrl:
         description: 'The URL of the JSON file with the required modules list'
         required: false
@@ -114,7 +119,7 @@ jobs:
       uses: VirtoCommerce/vc-github-actions/setup-vcbuild@master
 
     - name: Docker Env Full
-      uses: VirtoCommerce/vc-github-actions/docker-env-full@master
+      uses: VirtoCommerce/vc-github-actions/docker-env-full@VCST-4761 #master
       with:
         frontendZipUrl: ${{ inputs.frontendZipUrl }}
         installModules: ${{ inputs.installModules }}
@@ -126,6 +131,7 @@ jobs:
         customModuleId: ${{ inputs.customModuleId }}
         customModuleUrl: ${{ inputs.customModuleUrl }}
         sendgridApiKey: ${{ secrets.sendgridApiKey }}
+        prebuiltImageArtifact: ${{ inputs.prebuiltImageArtifact }}
     
     - name: Run Auto Tests
       uses: VirtoCommerce/vc-github-actions/run-pytest-tests@master
