@@ -100,3 +100,21 @@ Virto Commerce ships as **modules** — independently versioned, independently d
 | **January 2026** | [📊 View deck](https://virtocommerce.github.io/vc-release-notes/2026-01/) | [Notes](https://www.virtocommerce.org/t/virto-s-release-notes-january-2026/821) |
 
 [Previuos Releases](https://www.virtocommerce.org/c/news-digest/15) 
+
+## 🤝 Contributing
+
+We welcome contributions — code, docs, bug reports, feature ideas. The fastest path:
+
+1. **Fork** the relevant repo (e.g., [vc-platform](https://github.com/VirtoCommerce/vc-platform), [vc-module-catalog](https://github.com/VirtoCommerce/vc-module-catalog), [vc-frontend](https://github.com/VirtoCommerce/vc-frontend)).
+2. **Branch from `dev`** — not `master`. Create a topic branch: `git checkout -b feature/short-description`.
+3. **Commit and push** to your fork, then open a pull request against the upstream `dev` branch.
+4. **Sign the CLA** when prompted on your first PR — required for all contributors.
+5. Each PR automatically produces an **Alpha release** so you can test your changes against a real build before merge.
+
+### Where to start
+
+- 🐛 Browse [open issues](https://github.com/search?q=org%3AVirtoCommerce+is%3Aissue+is%3Aopen&type=issues) — issues labelled **good first issue** are best for newcomers.
+- 💡 For larger ideas, [open a discussion](https://www.virtocommerce.org/) or an issue *before* coding so maintainers can shape the approach.
+- 📝 Documentation fixes (typos, broken links, clarifications) are always welcome and the easiest way to get familiar with the workflow.
+
+📖 [Full contribution guide with step-by-step Git walkthrough](https://www.virtocommerce.org/t/how-to-contribute-to-virto-commerce/459)
