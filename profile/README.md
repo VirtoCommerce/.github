@@ -26,7 +26,7 @@ At Virto Commerce, we pride ourselves on being proactive technology innovators d
 
 ## 🚀 How to Start
 
-### Step 0. Hellow World
+### Step 0. Hello World
 
 👨‍💻 [Download and Read - Virto Architectural Guidelines](https://virtocommerce.com/atomic-architecture)
 
