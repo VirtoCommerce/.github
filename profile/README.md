@@ -1,5 +1,11 @@
 ![The Only B2B eCommerce Platform - You'll Ever Need](https://github.com/user-attachments/assets/01be73ce-e578-4843-91cc-61543f7929c9)
 
+[![Home](https://img.shields.io/badge/Website-virtocommerce.com-FF6B35?style=flat-square&logo=googlechrome&logoColor=white)](https://virtocommerce.com/)
+[![Interactive Demo](https://img.shields.io/badge/Live%20Demo-Try%20it%20now-22C55E?style=flat-square&logo=rocket&logoColor=white)](https://virtocommerce.com/interactive-demo)
+[![Documentation](https://img.shields.io/badge/Docs-docs.virtocommerce.org-0078D4?style=flat-square&logo=readthedocs&logoColor=white)](https://docs.virtocommerce.org/)
+[![Community](https://img.shields.io/badge/Community-virtocommerce.org-7B68EE?style=flat-square&logo=discourse&logoColor=white)](https://www.virtocommerce.org/)
+
+**Virto Commerce** is an open-source, .NET-based, headless, API-first commerce platform — built B2B-first, ready for B2C, marketplace, DTC, and composable scenarios. This page is the entry point for developers: spin it up, understand what you're building, and ship.
 
 ## JOIN US NOW
 👉 [Explore Virto Commerce](https://virtocommerce.com/)
@@ -18,21 +24,73 @@ As a Microsoft Gold Partner, Virto serves over 100 companies worldwide and has o
 ## WHAT AND HOW WE DO IT
 At Virto Commerce, we pride ourselves on being proactive technology innovators deeply dedicated to creating flexible, agile commerce software solutions that improve business and accelerate digital adoption. All this requires a special mindset and a lot of collaborative effort to make complex things simple. We believe in the uniting power of technology, teamwork and spirit, and we take personal responsibility for every project we undertake.
 
-## FAQ
+## 🚀 How to Start
+
+### Step 0. Hellow World
+
+👨‍💻 [Download and Read - Virto Architectural Guidelines](https://virtocommerce.com/atomic-architecture)
+
 👨‍💻 [Ask Virto Oz – Your Conversational AI Copilot](https://virtocommerce.com/)
+
+### Step 1. Run a demo in minutes
+
+Use **[start-local](https://github.com/VirtoCommerce/start-local)** to bring up the full stack (platform, frontend, database, Redis, Elasticsearch, Kibana) on your machine with one PowerShell command.
+
+```powershell
+$installSCript = Invoke-WebRequest -Uri "https://raw.githubusercontent.com/VirtoCommerce/start-local/dev/VirtoLocal_create_local_files.ps1" -UseBasicParsing; Set-Content -Path ".\VirtoLocal_create_local_files.ps1" -Value $installSCript.Content; .\VirtoLocal_create_local_files.ps1
+```
+
+### Step 2. Build a Proof of Concept (PoC) — extend, don't fork
 
 👨‍💻 [What are the skills required for Virto Commerce Developer?](https://www.virtocommerce.org/t/what-are-the-skills-required-for-virto-commerce-developer/90)
 
 👨‍💻 [Virto Commerce Dev Training Program](https://www.virtocommerce.org/t/virto-commerce-dev-training-program/786/1)
 
-👨‍💻 [Virto Commerce Atomic Architecture](https://www.virtocommerce.org/t/virto-commerce-atomic-architecture-in-action/408)
-
 👨‍💻 [Virto Commerce Documentation](https://docs.virtocommerce.org/) 
+
+Virto Commerce is designed to be extended [through custom modules](https://docs.virtocommerce.org/platform/developer-guide/latest/Tutorials-and-How-tos/Tutorials/creating-custom-module/), not by modifying the platform source. The Extensibility Framework lets you add entities, override services, extend APIs, and add admin UI — all without forking.
+
+```powershell
+dotnet new install VirtoCommerce.Module.Template
+dotnet new vc-module --ModuleName MyModule --Author "Me" --CompanyName MyCompany
+```
+
+Build with **[vc-build](https://github.com/VirtoCommerce/vc-build)**, install the resulting `.zip` into your local platform via **Modules → Advanced → Install from file**, and iterate.
+
+```powershell
+vc-build compress
+```
+
+### Step 3. Build your own solution — production-ready
+
+A Virto solution is **composed**, not forked:
+
+| Layer | What you do | Repo strategy |
+|---|---|---|
+| **Platform** | Use Virto's official Docker images or binary package | ❌ No fork |
+| **Custom modules** | One repo per module, generated from the template | ✅ Your repos |
+| **Frontend** | Brand and extend the storefront | ✅ Fork [vc-frontend](https://github.com/VirtoCommerce/vc-frontend), track upstream |
+| **Deployment** | Compose the environment from independent images | ✅ Virto Cloud, Azure, AWS, on-prem |
+
+This separation enables seamless Virto upgrades — your customisations stay yours, and the platform stays current.
+
+📖 [Deploy on Virto Cloud](https://docs.virtocommerce.org/platform/deployment-on-cloud/3.0/deploy-on-virto-cloud/)
 
 ## Releases
 
+### Virto Commerce Release Strategy
+Virto Commerce ships as **modules** — independently versioned, independently deployable units. Modules combine into bundles you can pick from based on how you want to balance stability and speed.
+
+| Release Strategy | What it is | Use it for |
+|---|---|---|
+| **Stable** | Quarterly release; passed full regression, E2E, and load testing | Production, new solution development (default in vc-build) |
+| **Hotfix** | Bug fixes for the two most recent stable releases | Maintenance updates between stable cuts |
+| **Edge** | Latest features as they land — minimal risk, maximum freshness | Early access to new capabilities, prototyping |
+
+
+### Release Notes
 > [!TIP]
-> Open any deck via the links above, or clone the repo and open the `index.html` files directly in your browser. Press `B` to add a feature to your backlog, then navigate to the Backlog screen and click **Copy as Markdown**. Press `?` or hover the top-right hint to see keyboard shortcuts.
+> Open any deck via the links above, or clone the repo and open the `index.html` files directly in your browser. Add a feature to your backlog, then navigate to the Backlog screen and click **Copy as Markdown**. 
 
 | Month | Live deck | Source notes |
 | --- | --- | --- |
