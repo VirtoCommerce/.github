@@ -28,9 +28,10 @@ At Virto Commerce, we pride ourselves on being proactive technology innovators d
 
 ### Step 0. Hello World
 
-👨‍💻 [Download and Read - Virto Architectural Guidelines](https://virtocommerce.com/atomic-architecture)
+>[!TIP]
+> AI helps at every step: Ask Virto OZ for documentation-grounded answers, Install Claude Code with Context7 for instant code changes, Add llms.txt to your prompts for zero-install documentation grounding
 
-👨‍💻 [Ask Virto Oz – Your Conversational AI Copilot](https://virtocommerce.com/)
+👨‍💻 [Ai Quick Start](https://docs.virtocommerce.org/platform/developer-guide/latest/Getting-Started/ai-quick-start/)
 
 ### Step 1. Run a demo in minutes
 
@@ -42,43 +43,21 @@ $installSCript = Invoke-WebRequest -Uri "https://raw.githubusercontent.com/Virto
 
 ### Step 2. Build a Proof of Concept (PoC) — extend, don't fork
 
-👨‍💻 [What are the skills required for Virto Commerce Developer?](https://www.virtocommerce.org/t/what-are-the-skills-required-for-virto-commerce-developer/90)
+Virto Commerce is designed to be extended. Start with [Configure your custom solution](https://docs.virtocommerce.org/platform/developer-guide/latest/Getting-Started/quick-start/#configure-your-custom-solution)
 
-👨‍💻 [Virto Commerce Dev Training Program](https://www.virtocommerce.org/t/virto-commerce-dev-training-program/786/1)
-
-👨‍💻 [Virto Commerce Documentation](https://docs.virtocommerce.org/) 
-
-Virto Commerce is designed to be extended [through custom modules](https://docs.virtocommerce.org/platform/developer-guide/latest/Tutorials-and-How-tos/Tutorials/creating-custom-module/), not by modifying the platform source. The Extensibility Framework lets you add entities, override services, extend APIs, and add admin UI — all without forking.
-
-```powershell
-dotnet new install VirtoCommerce.Module.Template
-dotnet new vc-module --ModuleName MyModule --Author "Me" --CompanyName MyCompany
-```
-
-Build with **[vc-build](https://github.com/VirtoCommerce/vc-build)**, install the resulting `.zip` into your local platform via **Modules → Advanced → Install from file**, and iterate.
-
-```powershell
-vc-build compress
-```
+The Extensibility Framework lets you add entities, override services, extend APIs, and add admin UI — all without forking.
 
 ### Step 3. Build your own solution — production-ready
 
-A Virto solution is **composed**, not forked:
-
-| Layer | What you do | Repo strategy |
-|---|---|---|
-| **Platform** | Use Virto's official Docker images or binary package | ❌ No fork |
-| **Custom modules** | One repo per module, generated from the template | ✅ Your repos |
-| **Frontend** | Brand and extend the storefront | ✅ Fork [vc-frontend](https://github.com/VirtoCommerce/vc-frontend), track upstream |
-| **Deployment** | Compose the environment from independent images | ✅ Virto Cloud, Azure, AWS, on-prem |
-
-This separation enables seamless Virto upgrades — your customisations stay yours, and the platform stays current.
-
 📖 [Deploy on Virto Cloud](https://docs.virtocommerce.org/platform/deployment-on-cloud/3.0/deploy-on-virto-cloud/)
 
-## Releases
+## FAQ
 
-### Virto Commerce Release Strategy
+👨‍💻 [Virto Architectural Guidelines](https://virtocommerce.com/atomic-architecture)
+👨‍💻 [What are the skills required for Virto Commerce Developer?](https://www.virtocommerce.org/t/what-are-the-skills-required-for-virto-commerce-developer/90)
+👨‍💻 [Virto Commerce Dev Training Program](https://www.virtocommerce.org/t/virto-commerce-dev-training-program/786/1)
+
+## Virto Commerce Release Strategy
 Virto Commerce ships as **modules** — independently versioned, independently deployable units. Modules combine into bundles you can pick from based on how you want to balance stability and speed.
 
 | Release Strategy | What it is | Use it for |
@@ -87,8 +66,7 @@ Virto Commerce ships as **modules** — independently versioned, independently d
 | **Hotfix** | Bug fixes for the two most recent stable releases | Maintenance updates between stable cuts |
 | **Edge** | Latest features as they land — minimal risk, maximum freshness | Early access to new capabilities, prototyping |
 
-
-### Release Notes
+## Release Notes
 > [!TIP]
 > Open any deck via the links above, or clone the repo and open the `index.html` files directly in your browser. Add a feature to your backlog, then navigate to the Backlog screen and click **Copy as Markdown**. 
 
@@ -102,18 +80,8 @@ Virto Commerce ships as **modules** — independently versioned, independently d
 
 ## 🤝 Contributing
 
-We welcome contributions — code, docs, bug reports, feature ideas. The fastest path:
-
-1. **Fork** the relevant repo (e.g., [vc-platform](https://github.com/VirtoCommerce/vc-platform), [vc-module-catalog](https://github.com/VirtoCommerce/vc-module-catalog), [vc-frontend](https://github.com/VirtoCommerce/vc-frontend)).
-2. **Branch from `dev`** — not `master`. Create a topic branch: `git checkout -b feature/short-description`.
-3. **Commit and push** to your fork, then open a pull request against the upstream `dev` branch.
-4. **Sign the CLA** when prompted on your first PR — required for all contributors.
-5. Each PR automatically produces an **Alpha release** so you can test your changes against a real build before merge.
-
-### Where to start
+We welcome contributions — code, docs, bug reports, and feature ideas. The fastest path:
 
 - 🐛 Browse [open issues](https://github.com/search?q=org%3AVirtoCommerce+is%3Aissue+is%3Aopen&type=issues) — issues labelled **good first issue** are best for newcomers.
 - 💡 For larger ideas, [open a discussion](https://www.virtocommerce.org/) or an issue *before* coding so maintainers can shape the approach.
-- 📝 Documentation fixes (typos, broken links, clarifications) are always welcome and the easiest way to get familiar with the workflow.
-
-📖 [Full contribution guide with step-by-step Git walkthrough](https://www.virtocommerce.org/t/how-to-contribute-to-virto-commerce/459)
+- 📝 Code fixes are always welcome and the easiest way to get familiar with [Contribution guide](https://www.virtocommerce.org/t/how-to-contribute-to-virto-commerce/459)
