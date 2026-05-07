@@ -51,10 +51,12 @@ The Extensibility Framework lets you add entities, override services, extend API
 
 📖 [Deploy on Virto Cloud](https://docs.virtocommerce.org/platform/deployment-on-cloud/3.0/deploy-on-virto-cloud/)
 
-## FAQ
+## What's next
 
 👨‍💻 [Virto Architectural Guidelines](https://virtocommerce.com/atomic-architecture)
+
 👨‍💻 [What are the skills required for Virto Commerce Developer?](https://www.virtocommerce.org/t/what-are-the-skills-required-for-virto-commerce-developer/90)
+
 👨‍💻 [Virto Commerce Dev Training Program](https://www.virtocommerce.org/t/virto-commerce-dev-training-program/786/1)
 
 ## Virto Commerce Release Strategy
