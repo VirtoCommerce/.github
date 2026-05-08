@@ -49,6 +49,11 @@ on:
         required: false
         type: string
         default: ''
+      databaseProviders:
+        description: 'JSON array of database providers to run the test matrix against. Any subset of: sqlserver, mysql, postgres'
+        required: false
+        type: string
+        default: '["sqlserver","mysql","postgres"]'
       frontendZipUrl:
         required: false
         type: string
@@ -109,7 +114,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        databaseProvider: [sqlserver, mysql, postgres]
+        databaseProvider: ${{ fromJSON(inputs.databaseProviders) }}
 
     env:
       GITHUB_TOKEN: ${{ secrets.envPAT }}
