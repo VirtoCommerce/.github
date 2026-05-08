@@ -4,6 +4,7 @@
 [![Interactive Demo](https://img.shields.io/badge/Live%20Demo-Try%20it%20now-22C55E?style=flat-square&logo=rocket&logoColor=white)](https://virtocommerce.com/interactive-demo)
 [![Documentation](https://img.shields.io/badge/Docs-docs.virtocommerce.org-0078D4?style=flat-square&logo=readthedocs&logoColor=white)](https://docs.virtocommerce.org/)
 [![Community](https://img.shields.io/badge/Community-virtocommerce.org-7B68EE?style=flat-square&logo=discourse&logoColor=white)](https://www.virtocommerce.org/)
+[![YouTube](https://img.shields.io/badge/YouTube-virtocommerce-FF0000?style=flat&logo=youtube&logoColor=white)](https://www.youtube.com/c/virtocommerce)
 
 **Virto Commerce** is an open-source, .NET-based, headless, API-first commerce platform — built B2B-first, ready for B2C, marketplace, DTC, and composable scenarios. This page is the entry point for developers: spin it up, understand what you're building, and ship.
 
