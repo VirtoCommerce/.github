@@ -1,5 +1,5 @@
-# v3.800.30
-# https://virtocommerce.atlassian.net/browse/VCST-4958
+# v3.800.31
+# https://virtocommerce.atlassian.net/browse/VCST-5041
 name: Auto tests
 
 on:
@@ -124,7 +124,7 @@ jobs:
       uses: VirtoCommerce/vc-github-actions/setup-vcbuild@master
 
     - name: Docker Env Full
-      uses: VirtoCommerce/vc-github-actions/docker-env-full@VCST-5041 #master
+      uses: VirtoCommerce/vc-github-actions/docker-env-full@master
       with:
         frontendZipUrl: ${{ inputs.frontendZipUrl }}
         installModules: ${{ inputs.installModules }}
@@ -139,7 +139,7 @@ jobs:
         databaseProvider: ${{ matrix.databaseProvider }}
 
     - name: Run Auto Tests
-      uses: VirtoCommerce/vc-github-actions/run-pytest-tests@VCST-5041 #master
+      uses: VirtoCommerce/vc-github-actions/run-pytest-tests@master
       with:
         adminPassword: ${{ inputs.adminPassword }}
         adminUsername: ${{ inputs.adminUsername }}
