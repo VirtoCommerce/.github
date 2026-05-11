@@ -6,9 +6,9 @@
 .DESCRIPTION
     Mirrors the change applied to new repos by
     .github/workflows/create-module-repository.yml (the "Protect branches" step):
-    replaces the old required status checks with a single new one on `main` and
-    `dev`. Any of the configured old checks that are present get removed and
-    collapsed into the new check.
+    replaces the old required status checks with the configured new ones on
+    `dev`. Any of the configured old checks that are present get
+    removed; any of the new checks that are missing get added.
 
     Read-modify-write: fetches each branch's current protection, updates only the
     contexts list, and PUTs it back. Other settings (reviews, enforce_admins,
@@ -28,13 +28,18 @@
 param(
     [string]$Org = 'VirtoCommerce',
     [string[]]$Repos,
-    [string[]]$Branches = @('main', 'dev'),
+    [string[]]$Branches = @('dev'),
     [string[]]$OldChecks = @(
         'module-katalon-tests / e2e-tests',
         'UI-auto-tests / ui-autotests',
-        'UI-auto-tests / dry-run'
+        'UI-auto-tests / dry-run',
+        'auto-tests / auto-autotests'
     ),
-    [string]$NewCheck = 'auto-tests / auto-autotests',
+    [string[]]$NewChecks = @(
+        'auto-tests / auto-autotests (mysql)',
+        'auto-tests / auto-autotests (postgres)',
+        'auto-tests / auto-autotests (sqlserver)'
+    ),
     [switch]$AddIfMissing,
     # PAT with repo admin on the target repos. If omitted, falls back to existing
     # $env:GH_TOKEN or the ambient `gh auth login` session.
@@ -74,16 +79,15 @@ function Get-Enabled {
 # Default protection policy for newly-created protection. Mirrors the
 # "Protect branches" step in .github/workflows/create-module-repository.yml.
 function New-DefaultProtectionPayload {
-    param([string]$NewCheck)
+    param([string[]]$NewChecks)
     return [ordered]@{
         required_status_checks = [ordered]@{
             strict   = $false
             contexts = @(
                 'license/cla',
                 'ci',
-                'SonarCloud Code Analysis',
-                $NewCheck
-            )
+                'SonarCloud Code Analysis'
+            ) + $NewChecks
         }
         enforce_admins                = $false
         required_pull_request_reviews = [ordered]@{
@@ -132,7 +136,7 @@ function Update-BranchProtection {
         [string]$RepoFull,
         [string]$Branch,
         [string[]]$OldChecks,
-        [string]$NewCheck,
+        [string[]]$NewChecks,
         [bool]$AddIfMissing
     )
 
@@ -144,7 +148,7 @@ function Update-BranchProtection {
             if (-not $AddIfMissing) {
                 return [pscustomobject]@{ Status = 'SKIP'; Reason = 'no protection (use -AddIfMissing to create)' }
             }
-            $payload = New-DefaultProtectionPayload -NewCheck $NewCheck
+            $payload = New-DefaultProtectionPayload -NewChecks $NewChecks
             $action  = "create protection -> [$($payload.required_status_checks.contexts -join ', ')]"
             return Invoke-PutProtection -RepoFull $RepoFull -Branch $Branch -Payload $payload -Action $action
         }
@@ -167,19 +171,19 @@ function Update-BranchProtection {
     }
 
     $contexts   = @($rsc.contexts)
-    $toRemove   = @($OldChecks | Where-Object { $contexts -contains $_ })
+    $toRemove   = @($OldChecks  | Where-Object { $contexts -contains $_ })
+    $toAdd      = @($NewChecks  | Where-Object { $contexts -notcontains $_ })
     $hasAnyOld  = $toRemove.Count -gt 0
-    $hasNew     = $contexts -contains $NewCheck
+    $hasAllNew  = $toAdd.Count -eq 0
 
     if ($hasAnyOld) {
-        $contexts = @($contexts | Where-Object { $toRemove -notcontains $_ })
-        if (-not $hasNew) { $contexts += $NewCheck }
+        $contexts = @($contexts | Where-Object { $toRemove -notcontains $_ }) + $toAdd
     }
-    elseif ($AddIfMissing -and -not $hasNew) {
-        $contexts += $NewCheck
+    elseif ($AddIfMissing -and -not $hasAllNew) {
+        $contexts = @($contexts) + $toAdd
     }
     else {
-        $reason = if ($hasNew) { 'already up to date' } else { 'no old checks present (use -AddIfMissing to add anyway)' }
+        $reason = if ($hasAllNew) { 'already up to date' } else { 'no old checks present (use -AddIfMissing to add anyway)' }
         return [pscustomobject]@{ Status = 'SKIP'; Reason = $reason }
     }
 
@@ -239,7 +243,7 @@ try {
         foreach ($branch in $Branches) {
             $r = Update-BranchProtection `
                 -RepoFull $repo -Branch $branch `
-                -OldChecks $OldChecks -NewCheck $NewCheck `
+                -OldChecks $OldChecks -NewChecks $NewChecks `
                 -AddIfMissing:$AddIfMissing
             $line = [pscustomobject]@{
                 Repo   = $repo
