@@ -165,7 +165,7 @@ jobs:
         continue-on-error: true
 
       - name: Teams notification
-        if: ${{ steps.collect-deprecation-warnings.outputs.result == 'true' }}
+        if: ${{ github.event_name == 'schedule' && steps.collect-deprecation-warnings.outputs.result == 'true' }}
         uses: VirtoCommerce/vc-github-actions/publish-teams-webhook-notification@master
         with:
           teamsWebhookUrl: ${{ env.TEAMS_WEBHOOK_URL }}
