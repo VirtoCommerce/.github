@@ -1,4 +1,4 @@
-![The Only B2B eCommerce Platform - You'll Ever Need](https://github.com/user-attachments/assets/94809d1d-9b5d-4c3a-a858-f858d117628a)
+![The Only B2B eCommerce Platform - You'll Ever Need](https://github.com/user-attachments/assets/3d0a7b86-b57d-4852-838c-339138a1fc4a)
 
 [![Home](https://img.shields.io/badge/Website-virtocommerce.com-FF6B35?style=flat-square&logo=googlechrome&logoColor=white)](https://virtocommerce.com/)
 [![Interactive Demo](https://img.shields.io/badge/Live%20Demo-Try%20it%20now-22C55E?style=flat-square&logo=rocket&logoColor=white)](https://virtocommerce.com/interactive-demo)
