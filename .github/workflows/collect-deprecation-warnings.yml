@@ -1,13 +1,25 @@
-# v3.800.33
-# https://virtocommerce.atlassian.net/browse/VCST-4761
-
 # =======================================================================================
-# The workflow collects deprecation and obsolete warnings from repos in the VirtoCommerce organization.
-# The list of repos can be specified in the workflow inputs.
-# The number of runs to check for deprecation and obsolete warnings in each repo can be specified in the workflow inputs.
-# The date threshold for checking deprecation and obsolete warnings in days can be specified in the workflow inputs. The runs older than the date threshold will be skipped.
-# The workflow will collect deprecation and obsolete warnings from the last ${{ inputs.numberOfRuns }} runs for each repo.
-# The workflow will skip repos that are not in the list of repos specified in the workflow inputs.
+# Collects deprecation/obsolete warnings from recent workflow runs across VirtoCommerce
+# repos. Configurable via inputs:
+#   - repos:         'all' (default) or comma-separated repo names. 'all' enumerates
+#                    every non-archived repo in the VirtoCommerce org.
+#   - numberOfRuns:  max number of recent runs to inspect per repo (default 5).
+#   - dateThreshold: max age in days; runs older than this are skipped (default 30).
+#
+# For each scanned run, `gh run view` output is grepped for `deprecated` / `obsolete`.
+# Lines matching the hardcoded skip list (known third-party noise: legacy AngularJS
+# packages, glob/inflight/request, etc.) are dropped. Runs left with at least one
+# surviving line emit a JSON object with: repository, branch, workflow, executionDate,
+# runUrl, messageBody (joined warning lines), and actions (GitHub Action references
+# `owner/name@ref` parsed out of the lines).
+#
+# Outputs:
+#   - deprecation-warnings.json   uploaded as an artifact (30-day retention).
+#   - Job summary                 markdown table + per-run sections written to
+#                                 $GITHUB_STEP_SUMMARY.
+#   - Teams notification          posted when at least one warning is found.
+#
+# Runs on workflow_dispatch and on a monthly cron (15th of each month, 00:00 UTC).
 # =======================================================================================
 name: Collect deprecation warnings
 
@@ -56,11 +68,13 @@ jobs:
           } else {
             [array]$repos = "${{ env.REPOS }}".Split(',')
           }
-          $fields = 'databaseId,name,conclusion,createdAt'
+          $fields = 'databaseId,name,workflowName,conclusion,createdAt,headBranch,url'
           $result = @()
           $skipValues = @('angular@1.8.3', 'angular-cookies@1.8.3', 'angular-resource@1.8.3', 'angular-translate-loader-url@2.19.1', 'angular-translate-storage-cookie@2.15.2', 'glob@7.1.7', 'har-validator@5.1.5', 'inflight@1.0.6', 'request@2.88.2', 'rimraf@2.7.1', 'angular-translate-storage-local@2.19.1', 'angular-translate-storage-cookie@2.19.1', 'uuid@3.4.0', 'angular-animate@1.8.3', 'angular-translate@2.15.2')
           $timeThreshold = (Get-Date).AddDays(-${{ github.event.inputs.dateThreshold || 30 }})
-          $deprecationWarnings = @()
+          # Owner/name(/sub-path)@ref — matches GitHub Action references like
+          # `actions/checkout@v4` or `VirtoCommerce/vc-github-actions/foo@master`.
+          $actionRefRegex = '[\w.-]+/[\w.-]+(?:/[\w.-]+)*@[\w./-]+'
           foreach ($repo in $repos) {
               echo "Checking repo: $repo"
               $testAccess = gh api "repos/VirtoCommerce/$repo" --jq '.id'
@@ -69,40 +83,47 @@ jobs:
                   continue
               }
               [array]$runs = gh run list -R VirtoCommerce/$repo --limit ${{ env.NUMBER_OF_RUNS}} --json $fields | ConvertFrom-Json
-              echo "Runs before filtering:"
-              $runs
               $runs = $runs | Where-Object { $_.createdAt -gt $timeThreshold }
-              echo "Runs after filtering:"
-              $runs
               foreach ($run in $runs) {
                   $runId = "$($run.databaseId)"
-                  $deprecationWarnings = gh run view $runId -R VirtoCommerce/$repo | Select-String -Pattern 'deprecated', 'obsolete'
-                  if ($deprecationWarnings) {
-                      foreach ($warning in $deprecationWarnings) {
-                          $skip = $false
-                          foreach ($skipValue in $skipValues) {
-                              if ($warning.Line -match $skipValue) {
-                                  # continue
-                                  echo "Skipping $skipValue"
-                                  $skip = $true
-                                  break
-                              }
-                          }
-                          if (!$skip) {
-                              echo "Adding $warning.Line"
-                              $result += @{
-                                  $run.name = @{
-                                      "https://github.com/VirtoCommerce/$repo/actions/runs/$runId" = $warning.Line
-                                  }
-                              }
+                  $rawWarnings = gh run view $runId -R VirtoCommerce/$repo | Select-String -Pattern 'deprecated', 'obsolete'
+                  if (-not $rawWarnings) { continue }
+                  $keptLines = @()
+                  foreach ($warning in $rawWarnings) {
+                      $skip = $false
+                      foreach ($skipValue in $skipValues) {
+                          if ($warning.Line -match $skipValue) {
+                              echo "Skipping $skipValue"
+                              $skip = $true
+                              break
                           }
                       }
+                      if (-not $skip) {
+                          $keptLines += $warning.Line.Trim()
+                      }
+                  }
+                  if ($keptLines.Count -eq 0) { continue }
+                  $actionsFound = @(
+                      $keptLines |
+                          Select-String -AllMatches -Pattern $actionRefRegex |
+                          ForEach-Object { $_.Matches.Value } |
+                          Sort-Object -Unique
+                  )
+                  $result += [ordered]@{
+                      repository    = $repo
+                      branch        = $run.headBranch
+                      workflow      = $run.workflowName
+                      executionDate = $run.createdAt
+                      runUrl        = $run.url
+                      messageBody   = ($keptLines -join "`n")
+                      actions       = $actionsFound
                   }
               }
               echo "Done"
           }
           if ($result) {
-              echo $result | ConvertTo-Json -Depth 10 | Out-File -FilePath "$env:RUNNER_TEMP/deprecation-warnings.json"
+              # Wrap in @($result) so a single-entry $result still serializes as a JSON array.
+              ConvertTo-Json -InputObject @($result) -Depth 10 | Out-File -FilePath "$env:RUNNER_TEMP/deprecation-warnings.json"
               echo "result=true" >> $env:GITHUB_OUTPUT
           } else {
               Write-Output 'No deprecation warnings found'
@@ -113,7 +134,26 @@ jobs:
         if: ${{ steps.collect-deprecation-warnings.outputs.result == 'true' }}
         shell: pwsh
         run: |
-          cat $env:RUNNER_TEMP/deprecation-warnings.json
+          $entries = Get-Content "$env:RUNNER_TEMP/deprecation-warnings.json" -Raw | ConvertFrom-Json
+          '### Deprecation warnings'                                          | Add-Content -Path $env:GITHUB_STEP_SUMMARY
+          ''                                                                  | Add-Content -Path $env:GITHUB_STEP_SUMMARY
+          '| Repository | Branch | Workflow | Execution date | Run | Actions |' | Add-Content -Path $env:GITHUB_STEP_SUMMARY
+          '|---|---|---|---|---|---|'                                         | Add-Content -Path $env:GITHUB_STEP_SUMMARY
+          foreach ($e in $entries) {
+              $runId   = ($e.runUrl -split '/')[-1]
+              $actions = if ($e.actions -and $e.actions.Count -gt 0) { ($e.actions -join '<br>') } else { '_(none)_' }
+              "| $($e.repository) | $($e.branch) | $($e.workflow) | $($e.executionDate) | [$runId]($($e.runUrl)) | $actions |" |
+                  Add-Content -Path $env:GITHUB_STEP_SUMMARY
+          }
+          foreach ($e in $entries) {
+              ''                                                                | Add-Content -Path $env:GITHUB_STEP_SUMMARY
+              "#### $($e.repository) / $($e.branch) / $($e.workflow)"           | Add-Content -Path $env:GITHUB_STEP_SUMMARY
+              "[Run #$(($e.runUrl -split '/')[-1])]($($e.runUrl)) — $($e.executionDate)" | Add-Content -Path $env:GITHUB_STEP_SUMMARY
+              ''                                                                | Add-Content -Path $env:GITHUB_STEP_SUMMARY
+              '```'                                                             | Add-Content -Path $env:GITHUB_STEP_SUMMARY
+              $e.messageBody                                                    | Add-Content -Path $env:GITHUB_STEP_SUMMARY
+              '```'                                                             | Add-Content -Path $env:GITHUB_STEP_SUMMARY
+          }
 
       - name: Upload deprecation warnings list
         if: ${{ steps.collect-deprecation-warnings.outputs.result == 'true' }}
@@ -125,7 +165,7 @@ jobs:
         continue-on-error: true
 
       - name: Teams notification
-        if: ${{ steps.collect-deprecation-warnings.outputs.result == 'true' }}
+        if: ${{ github.event_name == 'schedule' && steps.collect-deprecation-warnings.outputs.result == 'true' }}
         uses: VirtoCommerce/vc-github-actions/publish-teams-webhook-notification@master
         with:
           teamsWebhookUrl: ${{ env.TEAMS_WEBHOOK_URL }}

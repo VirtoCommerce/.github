@@ -395,7 +395,9 @@ jobs:
                 "license/cla",
                 "ci",
                 "SonarCloud Code Analysis",
-                "auto-tests / auto-autotests"
+                "auto-tests / auto-autotests (mysql)",
+                "auto-tests / auto-autotests (postgres)",
+                "auto-tests / auto-autotests (sqlserver)"
               ]
             },
             "enforce_admins": false,

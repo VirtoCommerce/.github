@@ -298,7 +298,7 @@ jobs:
       requiredModulesListUrl: ${{ needs.ci.outputs.requiredModulesListUrl }}
       vctestingRepoBranch: 'dev'
       frontendZipUrl: 'latest'
-      testSuites: 'graphql,restapi'
+      testSuites: 'graphql,restapi,e2e'
     secrets:
       envPAT: ${{ secrets.REPO_TOKEN }}
       testSecretEnvFile: ${{ secrets.VC_TESTING_MODULE_ENV_FILE }}
