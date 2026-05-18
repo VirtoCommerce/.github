@@ -73,6 +73,11 @@ on:
         required: false
         type: string
         default: ''
+      pytestMarkers:
+        description: 'Additional pytest -m marker expression, AND-combined with each suite''s default markers. Leave empty to use defaults only.'
+        required: false
+        default: ''
+        type: string
       requiredModulesListUrl:
         description: 'The URL of the JSON file with the required modules list'
         required: false
@@ -134,7 +139,7 @@ jobs:
         prebuiltImageArtifact: ${{ inputs.prebuiltImageArtifact }}
     
     - name: Run Auto Tests
-      uses: VirtoCommerce/vc-github-actions/run-pytest-tests@master
+      uses: VirtoCommerce/vc-github-actions/run-pytest-tests@VCST-4761 #master
       with:
         adminPassword: ${{ inputs.adminPassword }}
         adminUsername: ${{ inputs.adminUsername }}
@@ -142,6 +147,7 @@ jobs:
         backUrl: ${{ inputs.backUrl }}
         baseUrl: ${{ inputs.baseUrl }}
         browser: ${{ inputs.browser }}
+        pytestMarkers: ${{ inputs.pytestMarkers }}
         testSecretEnvFile: ${{ secrets.testSecretEnvFile }}
         testSuites: ${{ inputs.testSuites }}
         vctestingPath: ${{ inputs.vctestingPath }}
