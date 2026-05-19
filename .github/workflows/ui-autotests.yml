@@ -1,5 +1,5 @@
-# v3.800.32
-# https://virtocommerce.atlassian.net/browse/VCST-5041
+# v3.800.33
+# https://virtocommerce.atlassian.net/browse/VCST-4761
 name: Common UI tests
 
 on:

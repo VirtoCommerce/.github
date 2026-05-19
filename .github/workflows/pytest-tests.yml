@@ -1,5 +1,5 @@
-# v3.800.32
-# https://virtocommerce.atlassian.net/browse/VCST-5041
+# v3.800.33
+# https://virtocommerce.atlassian.net/browse/VCST-4761
 name: Auto tests
 
 on:
@@ -73,6 +73,16 @@ on:
         required: false
         type: string
         default: 'local-latest'
+      prebuiltImageArtifact:
+        description: 'Name of a workflow artifact containing a docker save tar of the platform image. When set, the action downloads and loads it instead of building or pulling, and installModules / installCustomModule / customPackagesJsonUrl must be unset.'
+        required: false
+        type: string
+        default: ''
+      pytestMarkers:
+        description: 'Additional pytest -m marker expression, AND-combined with each suite''s default markers. Leave empty to use defaults only.'
+        required: false
+        default: ''
+        type: string
       requiredModulesListUrl:
         description: 'The URL of the JSON file with the required modules list'
         required: false
@@ -137,6 +147,7 @@ jobs:
         customModuleUrl: ${{ inputs.customModuleUrl }}
         sendgridApiKey: ${{ secrets.sendgridApiKey }}
         databaseProvider: ${{ matrix.databaseProvider }}
+        prebuiltImageArtifact: ${{ inputs.prebuiltImageArtifact }}
 
     - name: Run Auto Tests
       uses: VirtoCommerce/vc-github-actions/run-pytest-tests@master
@@ -147,6 +158,7 @@ jobs:
         backUrl: ${{ inputs.backUrl }}
         baseUrl: ${{ inputs.baseUrl }}
         browser: ${{ inputs.browser }}
+        pytestMarkers: ${{ inputs.pytestMarkers }}
         testSecretEnvFile: ${{ secrets.testSecretEnvFile }}
         testSuites: ${{ inputs.testSuites }}
         vctestingPath: ${{ inputs.vctestingPath }}
