@@ -71,7 +71,7 @@ This applies to both reusable workflows in `.github/workflows/` and starter work
 - **Dependabot** (`.github/dependabot.yml`) scans `.github/workflows/` weekly and opens grouped PRs bumping SHA + trailing comment when upstream cuts a new tag. Dependabot's `github-actions` ecosystem does NOT scan `workflow-templates/`.
 - **Auto-update for templates** (`.github/workflows/auto-update-templates.yml`) runs Mondays 08:00 UTC, executes `pinact run -update` against `workflow-templates/*.yml`, and opens a PR with the SHA bumps. Closes the gap Dependabot can't cover.
 - **Pin-check CI** (`.github/workflows/pin-check.yml`) runs `pinact run -check` on every PR that touches workflows or templates. PRs with unpinned third-party `uses:` lines fail.
-- **Scope** is configured in [`pinact.yaml`](pinact.yaml) — `VirtoCommerce/*` is intentionally ignored (internal, not third-party).
+- **Scope** is configured in [`.pinact.yaml`](.pinact.yaml) — `VirtoCommerce/*` is intentionally ignored (internal, not third-party).
 
 **For contributors**
 

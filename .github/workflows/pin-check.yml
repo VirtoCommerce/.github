@@ -7,7 +7,7 @@ on:
       - 'workflow-templates/**'
       - '**/action.yml'
       - '**/action.yaml'
-      - 'pinact.yaml'
+      - '.pinact.yaml'
 
 permissions:
   contents: read
