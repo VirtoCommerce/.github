@@ -1,0 +1,9 @@
+version: 3
+
+files:
+  - pattern: "^\\.github/workflows/.*\\.ya?ml$"
+  - pattern: "^(.*/)?action\\.ya?ml$"
+  - pattern: "^workflow-templates/.*\\.ya?ml$"
+
+ignore_actions:
+  - name: "VirtoCommerce/.*"

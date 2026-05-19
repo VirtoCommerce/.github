@@ -51,3 +51,35 @@ You can also use `main` as version tag to use latest version from the main branc
 - Add new workflow file name to `TEMPLATES_LIST` environment variable in `deploy-module-workflows.yml`, `deploy-platform-workflows.yml` or both workflows for deploy new workflow to the repositories.
 
 ![Templates-list](docs/media/templates-list.png)
+
+## Supply-chain security: pinned third-party actions
+
+Every third-party `uses:` reference in this repo (anything not under `VirtoCommerce/*`) is pinned to a full 40-character commit SHA with a trailing `# tag` comment, per the [GitHub Actions hardening guide](https://docs.github.com/en/actions/security-for-github-actions/security-guides/security-hardening-for-github-actions#using-third-party-actions). Tags are mutable; SHAs are not.
+
+```yaml
+# Correct
+uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+
+# Rejected by CI
+uses: actions/checkout@v6
+```
+
+This applies to both reusable workflows in `.github/workflows/` and starter workflows in `workflow-templates/` (the latter inherit pinned SHAs when copied into module repos).
+
+**How updates happen**
+
+- **Dependabot** (`.github/dependabot.yml`) scans `.github/workflows/` weekly and opens grouped PRs bumping SHA + trailing comment when upstream cuts a new tag. Dependabot's `github-actions` ecosystem does NOT scan `workflow-templates/`.
+- **Auto-update for templates** (`.github/workflows/auto-update-templates.yml`) runs Mondays 08:00 UTC, executes `pinact run -update` against `workflow-templates/*.yml`, and opens a PR with the SHA bumps. Closes the gap Dependabot can't cover.
+- **Pin-check CI** (`.github/workflows/pin-check.yml`) runs `pinact run -check` on every PR that touches workflows or templates. PRs with unpinned third-party `uses:` lines fail.
+- **Scope** is configured in [`pinact.yaml`](pinact.yaml) — `VirtoCommerce/*` is intentionally ignored (internal, not third-party).
+
+**For contributors**
+
+- When adding a new third-party action, write the SHA, not the tag. Quick lookup:
+
+  ```sh
+  gh api repos/OWNER/REPO/commits/TAG --jq '.sha'
+  ```
+
+- `VirtoCommerce/vc-github-actions/<dir>@master` and `VirtoCommerce/.github/.../*.yml@vN.N.N` refs remain version-/branch-pinned as before.
+- New module repos created via `create-module-repository.yml` inherit pinned templates but do not get their own Dependabot config — SHAs there will go stale unless the module repo adds one.
