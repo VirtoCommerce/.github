@@ -150,7 +150,7 @@ jobs:
         prebuiltImageArtifact: ${{ inputs.prebuiltImageArtifact }}
 
     - name: Run Auto Tests
-      uses: VirtoCommerce/vc-github-actions/run-pytest-tests@master
+      uses: VirtoCommerce/vc-github-actions/run-pytest-tests@VCST-5063 #master
       with:
         adminPassword: ${{ inputs.adminPassword }}
         adminUsername: ${{ inputs.adminUsername }}
