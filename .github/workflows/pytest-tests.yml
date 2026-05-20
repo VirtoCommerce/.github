@@ -134,7 +134,7 @@ jobs:
       uses: VirtoCommerce/vc-github-actions/setup-vcbuild@master
 
     - name: Docker Env Full
-      uses: VirtoCommerce/vc-github-actions/docker-env-full@VCST-5063 #master
+      uses: VirtoCommerce/vc-github-actions/docker-env-full@VCST-5063-1 #master
       with:
         frontendZipUrl: ${{ inputs.frontendZipUrl }}
         installModules: ${{ inputs.installModules }}
@@ -150,7 +150,7 @@ jobs:
         prebuiltImageArtifact: ${{ inputs.prebuiltImageArtifact }}
 
     - name: Run Auto Tests
-      uses: VirtoCommerce/vc-github-actions/run-pytest-tests@VCST-5063 #master
+      uses: VirtoCommerce/vc-github-actions/run-pytest-tests@VCST-5063-1 #master
       with:
         adminPassword: ${{ inputs.adminPassword }}
         adminUsername: ${{ inputs.adminUsername }}
