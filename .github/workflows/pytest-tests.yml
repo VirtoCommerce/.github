@@ -119,8 +119,8 @@ on:
       appInsightsResourceId:
         description: 'Azure resource ID of the Application Insights component. When set, a Logs blade link pre-filtered by cloud_RoleName is logged for each run.'
         required: false
-      appInsightsConnectionString:
-        description: 'Application Insights connection string (e.g. `InstrumentationKey=<guid>;IngestionEndpoint=https://...;LiveEndpoint=https://...`). Passed to the platform container so its telemetry lands in the AI resource referenced by appInsightsResourceId.'
+      appInsightsInstrumentationKey:
+        description: 'Application Insights instrumentation key (GUID). Passed to the platform container so its telemetry lands in the AI resource referenced by appInsightsResourceId.'
         required: false
 
 jobs:
@@ -154,7 +154,7 @@ jobs:
         sendgridApiKey: ${{ secrets.sendgridApiKey }}
         databaseProvider: ${{ matrix.databaseProvider }}
         prebuiltImageArtifact: ${{ inputs.prebuiltImageArtifact }}
-        appInsightsConnectionString: ${{ secrets.APPINSIGHTSCONNECTIONSTRING }}
+        appInsightsInstrumentationKey: ${{ secrets.appInsightsInstrumentationKey }}
 
     - name: Run Auto Tests
       uses: VirtoCommerce/vc-github-actions/run-pytest-tests@VCST-5063-1 #master
