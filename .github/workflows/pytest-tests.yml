@@ -116,9 +116,6 @@ on:
         required: true
       testSecretEnvFile:
         required: true
-      appInsightsResourceId:
-        description: 'Azure resource ID of the Application Insights component. When set, a Logs blade link pre-filtered by cloud_RoleName is logged for each run.'
-        required: false
       appInsightsInstrumentationKey:
         description: 'Application Insights instrumentation key (GUID). Passed to the platform container so its telemetry lands in the AI resource referenced by appInsightsResourceId.'
         required: false
@@ -172,4 +169,3 @@ jobs:
         vctestingRepo: ${{ inputs.vctestingRepo }}
         vctestingRepoBranch: ${{ inputs.vctestingRepoBranch }}
         artifactSuffix: -${{ matrix.databaseProvider }}
-        appInsightsResourceId: ${{ secrets.appInsightsResourceId }}
