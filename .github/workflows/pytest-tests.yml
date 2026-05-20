@@ -116,6 +116,9 @@ on:
         required: true
       testSecretEnvFile:
         required: true
+      appInsightsResourceId:
+        description: 'Azure resource ID of the Application Insights component. When set, a Logs blade link pre-filtered by cloud_RoleName is logged for each run.'
+        required: false
 
 jobs:
   auto-autotests:
@@ -165,3 +168,4 @@ jobs:
         vctestingRepo: ${{ inputs.vctestingRepo }}
         vctestingRepoBranch: ${{ inputs.vctestingRepoBranch }}
         artifactSuffix: -${{ matrix.databaseProvider }}
+        appInsightsResourceId: ${{ secrets.appInsightsResourceId }}
