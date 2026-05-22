@@ -1,0 +1,12 @@
+version: 2
+updates:
+  - package-ecosystem: github-actions
+    directories: ["/**"]
+    schedule:
+      interval: weekly
+    groups:
+      actions:
+        patterns:
+          - "*"
+# Workflow-templates/ is not scanned by Dependabot's github-actions ecosystem.
+# Those files are kept up-to-date by .github/workflows/auto-update-templates.yml.
