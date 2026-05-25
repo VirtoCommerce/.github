@@ -1,5 +1,5 @@
-# v3.800.34
-# https://virtocommerce.atlassian.net/browse/VCST-4843
+# v3.800.35
+# https://virtocommerce.atlassian.net/browse/VCST-5063
 name: Auto tests
 
 on:
@@ -116,6 +116,9 @@ on:
         required: true
       testSecretEnvFile:
         required: true
+      appInsightsInstrumentationKey:
+        description: 'Application Insights instrumentation key (GUID). Passed to the platform container so its telemetry lands in the configured Application Insights resource.'
+        required: false
 
 jobs:
   auto-autotests:
@@ -148,6 +151,7 @@ jobs:
         sendgridApiKey: ${{ secrets.sendgridApiKey }}
         databaseProvider: ${{ matrix.databaseProvider }}
         prebuiltImageArtifact: ${{ inputs.prebuiltImageArtifact }}
+        appInsightsInstrumentationKey: ${{ secrets.appInsightsInstrumentationKey }}
 
     - name: Run Auto Tests
       uses: VirtoCommerce/vc-github-actions/run-pytest-tests@master
