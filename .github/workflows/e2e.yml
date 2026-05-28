@@ -1,5 +1,5 @@
-# v3.800.35
-# https://virtocommerce.atlassian.net/browse/VCST-5063
+# v3.800.36
+# https://virtocommerce.atlassian.net/browse/VCST-5151
 name: Common katalon tests
 
 on:
@@ -88,7 +88,7 @@ jobs:
     - name: Docker Env
       uses: VirtoCommerce/vc-github-actions/docker-env@master
       with:
-        githubUser: ${{ env.GITHUB_ACTOR }}
+        githubUser: ${{ github.actor }}
         githubToken: ${{ env.GITHUB_TOKEN }}
         platformDockerTag: ${{ inputs.platformDockerTag }}
         platformImage: ghcr.io/virtocommerce/platform
