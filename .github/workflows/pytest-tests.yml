@@ -88,6 +88,11 @@ on:
         required: false
         type: string
         default: ''
+      skipDocCountVerification:
+        description: 'Comma-separated document types whose post-reindex count check should be skipped (reindex still runs). Use when the seed dataset has 0 records for a type. Example: ''PickupLocation'' or ''PickupLocation,ContentFile''.'
+        required: false
+        default: ''
+        type: string
       testSuites:
         description: 'Comma-separated list of suites to run. Any subset of: graphql, restapi, e2e'
         required: false
@@ -154,7 +159,7 @@ jobs:
         appInsightsInstrumentationKey: ${{ secrets.appInsightsInstrumentationKey }}
 
     - name: Run Auto Tests
-      uses: VirtoCommerce/vc-github-actions/run-pytest-tests@master
+      uses: VirtoCommerce/vc-github-actions/run-pytest-tests@VCST-5155 #master
       with:
         adminPassword: ${{ inputs.adminPassword }}
         adminUsername: ${{ inputs.adminUsername }}
@@ -169,3 +174,4 @@ jobs:
         vctestingRepo: ${{ inputs.vctestingRepo }}
         vctestingRepoBranch: ${{ inputs.vctestingRepoBranch }}
         artifactSuffix: -${{ matrix.databaseProvider }}
+        skipDocCountVerification: ${{ inputs.skipDocCountVerification }}
