@@ -68,6 +68,11 @@ on:
         required: false
         type: string
         default: ''
+      skipDocCountVerification:
+        description: 'Comma-separated document types whose post-reindex count check should be skipped (reindex still runs). Use when the seed dataset has 0 records for a type. Example: ''PickupLocation'' or ''PickupLocation,ContentFile''.'
+        required: false
+        default: ''
+        type: string
       vctestingPath:
         description: 'UI tests path'
         required: false
@@ -128,3 +133,4 @@ jobs:
         vctestingPath: 'vc-testing-module'
         vctestingRepo: ${{ inputs.vctestingRepo }}
         vctestingRepoBranch: ${{ inputs.vctestingRepoBranch }}
+        skipDocCountVerification: ${{ inputs.skipDocCountVerification }}
