@@ -1,0 +1,46 @@
+name: Workflow security
+
+on:
+  pull_request:
+    paths:
+      - 'workflow-templates/**'
+      - '.github/workflows/**'
+      - '**/action.yml'
+      - '**/action.yaml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  scan:
+    runs-on: ubuntu-latest
+    env:
+      ACTIONLINT_VERSION: 1.7.12
+      ZIZMOR_VERSION: 1.25.2
+      # zizmor reads GITHUB_TOKEN for its online audits (e.g. unpinned-tools);
+      # the static audits like template-injection run without it.
+      GH_TOKEN: ${{ github.token }}
+      GITHUB_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+
+      - name: Install actionlint
+        run: |
+          cd "$RUNNER_TEMP"
+          gh release download "v${ACTIONLINT_VERSION}" \
+            --repo rhysd/actionlint \
+            --pattern "actionlint_${ACTIONLINT_VERSION}_linux_amd64.tar.gz"
+          tar -xzf "actionlint_${ACTIONLINT_VERSION}_linux_amd64.tar.gz"
+          sudo install actionlint /usr/local/bin/
+
+      - name: Run actionlint
+        run: actionlint .github/workflows/*.yml workflow-templates/*.yml
+
+      - name: Install zizmor
+        if: always()
+        run: pipx install "zizmor==${ZIZMOR_VERSION}"
+
+      - name: Run zizmor
+        if: always()
+        run: zizmor .github/workflows/ workflow-templates/
