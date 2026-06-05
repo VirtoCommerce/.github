@@ -41,6 +41,7 @@ jobs:
 
     - name: Checkout ArgoCD repository
       uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+      # zizmor: ignore[artipacked] the Commit step pushes to the external ArgoCD repo with this persisted REPO_TOKEN; no setup-git-credentials step here
       with:
         token: ${{ secrets.REPO_TOKEN }}
         repository: "${{ github.event.inputs.appDescriptionRepo }}"
