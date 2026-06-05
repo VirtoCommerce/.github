@@ -22,7 +22,7 @@ on:
         required: true
         default: 'master'
       appFolder:
-        appDescription: 'ArgoCd full path to folder containing app description code'
+        description: 'ArgoCd full path to folder containing app description code'
         required: true
 
 jobs:

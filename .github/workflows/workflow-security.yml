@@ -35,6 +35,12 @@ jobs:
           sudo install actionlint /usr/local/bin/
 
       - name: Run actionlint
+        # SC2086/SC2035 are info-level shell-quoting nits, almost always false
+        # positives on `>> $GITHUB_ENV`/`$GITHUB_OUTPUT` writes — silence them so
+        # the gate surfaces substantive findings. Native actionlint checks (e.g.
+        # the intentional empty choice option) are scoped in .github/actionlint.yaml.
+        env:
+          SHELLCHECK_OPTS: '-e SC2086 -e SC2035'
         run: actionlint .github/workflows/*.yml workflow-templates/*.yml
 
       - name: Install zizmor

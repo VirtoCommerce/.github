@@ -56,7 +56,7 @@ jobs:
       run: |
         if(git status --porcelain |Where {$_ -notmatch '^\?\?'}) # uncommitted changes exist
         {
-          git commit -am 'Automated update ${{ github.repository }} to ${{ github.event.inputs.artifactVersion }}'
+          git commit -am 'Automated update ${{ github.repository }} to ${{ github.event.inputs.artifactLink }}'
           git push
         }
         else 

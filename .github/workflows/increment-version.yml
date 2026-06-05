@@ -8,12 +8,12 @@ on:
     inputs:
       forceModuleManifest:
         description: 'Force to update version in module.manifest'
-        required: true
+        required: false
         type: string
         default: 'false'
       versionType:
         description: 'Version type. Can be "Patch", "Minor"'
-        required: true
+        required: false
         type: string
         default: 'Patch'
 
