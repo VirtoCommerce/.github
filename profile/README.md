@@ -60,6 +60,8 @@ The Extensibility Framework lets you add entities, override services, extend API
 
 👨‍💻 [Virto Commerce Dev Training Program](https://www.virtocommerce.org/t/virto-commerce-dev-training-program/786/1)
 
+👨‍💻 [How to Run a Real Root Cause Analysis on a Virto Commerce Project](https://www.virtocommerce.org/t/how-to-run-a-real-root-cause-analysis-on-a-virto-commerce-project-and-solve-problems-faster-together/855)
+
 ## Virto Commerce Release Strategy
 Virto Commerce ships as **modules** — independently versioned, independently deployable units. Modules combine into bundles you can pick from based on how you want to balance stability and speed.
 
