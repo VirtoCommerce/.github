@@ -26,6 +26,7 @@ jobs:
                   ,vc-module-azure-search
                   ,vc-module-azureblob-assets
                   ,vc-module-back-in-stock
+                  ,vc-module-backup-restore
                   ,vc-module-builder-io
                   ,vc-module-bulk-actions
                   ,vc-module-cart
