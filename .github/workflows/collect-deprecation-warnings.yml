@@ -63,10 +63,10 @@ jobs:
           REPOS: ${{ github.event.inputs.repos || 'all' }}
         shell: pwsh
         run: |
-          if ("${{ env.REPOS }}" -eq 'all') {
+          if ("$env:REPOS" -eq 'all') {
             [array]$repos = gh repo list VirtoCommerce --json name -q '.[].name' --limit 1000
           } else {
-            [array]$repos = "${{ env.REPOS }}".Split(',')
+            [array]$repos = "$env:REPOS".Split(',')
           }
           $fields = 'databaseId,name,workflowName,conclusion,createdAt,headBranch,url'
           $result = @()
@@ -82,7 +82,7 @@ jobs:
                   Write-Warning "Skipping $repo - no access or repo doesn't exist"
                   continue
               }
-              [array]$runs = gh run list -R VirtoCommerce/$repo --limit ${{ env.NUMBER_OF_RUNS}} --json $fields | ConvertFrom-Json
+              [array]$runs = gh run list -R VirtoCommerce/$repo --limit $env:NUMBER_OF_RUNS --json $fields | ConvertFrom-Json
               $runs = $runs | Where-Object { $_.createdAt -gt $timeThreshold }
               foreach ($run in $runs) {
                   $runId = "$($run.databaseId)"
