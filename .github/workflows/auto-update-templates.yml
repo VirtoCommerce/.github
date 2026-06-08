@@ -62,6 +62,13 @@ jobs:
       - name: Open PR with updates
         uses: peter-evans/create-pull-request@22a9089034f40e5a961c8808d113e2c98fb63676 # v7
         with:
+          # A PAT with `workflow` scope (classic) or `Workflows: write`
+          # (fine-grained) is REQUIRED here: this job's zizmor `--fix=all`
+          # step edits files under `.github/workflows/`, and GitHub refuses
+          # to let the default GITHUB_TOKEN push workflow-file changes
+          # ("refusing to allow a GitHub App ... without `workflows`
+          # permission"). The `permissions:` block cannot grant this.
+          token: ${{ secrets.REPO_TOKEN }}
           commit-message: "ci: Auto-maintain workflows (pin updates + zizmor security autofixes)"
           title: "ci: Auto-maintain workflows (pin updates + zizmor security autofixes)"
           branch: ci/auto-maintain-workflows
