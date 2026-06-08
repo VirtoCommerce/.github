@@ -7,6 +7,10 @@ on:
       - '.github/workflows/**'
       - '**/action.yml'
       - '**/action.yaml'
+      # Re-run the gate when the scanners' own configs change, so a PR that
+      # only relaxes a rule can't merge without actionlint/zizmor re-running.
+      - 'zizmor.yml'
+      - '.github/actionlint.yaml'
   workflow_dispatch:
 
 permissions:
@@ -50,4 +54,17 @@ jobs:
 
       - name: Run zizmor
         if: always()
-        run: zizmor .github/workflows/ workflow-templates/
+        shell: bash
+        # Passing `.` lets zizmor discover every **/action.yml|action.yaml
+        # (composite actions, anywhere) plus .github/workflows/* — matching the
+        # PR trigger paths. Templates live OUTSIDE .github/workflows/, so
+        # zizmor's directory walk never classifies them as workflows; they must
+        # be passed as explicit file paths (a bare `workflow-templates/` dir
+        # collects zero inputs). --collect=workflows,actions keeps the scope to
+        # the trigger paths (excludes dependabot.yml). nullglob so an unmatched
+        # template glob disappears instead of being passed literally.
+        # (actionlint above is workflow-only and cannot lint composite actions —
+        # composite-action coverage is zizmor's job.)
+        run: |
+          shopt -s nullglob
+          zizmor --collect=workflows,actions . workflow-templates/*.yml workflow-templates/*.yaml

@@ -56,10 +56,22 @@ jobs:
         # review gate for the unsafe ones. Both trees are processed:
         # .github/workflows/ ships reusable workflows consumed by other repos,
         # and workflow-templates/ is copied into module repos.
-        # `|| true` so remaining unfixable findings don't block the PR.
+        # zizmor exit codes: 0 = clean, 14 = ran OK but unfixed findings remain
+        # (expected here — the unsafe/unfixable findings are left for human
+        # review in this PR). Tolerate ONLY 14; any other non-zero (1 config/
+        # usage error, 2 bad CLI, a pipx/install failure, or a crash) means the
+        # scan didn't really run, so fail the step instead of opening a
+        # maintenance PR as if the autofixes had succeeded. `|| rc=$?` captures
+        # the code without tripping the shell's `set -e`.
         run: |
+          rc=0
           pipx run --spec "zizmor==$ZIZMOR_VERSION" zizmor \
-            --fix=all .github/workflows/ workflow-templates/ || true
+            --fix=all .github/workflows/ workflow-templates/ || rc=$?
+          if [ "$rc" -ne 0 ] && [ "$rc" -ne 14 ]; then
+            echo "::error::zizmor failed to run (exit $rc), not just remaining findings"
+            exit "$rc"
+          fi
+          echo "zizmor completed (exit $rc)."
 
       - name: Open PR with updates
         uses: peter-evans/create-pull-request@22a9089034f40e5a961c8808d113e2c98fb63676 # v7
