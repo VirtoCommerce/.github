@@ -71,11 +71,13 @@ jobs:
         shell: pwsh
         run: | 
            $forceCommits = @("true", "false")
-           if ($forceCommits -contains "${{ matrix.forceCommit }}".ToLower()) {
-             echo "value=${{ matrix.forceCommit }}" >> $env:GITHUB_OUTPUT
+           if ($forceCommits -contains "$env:MATRIX_FORCECOMMIT".ToLower()) {
+             echo "value=$env:MATRIX_FORCECOMMIT" >> $env:GITHUB_OUTPUT
            } else {
              echo "value=true" >> $env:GITHUB_OUTPUT
            }
+        env:
+          MATRIX_FORCECOMMIT: ${{ matrix.forceCommit }}
 
       - name: Read deployment config
         uses: VirtoCommerce/vc-github-actions/get-deploy-param@master
@@ -121,8 +123,10 @@ jobs:
         timeout-minutes: 5
         run: |
           dotnet tool install --global VirtoCommerce.GlobalTool || true
-          vc-build CloudEnvStatus -CloudUrl ${{ env.CLOUD_URL }} -CloudToken ${{ secrets.VIRTOCLOUD_KEY_VCPT_VCST }} -EnvironmentName ${{ steps.deployConfig.outputs.deployAppName }} -HealthStatus Healthy -SyncStatus Synced
+          vc-build CloudEnvStatus -CloudUrl ${CLOUD_URL} -CloudToken ${{ secrets.VIRTOCLOUD_KEY_VCPT_VCST }} -EnvironmentName ${STEPS_DEPLOYCONFIG_OUTPUTS_DEPLOYAPPNAME} -HealthStatus Healthy -SyncStatus Synced
         shell: bash
+        env:
+          STEPS_DEPLOYCONFIG_OUTPUTS_DEPLOYAPPNAME: ${{ steps.deployConfig.outputs.deployAppName }}
 
       - name: DEPLOY_STATE::successful
         if: success()

@@ -246,10 +246,11 @@ jobs:
           done
 
       - name: Checkout .github (workflow templates)
-        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
           path: dotgithub
           token: ${{ env.GH_TOKEN }}
+          persist-credentials: false
 
       - name: Install module template
         run: |
@@ -449,7 +450,7 @@ jobs:
 
           # Create project and bind to GitHub in one call.
           # installationKeys format: {github-org}/{repo-name}|{github-repo-id}
-          INSTALLATION_KEY="$REPO_FULL_NAME|${{ steps.create-repo.outputs.repoId }}"
+          INSTALLATION_KEY="$REPO_FULL_NAME|${STEPS_CREATE_REPO_OUTPUTS_REPOID}"
           sonar_post "provision_projects" "api/alm_integration/provision_projects" \
             --data-urlencode "installationKeys=$INSTALLATION_KEY" \
             --data-urlencode "organization=$SONAR_ORG_KEY"
@@ -491,6 +492,8 @@ jobs:
               --data-urlencode "value=previous_version"
           done
           echo "New Code definition set to: Previous version"
+        env:
+          STEPS_CREATE_REPO_OUTPUTS_REPOID: ${{ steps.create-repo.outputs.repoId }}
 
       - name: Set repository custom properties
         # Property schemas must be pre-defined in the org:

@@ -92,9 +92,10 @@ jobs:
       run: |
         echo "FETCH_DEPTH=0" >> $GITHUB_ENV
 
-    - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+    - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
       with:
         fetch-depth: ${{ env.FETCH_DEPTH }}
+        persist-credentials: false
 
     - name: Increment Patch Version
       if: ${{ inputs.incrementPatch == 'true' }}
@@ -107,17 +108,23 @@ jobs:
 
     - name: Set IMAGE_TAG variables
       run: |
-        echo "IMAGE_TAG=${{ steps.artifactVer.outputs.prefix }}" >> $GITHUB_ENV
+        echo "IMAGE_TAG=${STEPS_ARTIFACTVER_OUTPUTS_PREFIX}" >> $GITHUB_ENV
+      env:
+        STEPS_ARTIFACTVER_OUTPUTS_PREFIX: ${{ steps.artifactVer.outputs.prefix }}
 
     - name: Set VERSION_SUFFIX variables
       if: ${{ inputs.forceVersionSuffix == 'true' }}
       run: |
         if [ '${{ github.event_name }}' == 'workflow_dispatch' ]; then
-          echo "VERSION_SUFFIX=${{ steps.artifactVer.outputs.fullSuffix }}" >> $GITHUB_ENV
+          echo "VERSION_SUFFIX=${STEPS_ARTIFACTVER_OUTPUTS_FULLSUFFIX}" >> $GITHUB_ENV
         else
-          echo "VERSION_SUFFIX=${{ steps.artifactVer.outputs.suffix }}" >> $GITHUB_ENV
+          echo "VERSION_SUFFIX=${STEPS_ARTIFACTVER_OUTPUTS_SUFFIX}" >> $GITHUB_ENV
         fi;
-        echo "IMAGE_TAG=${{ steps.artifactVer.outputs.taggedVersion }}" >> $GITHUB_ENV
+        echo "IMAGE_TAG=${STEPS_ARTIFACTVER_OUTPUTS_TAGGEDVERSION}" >> $GITHUB_ENV
+      env:
+        STEPS_ARTIFACTVER_OUTPUTS_FULLSUFFIX: ${{ steps.artifactVer.outputs.fullSuffix }}
+        STEPS_ARTIFACTVER_OUTPUTS_SUFFIX: ${{ steps.artifactVer.outputs.suffix }}
+        STEPS_ARTIFACTVER_OUTPUTS_TAGGEDVERSION: ${{ steps.artifactVer.outputs.taggedVersion }}
 
     - name: Add version suffix
       if: ${{ github.ref != 'refs/heads/master' || github.ref != 'refs/heads/main' || inputs.forceVersionSuffix == 'true'}}
@@ -157,7 +164,9 @@ jobs:
     - name: Save Docker to tar
       if: ${{ inputs.uploadDocker == 'true' }}
       run: |
-        docker save -o ${{ env.DOCKER_TAR }} ${{ steps.dockerBuild.outputs.imageName }}
+        docker save -o ${{ env.DOCKER_TAR }} ${STEPS_DOCKERBUILD_OUTPUTS_IMAGENAME}
+      env:
+        STEPS_DOCKERBUILD_OUTPUTS_IMAGENAME: ${{ steps.dockerBuild.outputs.imageName }}
 
     - name: Cache Docker image
       if: ${{ inputs.uploadDocker == 'true' }}
