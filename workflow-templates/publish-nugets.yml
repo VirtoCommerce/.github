@@ -11,6 +11,10 @@ on:
         default: true
         type: boolean
 
+# Least-privilege default for all jobs; publish-nuget overrides below.
+permissions:
+  contents: read
+
 jobs:
   test:
     uses: VirtoCommerce/.github/.github/workflows/test-and-sonar.yml@v3.800.37    
@@ -27,6 +31,11 @@ jobs:
       envPAT: ${{ secrets.REPO_TOKEN }}
 
   publish-nuget:
+    # publish-github.yml creates the GitHub release and edits the PR using the
+    # passed GITHUB_TOKEN (envPAT), so this caller must grant write to both.
+    permissions:
+      contents: write
+      pull-requests: write
     needs:
       [build, test]
     uses: VirtoCommerce/.github/.github/workflows/publish-github.yml@v3.800.37

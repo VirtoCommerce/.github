@@ -11,6 +11,10 @@ on:
         default: true
         type: boolean
 
+# Least-privilege default for all jobs; publish-github-release overrides below.
+permissions:
+  contents: read
+
 jobs:
   test:
     uses: VirtoCommerce/.github/.github/workflows/test-and-sonar.yml@v3.800.37
@@ -38,12 +42,18 @@ jobs:
     - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
       with:
         fetch-depth: 0
+        persist-credentials: false
 
     - name: Get Changelog
       id: changelog
       uses: VirtoCommerce/vc-github-actions/changelog-generator@master
 
   publish-github-release:
+    # publish-github.yml creates the GitHub release and edits the PR using the
+    # passed GITHUB_TOKEN (envPAT), so this caller must grant write to both.
+    permissions:
+      contents: write
+      pull-requests: write
     needs:
       [build, test, get-metadata]
     uses: VirtoCommerce/.github/.github/workflows/publish-github.yml@v3.800.37
@@ -65,6 +75,8 @@ jobs:
     steps:
     - name: Checkout
       uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
+      with:
+        persist-credentials: false
 
     - name: Install VirtoCommerce.GlobalTool
       uses: VirtoCommerce/vc-github-actions/setup-vcbuild@master

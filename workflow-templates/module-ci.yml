@@ -28,12 +28,21 @@ on:
       - '**/cloudDeploy.json'
       - samples/**
 
+# Least-privilege default for all jobs; jobs that need more override below.
+permissions:
+  contents: read
+
 jobs:
   ci:
     if: ${{ github.actor != 'dependabot[bot]' &&
         (github.event.pull_request.head.repo.full_name == github.repository ||
         github.event.pull_request.head.repo.full_name == '') }}  # Check that PR not from forked repo and not from Dependabot
     runs-on: ubuntu-24.04
+    # Default GITHUB_TOKEN is used to create the GitHub release and update the
+    # PR; everything else uses the REPO_TOKEN PAT (job-level GITHUB_TOKEN env).
+    permissions:
+      contents: write
+      pull-requests: write
     env:
       CLOUD_INSTANCE_BASE_URL: ${{secrets.CLOUD_INSTANCE_BASE_URL}}
       CLIENT_ID: ${{secrets.CLIENT_ID}}
@@ -77,6 +86,7 @@ jobs:
       - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
         with:
           fetch-depth: 0
+          persist-credentials: false
 
       - name: Install VirtoCommerce.GlobalTool
         uses: VirtoCommerce/vc-github-actions/setup-vcbuild@master
@@ -106,10 +116,13 @@ jobs:
       - name: Set VERSION_SUFFIX variable
         run: |
           if [ '${{ github.event_name }}' = 'workflow_dispatch' ]; then
-            echo "VERSION_SUFFIX=${{ steps.artifact_ver.outputs.fullSuffix }}" >> $GITHUB_ENV
+            echo "VERSION_SUFFIX=${STEPS_ARTIFACT_VER_OUTPUTS_FULLSUFFIX}" >> $GITHUB_ENV
           else
-            echo "VERSION_SUFFIX=${{ steps.artifact_ver.outputs.suffix }}" >> $GITHUB_ENV
+            echo "VERSION_SUFFIX=${STEPS_ARTIFACT_VER_OUTPUTS_SUFFIX}" >> $GITHUB_ENV
           fi;
+        env:
+          STEPS_ARTIFACT_VER_OUTPUTS_FULLSUFFIX: ${{ steps.artifact_ver.outputs.fullSuffix }}
+          STEPS_ARTIFACT_VER_OUTPUTS_SUFFIX: ${{ steps.artifact_ver.outputs.suffix }}
 
       - name: Add version suffix
         if: ${{ github.ref != 'refs/heads/master' && github.ref != 'refs/heads/main' }}
@@ -195,11 +208,14 @@ jobs:
       - name: Set artifactUrl value
         id: artifactUrl
         run: |
-          if [ '${{ github.ref }}' = 'refs/heads/master' ] || [ '${{ github.ref }}' = 'refs/heads/main' ]; then
-            echo "download_url=${{ steps.githubRelease.outputs.downloadUrl }}" >> $GITHUB_OUTPUT
+          if [ '${GITHUB_REF}' = 'refs/heads/master' ] || [ '${GITHUB_REF}' = 'refs/heads/main' ]; then
+            echo "download_url=${STEPS_GITHUBRELEASE_OUTPUTS_DOWNLOADURL}" >> $GITHUB_OUTPUT
           else
-            echo "download_url=${{ steps.blobRelease.outputs.packageUrl }}" >> $GITHUB_OUTPUT
+            echo "download_url=${STEPS_BLOBRELEASE_OUTPUTS_PACKAGEURL}" >> $GITHUB_OUTPUT
           fi;
+        env:
+          STEPS_GITHUBRELEASE_OUTPUTS_DOWNLOADURL: ${{ steps.githubRelease.outputs.downloadUrl }}
+          STEPS_BLOBRELEASE_OUTPUTS_PACKAGEURL: ${{ steps.blobRelease.outputs.packageUrl }}
 
       - name: Create deployment matrix
         if: ${{ github.ref == 'refs/heads/dev' || github.ref == 'refs/heads/master' || github.ref == 'refs/heads/main' }}
@@ -297,7 +313,9 @@ jobs:
       - name: Confirm Jira Build Output
         if: success()
         run: |
-          echo "Jira Upload Build Info response: ${{ steps.push_build_info_to_jira.outputs.response }}"
+          echo "Jira Upload Build Info response: ${STEPS_PUSH_BUILD_INFO_TO_JIRA_OUTPUTS_RESPONSE}"
+        env:
+          STEPS_PUSH_BUILD_INFO_TO_JIRA_OUTPUTS_RESPONSE: ${{ steps.push_build_info_to_jira.outputs.response }}
 
   auto-tests:
     if: ${{ ((github.ref == 'refs/heads/dev') && (github.event_name == 'push')) ||
@@ -324,6 +342,11 @@ jobs:
       && github.event_name == 'push'
       && needs.ci.outputs.deployment-folder-exists == 'true'}}
     needs: ci
+    # deploy-cloud.yml writes deployment status via the default GITHUB_TOKEN;
+    # all other privileged work uses inherited PATs.
+    permissions:
+      contents: read
+      deployments: write
     uses: VirtoCommerce/.github/.github/workflows/deploy-cloud.yml@v3.800.37
     with:
       releaseSource: module
@@ -332,4 +355,4 @@ jobs:
       moduleBlob: ${{ needs.ci.outputs.blobId }}
       jiraKeys: ${{ needs.ci.outputs.jira-keys }}
       matrix: '{"include":${{ needs.ci.outputs.matrix }}}'
-    secrets: inherit
+    secrets: inherit # zizmor: ignore[secrets-inherit] first-party deploy-cloud.yml@v3.800.37 reads org secrets (REPO_TOKEN, VIRTOCLOUD_KEY_VCPT_VCST) it does not declare as workflow_call inputs; explicit passing needs a new deploy-cloud release + tag bump

@@ -66,6 +66,12 @@ concurrency:
   group: module-repository-${{ inputs.moduleName }}-${{ github.repository_owner }}
   cancel-in-progress: false
 
+# Least privilege: every privileged operation here (repo/team/branch-protection
+# creation, pushes) uses the GH_TOKEN PAT, so the default GITHUB_TOKEN only needs
+# read access.
+permissions:
+  contents: read
+
 jobs:
 
   summarize-inputs:

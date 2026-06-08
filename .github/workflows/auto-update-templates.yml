@@ -55,7 +55,11 @@ jobs:
         # auto-pinned. --fix=all applies safe + unsafe fixes; this PR is the
         # review gate for the unsafe ones. Both trees are processed:
         # .github/workflows/ ships reusable workflows consumed by other repos,
-        # and workflow-templates/ is copied into module repos.
+        # and workflow-templates/ is copied into module repos. Templates live
+        # OUTSIDE .github/workflows/, so zizmor's directory walk never collects
+        # them — they must be passed as explicit file globs (this must stay in
+        # sync with workflow-security.yml, or the fixer silently skips what the
+        # gate flags). `.` also picks up any **/action.yml|yaml.
         # zizmor exit codes: 0 = clean, 14 = ran OK but unfixed findings remain
         # (expected here — the unsafe/unfixable findings are left for human
         # review in this PR). Tolerate ONLY 14; any other non-zero (1 config/
@@ -64,9 +68,10 @@ jobs:
         # maintenance PR as if the autofixes had succeeded. `|| rc=$?` captures
         # the code without tripping the shell's `set -e`.
         run: |
+          shopt -s nullglob
           rc=0
-          pipx run --spec "zizmor==$ZIZMOR_VERSION" zizmor \
-            --fix=all .github/workflows/ workflow-templates/ || rc=$?
+          pipx run --spec "zizmor==$ZIZMOR_VERSION" zizmor --fix=all \
+            --collect=workflows,actions . workflow-templates/*.yml workflow-templates/*.yaml || rc=$?
           if [ "$rc" -ne 0 ] && [ "$rc" -ne 14 ]; then
             echo "::error::zizmor failed to run (exit $rc), not just remaining findings"
             exit "$rc"
