@@ -208,7 +208,7 @@ jobs:
       - name: Set artifactUrl value
         id: artifactUrl
         run: |
-          if [ '${GITHUB_REF}' = 'refs/heads/master' ] || [ '${GITHUB_REF}' = 'refs/heads/main' ]; then
+          if [ "${GITHUB_REF}" = 'refs/heads/master' ] || [ "${GITHUB_REF}" = 'refs/heads/main' ]; then
             echo "download_url=${STEPS_GITHUBRELEASE_OUTPUTS_DOWNLOADURL}" >> $GITHUB_OUTPUT
           else
             echo "download_url=${STEPS_BLOBRELEASE_OUTPUTS_PACKAGEURL}" >> $GITHUB_OUTPUT
