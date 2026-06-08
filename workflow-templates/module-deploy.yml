@@ -25,8 +25,7 @@ on:
         description: 'ArgoCd full path to folder containing app description code'
         required: true
 
-# Least privilege: the ArgoCD push uses the persisted REPO_TOKEN PAT; the
-# default GITHUB_TOKEN is only used by the gh-deployments steps for status.
+# Least privilege: push uses the persisted REPO_TOKEN PAT; GITHUB_TOKEN only writes deployment status.
 permissions:
   contents: read
   deployments: write
@@ -45,7 +44,7 @@ jobs:
         env: Development
         no_override: false
 
-    - name: Checkout ArgoCD repository # zizmor: ignore[artipacked] the Commit step pushes to the external ArgoCD repo with this persisted REPO_TOKEN; no setup-git-credentials step here
+    - name: Checkout ArgoCD repository # zizmor: ignore[artipacked] Commit step pushes with this persisted REPO_TOKEN; no setup-git-credentials step
       uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
       with:
         token: ${{ secrets.REPO_TOKEN }}

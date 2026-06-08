@@ -15,11 +15,8 @@ jobs:
     env:
       PINACT_VERSION: v3.10.1
       ZIZMOR_VERSION: 1.25.2
-      # Used by `gh release download` and by pinact when calling the GitHub
-      # REST API to resolve latest tag SHAs. Without this, pinact falls back
-      # to unauthenticated requests (60/hour) and the update will likely
-      # rate-limit. GH_TOKEN is the alias gh CLI prefers; pinact reads
-      # GITHUB_TOKEN.
+      # Authenticate gh + pinact when resolving tag SHAs (avoids the 60/hour
+      # unauthenticated limit). gh uses GH_TOKEN; pinact uses GITHUB_TOKEN.
       GH_TOKEN: ${{ github.token }}
       GITHUB_TOKEN: ${{ github.token }}
     steps:
@@ -49,24 +46,13 @@ jobs:
 
       - name: Apply zizmor security autofixes
         shell: bash
-        # GH_TOKEN/GITHUB_TOKEN (job env) let zizmor resolve SHAs -> tags for
-        # the ref-version-mismatch fix. zizmor.yml (repo root) scopes
-        # unpinned-uses so VirtoCommerce/* @master refs are allowed and never
-        # auto-pinned. --fix=all applies safe + unsafe fixes; this PR is the
-        # review gate for the unsafe ones. Both trees are processed:
-        # .github/workflows/ ships reusable workflows consumed by other repos,
-        # and workflow-templates/ is copied into module repos. Templates live
-        # OUTSIDE .github/workflows/, so zizmor's directory walk never collects
-        # them — they must be passed as explicit file globs (this must stay in
-        # sync with workflow-security.yml, or the fixer silently skips what the
-        # gate flags). `.` also picks up any **/action.yml|yaml.
-        # zizmor exit codes: 0 = clean, 14 = ran OK but unfixed findings remain
-        # (expected here — the unsafe/unfixable findings are left for human
-        # review in this PR). Tolerate ONLY 14; any other non-zero (1 config/
-        # usage error, 2 bad CLI, a pipx/install failure, or a crash) means the
-        # scan didn't really run, so fail the step instead of opening a
-        # maintenance PR as if the autofixes had succeeded. `|| rc=$?` captures
-        # the code without tripping the shell's `set -e`.
+        # GH_TOKEN/GITHUB_TOKEN let zizmor resolve SHAs->tags (ref-version-mismatch);
+        # zizmor.yml scopes unpinned-uses. --fix=all applies safe+unsafe fixes —
+        # this PR reviews the unsafe ones. Collection must match workflow-security.yml
+        # (templates as explicit globs, `.` for actions) or the fixer skips what the
+        # gate flags. Exit 0/14 = ran OK (14 = findings remain); any other code is a
+        # real failure (install/crash) — fail rather than open a misleading PR.
+        # `|| rc=$?` captures the code under the shell's `set -e`.
         run: |
           shopt -s nullglob
           rc=0
@@ -81,12 +67,9 @@ jobs:
       - name: Open PR with updates
         uses: peter-evans/create-pull-request@5f6978faf089d4d20b00c7766989d076bb2fc7f1 # v8.1.1
         with:
-          # A PAT with `workflow` scope (classic) or `Workflows: write`
-          # (fine-grained) is REQUIRED here: this job's zizmor `--fix=all`
-          # step edits files under `.github/workflows/`, and GitHub refuses
-          # to let the default GITHUB_TOKEN push workflow-file changes
-          # ("refusing to allow a GitHub App ... without `workflows`
-          # permission"). The `permissions:` block cannot grant this.
+          # Needs a PAT with `workflow` scope: this job edits .github/workflows/,
+          # and GitHub blocks the default GITHUB_TOKEN from pushing workflow files
+          # (the `permissions:` block can't grant this).
           token: ${{ secrets.REPO_TOKEN }}
           commit-message: "ci: Auto-maintain workflows (pin updates + zizmor security autofixes)"
           title: "ci: Auto-maintain workflows (pin updates + zizmor security autofixes)"

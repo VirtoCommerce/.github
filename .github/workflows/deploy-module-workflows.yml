@@ -9,8 +9,7 @@ on:
         type: string
         default: 'v3.800.37'
 
-# Least privilege: the deploy job pushes to the target repo with the REPO_TOKEN
-# PAT (via setup-git-credentials), so the default GITHUB_TOKEN only needs read.
+# Least privilege: pushes use the REPO_TOKEN PAT, so GITHUB_TOKEN needs only read.
 permissions:
   contents: read
 

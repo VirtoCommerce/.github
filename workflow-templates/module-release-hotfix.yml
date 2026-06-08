@@ -11,7 +11,7 @@ on:
         default: true
         type: boolean
 
-# Least-privilege default for all jobs; publish-github-release overrides below.
+# Least-privilege default; publish-github-release overrides below.
 permissions:
   contents: read
 
@@ -49,8 +49,7 @@ jobs:
       uses: VirtoCommerce/vc-github-actions/changelog-generator@master
 
   publish-github-release:
-    # publish-github.yml creates the GitHub release and edits the PR using the
-    # passed GITHUB_TOKEN (envPAT), so this caller must grant write to both.
+    # publish-github.yml creates the release + edits the PR via the passed GITHUB_TOKEN — grant write to both.
     permissions:
       contents: write
       pull-requests: write

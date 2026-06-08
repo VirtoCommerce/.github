@@ -28,7 +28,7 @@ on:
       - '**/cloudDeploy.json'
       - samples/**
 
-# Least-privilege default for all jobs; jobs that need more override below.
+# Least-privilege default; jobs override below where they need more.
 permissions:
   contents: read
 
@@ -38,8 +38,7 @@ jobs:
         (github.event.pull_request.head.repo.full_name == github.repository ||
         github.event.pull_request.head.repo.full_name == '') }}  # Check that PR not from forked repo and not from Dependabot
     runs-on: ubuntu-24.04
-    # Default GITHUB_TOKEN is used to create the GitHub release and update the
-    # PR; everything else uses the REPO_TOKEN PAT (job-level GITHUB_TOKEN env).
+    # Default GITHUB_TOKEN creates the release + updates the PR; rest uses the REPO_TOKEN PAT.
     permissions:
       contents: write
       pull-requests: write
@@ -342,8 +341,7 @@ jobs:
       && github.event_name == 'push'
       && needs.ci.outputs.deployment-folder-exists == 'true'}}
     needs: ci
-    # deploy-cloud.yml writes deployment status via the default GITHUB_TOKEN;
-    # all other privileged work uses inherited PATs.
+    # deploy-cloud.yml writes deployment status via GITHUB_TOKEN; rest uses inherited PATs.
     permissions:
       contents: read
       deployments: write
@@ -355,4 +353,4 @@ jobs:
       moduleBlob: ${{ needs.ci.outputs.blobId }}
       jiraKeys: ${{ needs.ci.outputs.jira-keys }}
       matrix: '{"include":${{ needs.ci.outputs.matrix }}}'
-    secrets: inherit # zizmor: ignore[secrets-inherit] first-party deploy-cloud.yml@v3.800.37 reads org secrets (REPO_TOKEN, VIRTOCLOUD_KEY_VCPT_VCST) it does not declare as workflow_call inputs; explicit passing needs a new deploy-cloud release + tag bump
+    secrets: inherit # zizmor: ignore[secrets-inherit] deploy-cloud.yml@v3.800.37 reads undeclared org secrets; explicit passing needs a new release + tag bump

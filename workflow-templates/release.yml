@@ -5,8 +5,7 @@ name: Release
 on:
   workflow_dispatch:
 
-# Least privilege: the reusable release workflow pushes tags/commits with the
-# REPO_TOKEN PAT, so the default GITHUB_TOKEN only needs read.
+# Least privilege: the reusable workflow pushes with the REPO_TOKEN PAT, so GITHUB_TOKEN needs only read.
 permissions:
   contents: read
 

@@ -19,9 +19,7 @@ on:
         required: true
         default: 'dev'
 
-# Least privilege: the ArgoCD push uses the REPO_TOKEN PAT (via
-# setup-git-credentials); the default GITHUB_TOKEN is only used by the
-# gh-deployments steps to write deployment status.
+# Least privilege: push uses the REPO_TOKEN PAT; GITHUB_TOKEN only writes deployment status.
 permissions:
   contents: read
   deployments: write
