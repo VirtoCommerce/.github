@@ -75,6 +75,9 @@ jobs:
           title: "ci: Auto-maintain workflows (pin updates + zizmor security autofixes)"
           branch: ci/auto-maintain-workflows
           delete-branch: true
+          # Request a review so the maintenance PR notifies a human (must not be
+          # the REPO_TOKEN owner, or GitHub silently drops the self-request).
+          reviewers: AndrewEhlo
           body: |
             Automated maintenance of GitHub Actions workflows:
 
