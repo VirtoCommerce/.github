@@ -50,15 +50,17 @@ jobs:
         # zizmor.yml scopes unpinned-uses. --fix=all applies safe+unsafe fixes —
         # this PR reviews the unsafe ones. Collection must match workflow-security.yml
         # (templates as explicit globs, `.` for actions) or the fixer skips what the
-        # gate flags. Exit 0/14 = ran OK (14 = findings remain); any other code is a
-        # real failure (install/crash) — fail rather than open a misleading PR.
-        # `|| rc=$?` captures the code under the shell's `set -e`.
+        # gate flags. Exit codes: 0 = clean; 11-14 = ran OK but findings remain
+        # (info/low/medium/high by max severity) — expected, the unsafe/unfixable
+        # ones await review in this PR. Any other non-zero (1/2 usage, install/
+        # crash) means it didn't really run — fail rather than open a misleading
+        # PR. `|| rc=$?` captures the code under the shell's `set -e`.
         run: |
           shopt -s nullglob
           rc=0
           pipx run --spec "zizmor==$ZIZMOR_VERSION" zizmor --fix=all \
             --collect=workflows,actions . workflow-templates/*.yml workflow-templates/*.yaml || rc=$?
-          if [ "$rc" -ne 0 ] && [ "$rc" -ne 14 ]; then
+          if [ "$rc" -ne 0 ] && { [ "$rc" -lt 11 ] || [ "$rc" -gt 14 ]; }; then
             echo "::error::zizmor failed to run (exit $rc), not just remaining findings"
             exit "$rc"
           fi
