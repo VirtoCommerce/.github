@@ -19,6 +19,11 @@ on:
         required: true
         default: 'dev'
 
+# Least privilege: push uses the REPO_TOKEN PAT; GITHUB_TOKEN only writes deployment status.
+permissions:
+  contents: read
+  deployments: write
+
 jobs:
   cd:
     runs-on: ubuntu-24.04
@@ -34,18 +39,22 @@ jobs:
         override: true
 
     - name: Checkout ArgoCD repository
-      uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6
+      uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
       with:
         token: ${{ secrets.REPO_TOKEN }}
         repository: "${{ github.event.inputs.appDescriptionRepo }}"
         ref: "${{ github.event.inputs.appDescriptionBranch }}"
+        persist-credentials: false
 
     - name: Update kustomize
       shell: pwsh
       run: |
         cd ${{ github.workspace }}
         cd ./webstore-app/resources
-        kustomize edit set image ${{ github.event.inputs.baseImageName }}=${{ github.event.inputs.artifactLink }}
+        kustomize edit set image "$env:GITHUB_EVENT_INPUTS_BASEIMAGENAME=$env:GITHUB_EVENT_INPUTS_ARTIFACTLINK"
+      env:
+        GITHUB_EVENT_INPUTS_BASEIMAGENAME: ${{ github.event.inputs.baseImageName }}
+        GITHUB_EVENT_INPUTS_ARTIFACTLINK: ${{ github.event.inputs.artifactLink }}
 
     - uses: VirtoCommerce/vc-github-actions/setup-git-credentials-github@master
       with:
@@ -56,13 +65,15 @@ jobs:
       run: |
         if(git status --porcelain |Where {$_ -notmatch '^\?\?'}) # uncommitted changes exist
         {
-          git commit -am 'Automated update ${{ github.repository }} to ${{ github.event.inputs.artifactVersion }}'
+          git commit -am "Automated update ${{ github.repository }} to $env:GITHUB_EVENT_INPUTS_ARTIFACTLINK"
           git push
         }
         else 
         {
           Write-Output 'Nothing to commit, working tree clean'
         }
+      env:
+        GITHUB_EVENT_INPUTS_ARTIFACTLINK: ${{ github.event.inputs.artifactLink }}
 
     - name: Wait for environment is up
       shell: pwsh

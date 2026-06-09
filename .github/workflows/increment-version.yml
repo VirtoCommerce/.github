@@ -1,5 +1,5 @@
-# v3.800.37
-# https://virtocommerce.atlassian.net/browse/VCST-5155
+# v3.800.38
+# https://virtocommerce.atlassian.net/browse/VCST-4492
 name: Increment version
 
 on:
@@ -8,12 +8,12 @@ on:
     inputs:
       forceModuleManifest:
         description: 'Force to update version in module.manifest'
-        required: true
+        required: false
         type: string
         default: 'false'
       versionType:
         description: 'Version type. Can be "Patch", "Minor"'
-        required: true
+        required: false
         type: string
         default: 'Patch'
 
@@ -30,7 +30,9 @@ jobs:
       run: echo "MODULE_MANIFEST=*module.manifest" >> $GITHUB_ENV
 
     - name: Checkout
-      uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6
+      uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      with:
+        persist-credentials: false
 
     - name: Install VirtoCommerce.GlobalTool
       uses: VirtoCommerce/vc-github-actions/setup-vcbuild@master
@@ -42,7 +44,9 @@ jobs:
 
     - name: Increment ${{ inputs.versionType }} Version
       run: |
-        vc-build Increment${{ inputs.versionType }}
+        vc-build Increment${INPUTS_VERSIONTYPE}
         git add Directory.Build.props ${{ env.MODULE_MANIFEST }}
-        git commit -m "ci: Auto Increment${{ inputs.versionType }}"
+        git commit -m "ci: Auto Increment${INPUTS_VERSIONTYPE}"
         git push
+      env:
+        INPUTS_VERSIONTYPE: ${{ inputs.versionType }}

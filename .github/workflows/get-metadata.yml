@@ -1,5 +1,5 @@
-# v3.800.37
-# https://virtocommerce.atlassian.net/browse/VCST-5155
+# v3.800.38
+# https://virtocommerce.atlassian.net/browse/VCST-4492
 name: Get metadata
 
 on:
@@ -40,9 +40,10 @@ jobs:
       run: |
         echo "FETCH_DEPTH=0" >> $GITHUB_ENV
 
-    - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6
+    - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
       with:
         fetch-depth: ${{ env.FETCH_DEPTH }}
+        persist-credentials: false
 
     - name: Get Changelog
       id: changelog
@@ -57,8 +58,12 @@ jobs:
       id: version
       run: |
         if [ '${{ github.event_name }}' == 'workflow_dispatch' ]; then
-          echo "version_suffix=${{ steps.artifactVer.outputs.fullSuffix }}" >> $GITHUB_OUTPUT
+          echo "version_suffix=${STEPS_ARTIFACTVER_OUTPUTS_FULLSUFFIX}" >> $GITHUB_OUTPUT
         else
-          echo "version_suffix=${{ steps.artifactVer.outputs.suffix }}" >> $GITHUB_OUTPUT
+          echo "version_suffix=${STEPS_ARTIFACTVER_OUTPUTS_SUFFIX}" >> $GITHUB_OUTPUT
         fi;
-        echo "image_tag=${{ steps.artifactVer.outputs.taggedVersion }}" >> $GITHUB_OUTPUT
+        echo "image_tag=${STEPS_ARTIFACTVER_OUTPUTS_TAGGEDVERSION}" >> $GITHUB_OUTPUT
+      env:
+        STEPS_ARTIFACTVER_OUTPUTS_FULLSUFFIX: ${{ steps.artifactVer.outputs.fullSuffix }}
+        STEPS_ARTIFACTVER_OUTPUTS_SUFFIX: ${{ steps.artifactVer.outputs.suffix }}
+        STEPS_ARTIFACTVER_OUTPUTS_TAGGEDVERSION: ${{ steps.artifactVer.outputs.taggedVersion }}

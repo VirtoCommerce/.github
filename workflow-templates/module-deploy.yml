@@ -1,5 +1,5 @@
-# v3.800.37
-# https://virtocommerce.atlassian.net/browse/VCST-5155
+# v3.800.38
+# https://virtocommerce.atlassian.net/browse/VCST-4492
 name: Module deployment
 on:
   workflow_dispatch:
@@ -22,8 +22,13 @@ on:
         required: true
         default: 'master'
       appFolder:
-        appDescription: 'ArgoCd full path to folder containing app description code'
+        description: 'ArgoCd full path to folder containing app description code'
         required: true
+
+# Least privilege: push uses the persisted REPO_TOKEN PAT; GITHUB_TOKEN only writes deployment status.
+permissions:
+  contents: read
+  deployments: write
 
 jobs:
   cd:
@@ -39,8 +44,8 @@ jobs:
         env: Development
         no_override: false
 
-    - name: Checkout ArgoCD repository
-      uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6
+    - name: Checkout ArgoCD repository # zizmor: ignore[artipacked] Commit step pushes with this persisted REPO_TOKEN; no setup-git-credentials step
+      uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
       with:
         token: ${{ secrets.REPO_TOKEN }}
         repository: "${{ github.event.inputs.appDescriptionRepo }}"
@@ -50,12 +55,16 @@ jobs:
       shell: pwsh
       run: |
         cd ${{ github.workspace }}
-        cd .${{ github.event.inputs.appFolder }}
+        cd .$env:GITHUB_EVENT_INPUTS_APPFOLDER
         $fileName = "./deployment-cm.yaml"
         $content = Get-Content $fileName
-        $key = "${{ github.event.inputs.moduleId }}"
-        $artifactPath = "`"${{ github.event.inputs.blobUrl }}`""
+        $key = "$env:GITHUB_EVENT_INPUTS_MODULEID"
+        $artifactPath = "`"$env:GITHUB_EVENT_INPUTS_BLOBURL`""
         $content -replace "`"PackageUrl`":\s*.*$key.*", "`"PackageUrl`": $artifactPath" | Set-Content -Path $fileName
+      env:
+        GITHUB_EVENT_INPUTS_APPFOLDER: ${{ github.event.inputs.appFolder }}
+        GITHUB_EVENT_INPUTS_MODULEID: ${{ github.event.inputs.moduleId }}
+        GITHUB_EVENT_INPUTS_BLOBURL: ${{ github.event.inputs.blobUrl }}
 
     - name: Commit deployment-cm change
       shell: pwsh
@@ -64,13 +73,15 @@ jobs:
         {
           git config --global user.name 'GitHub Actions'
           git config user.email --global  'github.actions@virtoway.com'
-          git commit -am 'Automated update ${{ github.repository }} to ${{ github.event.inputs.artifactVersion }}'
+          git commit -am "Automated update ${{ github.repository }} to $env:GITHUB_EVENT_INPUTS_ARTIFACTVERSION"
           git push
         }
         else 
         {
           Write-Output 'Nothing to commit, working tree clean'
         }
+      env:
+        GITHUB_EVENT_INPUTS_ARTIFACTVERSION: ${{ github.event.inputs.artifactVersion }}
 
     - name: Wait for environment is up
       shell: pwsh

@@ -1,0 +1,9 @@
+# actionlint configuration
+paths:
+  # The empty option in create-module-repository's `templateVersion` choice list
+  # is intentional: '' is the documented "use latest" sentinel (input description
+  # says "empty = latest", default: ''). Scope the "empty string" check off here
+  # only — it still applies everywhere else.
+  "**/create-module-repository.yml":
+    ignore:
+      - "string should not be empty"

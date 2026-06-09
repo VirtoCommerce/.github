@@ -1,5 +1,5 @@
-# v3.800.37
-# https://virtocommerce.atlassian.net/browse/VCST-5155
+# v3.800.38
+# https://virtocommerce.atlassian.net/browse/VCST-4492
 name: VC Publish docker
 
 on:
@@ -68,7 +68,10 @@ jobs:
     - name: Check cache status # Warn workflow if fullKey not present
       if: steps.restore-build.outputs.cache-hit != 'true'
       run: |
-        echo -e "\033[33mWarning: Cache not found for input keys: ${{ inputs.fullKey }}. The cache may have been restored from alternative key ${{ inputs.shortKey }}"
+        echo -e "\033[33mWarning: Cache not found for input keys: ${INPUTS_FULLKEY}. The cache may have been restored from alternative key ${INPUTS_SHORTKEY}"
+      env:
+        INPUTS_FULLKEY: ${{ inputs.fullKey }}
+        INPUTS_SHORTKEY: ${{ inputs.shortKey }}
 
     - name: Load Docker image 
       id: load-docker
@@ -77,7 +80,7 @@ jobs:
         dockerTar: ${{ env.DOCKER_TAR }}
 
     - name: Docker Login
-      uses: docker/login-action@650006c6eb7dba73a995cc03b0b2d7f5ca915bee # v4
+      uses: docker/login-action@4907a6ddec9925e35a0a9e82d7399ccc52663121 # v4.1.0
       with:
         registry: ${{ env.PACKAGE_SERVER }}
         username: $GITHUB_ACTOR

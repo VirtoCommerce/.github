@@ -1,5 +1,5 @@
-# v3.800.37
-# https://virtocommerce.atlassian.net/browse/VCST-5155
+# v3.800.38
+# https://virtocommerce.atlassian.net/browse/VCST-4492
 name: VC Publish Github release and Nuget package
 
 on:
@@ -60,7 +60,9 @@ jobs:
     - name: Install VirtoCommerce.GlobalTool
       uses: VirtoCommerce/vc-github-actions/setup-vcbuild@master
 
-    - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6
+    - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      with:
+        persist-credentials: false
 
     - name: Increment Patch Version
       if: ${{ inputs.incrementPatch == 'true' }}
@@ -79,8 +81,10 @@ jobs:
     - name: Exit if cache not restored
       if: steps.restore-build.outputs.cache-hit != 'true'
       run: |
-        echo -e "\033[31mError: Cache not found for input keys: ${{ inputs.fullKey }}"
+        echo -e "\033[31mError: Cache not found for input keys: ${INPUTS_FULLKEY}"
         exit 1
+      env:
+        INPUTS_FULLKEY: ${{ inputs.fullKey }}
 
     - name: List /artifacts folder
       working-directory: ${{ github.workspace }}/artifacts
@@ -122,17 +126,20 @@ jobs:
       if: ${{ inputs.forceBlob && steps.getPrNumber.outputs.prNumber != '' && steps.getPrNumber.outputs.prNumber != null }}
       shell: pwsh
       run: |
-        $prBody = $(gh pr view ${{ steps.getPrNumber.outputs.prNumber }} --repo ${{ github.repository }} --json body | ConvertFrom-Json).body
+        $prBody = $(gh pr view $env:STEPS_GETPRNUMBER_OUTPUTS_PRNUMBER --repo ${{ github.repository }} --json body | ConvertFrom-Json).body
         if ($prBody -match 'https:\/\/vc3prerelease.blob.core.windows.net\/packages\/(\S+)') {
-            $prUpdatedBody = $prBody.Replace($matches[0], "${{ steps.blobRelease.outputs.packageUrl }}")
-            Write-Host "Updated PR #${{ steps.getPrNumber.outputs.prNumber }} body with new blob URL: ${{ steps.blobRelease.outputs.packageUrl }}"
+            $prUpdatedBody = $prBody.Replace($matches[0], "$env:STEPS_BLOBRELEASE_OUTPUTS_PACKAGEURL")
+            Write-Host "Updated PR #$env:STEPS_GETPRNUMBER_OUTPUTS_PRNUMBER body with new blob URL: $env:STEPS_BLOBRELEASE_OUTPUTS_PACKAGEURL"
         } else {
             Write-Warning "No blob URL found in PR body. Skipping update."
             exit 0
         }
-        gh pr edit ${{ steps.getPrNumber.outputs.prNumber }} --repo ${{ github.repository }} --body $prUpdatedBody
+        gh pr edit $env:STEPS_GETPRNUMBER_OUTPUTS_PRNUMBER --repo ${{ github.repository }} --body $prUpdatedBody
         if ($lastExitCode -ne 0) {
             Write-Host "Error: Failed to update PR body"
             exit 1
         }
+      env:
+        STEPS_GETPRNUMBER_OUTPUTS_PRNUMBER: ${{ steps.getPrNumber.outputs.prNumber }}
+        STEPS_BLOBRELEASE_OUTPUTS_PACKAGEURL: ${{ steps.blobRelease.outputs.packageUrl }}
 

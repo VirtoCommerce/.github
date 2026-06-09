@@ -1,5 +1,5 @@
-# v3.800.37
-# https://virtocommerce.atlassian.net/browse/VCST-5155
+# v3.800.38
+# https://virtocommerce.atlassian.net/browse/VCST-4492
 name: Common katalon tests
 
 on:
@@ -79,11 +79,12 @@ jobs:
       uses: VirtoCommerce/vc-github-actions/setup-vcbuild@master
 
     - name: Getting tests
-      uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6
+      uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
       with:
         repository: ${{ env.KATALON_REPO }}
         ref: ${{ env.KATALON_REPO_BRANCH }}
         path: ${{ env.KATALON_PATH }}
+        persist-credentials: false
 
     - name: Docker Env
       uses: VirtoCommerce/vc-github-actions/docker-env@master

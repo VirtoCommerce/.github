@@ -1,5 +1,5 @@
-# v3.800.37
-# https://virtocommerce.atlassian.net/browse/VCST-5155
+# v3.800.38
+# https://virtocommerce.atlassian.net/browse/VCST-4492
 name: VC deployment
 
 on:
@@ -79,8 +79,10 @@ jobs:
         timeout-minutes: 5
         run: |
           dotnet tool install --global VirtoCommerce.GlobalTool || true
-          vc-build CloudEnvStatus -CloudUrl ${{ env.CLOUD_URL }} -CloudToken ${{ secrets.VIRTOCLOUD_KEY_VCPT_VCST }} -EnvironmentName ${{ steps.deployConfig.outputs.deployAppName }} -HealthStatus Healthy -SyncStatus Synced
+          vc-build CloudEnvStatus -CloudUrl ${CLOUD_URL} -CloudToken ${{ secrets.VIRTOCLOUD_KEY_VCPT_VCST }} -EnvironmentName ${STEPS_DEPLOYCONFIG_OUTPUTS_DEPLOYAPPNAME} -HealthStatus Healthy -SyncStatus Synced
         shell: bash
+        env:
+          STEPS_DEPLOYCONFIG_OUTPUTS_DEPLOYAPPNAME: ${{ steps.deployConfig.outputs.deployAppName }}
 
       - name: BUILD_STATE::successful
         if: success()

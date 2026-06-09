@@ -1,0 +1,9 @@
+# zizmor configuration — keep in sync with .pinact.yaml
+rules:
+  # Mirror .pinact.yaml's ignore_actions (VirtoCommerce/.*): first-party actions
+  # may float on a ref (e.g. @master); all third-party actions must be SHA-pinned.
+  unpinned-uses:
+    config:
+      policies:
+        VirtoCommerce/*: ref-pin
+        "*": hash-pin
