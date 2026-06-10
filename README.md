@@ -13,7 +13,7 @@ Module workflow templates include:
 - release.yml - VirtoCommerce Release workflow template.
 - publish-nugets.yml VirtoCommerce nugets publish workflow template.
 
-Platform workflow templates include:
+Platform workflow templates moved to the vc-platform repository:
 
 - platform-ci.yml - VirtoCommerce Platform CI workflow template.
 - platform-release-hotfix.yml - VirtoCommerce Platform release hotfix workflow template.
@@ -29,6 +29,7 @@ To update workflow templates:
 - Update template in `workflow-templates` folder.
 - Increment version in a template.
 - Add a version tag for releases of your workflows.
+- Bump default version for module workflows in deploy-module-workflows.yml
 
  ```git
     git tag -a -m "My template release" v3.800.0
@@ -44,6 +45,12 @@ To update workflow templates:
 ![Deploy workflows](docs/media/specify-version.png)
 
 You can also use `main` as version tag to use latest version from the main branch for update.
+
+- Update composable workflow versions in repositories:
+  - vc-modules
+  - vc-platform
+  - vc-frontend
+
 
 ## Add new workflow templates
 
