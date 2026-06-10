@@ -169,7 +169,7 @@ jobs:
         git add .
         # Skip repos already up to date so a no-op doesn't fail the job.
         if git diff --cached --quiet; then
-          echo "No changes for $DEPLOY_REPO — already up to date."
+          echo "::warning::No changes for $DEPLOY_REPO — already up to date."
           exit 0
         fi
         git commit -m "ci: Auto update Github Action workflows"
