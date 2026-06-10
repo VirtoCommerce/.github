@@ -18,6 +18,9 @@ jobs:
   deploy:
     runs-on: ubuntu-latest
     strategy:
+      # Deploy each repo independently — one repo failing (e.g. archived) must
+      # not cancel the others.
+      fail-fast: false
       matrix:
 # Module workflows
         repoName: [vc-module-algolia-search
@@ -155,7 +158,19 @@ jobs:
 
     - name: Commit changes to ${{ env.DEPLOY_REPO }}
       working-directory: ${{ matrix.repoName }}
+      env:
+        GH_TOKEN: ${{ secrets.REPO_TOKEN }}
       run: |
+        # Skip archived repos (push is rejected) — DEPLOY_REPO comes from job env.
+        if [ "$(gh api "repos/$DEPLOY_REPO" --jq '.archived')" = "true" ]; then
+          echo "::warning::$DEPLOY_REPO is archived — skipping."
+          exit 0
+        fi
         git add .
+        # Skip repos already up to date so a no-op doesn't fail the job.
+        if git diff --cached --quiet; then
+          echo "No changes for $DEPLOY_REPO — already up to date."
+          exit 0
+        fi
         git commit -m "ci: Auto update Github Action workflows"
         git push
