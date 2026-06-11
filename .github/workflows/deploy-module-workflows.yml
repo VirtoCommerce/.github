@@ -102,6 +102,7 @@ jobs:
                   ,vc-module-task-management
                   ,vc-module-tax
                   ,vc-module-test-pr-hook
+                  ,vc-module-test-pr-hook1
                   ,vc-module-u-c-p
                   ,vc-module-webhooks
                   ,vc-module-white-labeling
