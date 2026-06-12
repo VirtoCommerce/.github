@@ -1,8 +1,9 @@
 version: 2
 updates:
   - package-ecosystem: github-actions
+    directories: ["/**"]
     # deprecated/ holds retired reusable workflows — not maintained.
-    directories: ["/**", "!/deprecated/**"]
+    exclude-paths: ["deprecated/**"]
     schedule:
       interval: weekly
     groups:
