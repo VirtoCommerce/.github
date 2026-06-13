@@ -33,6 +33,7 @@ jobs:
                   ,vc-module-azure-search
                   ,vc-module-azureblob-assets
                   ,vc-module-back-in-stock
+                  ,vc-module-background-jobs
                   ,vc-module-backup-restore
                   ,vc-module-builder-io
                   ,vc-module-bulk-actions
