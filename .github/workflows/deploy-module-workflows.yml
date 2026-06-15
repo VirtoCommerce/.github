@@ -56,6 +56,7 @@ jobs:
                   ,vc-module-elastic-search
                   ,vc-module-elastic-search-8
                   ,vc-module-elastic-search-9
+                  ,vc-module-environments-compare
                   ,vc-module-event-bus
                   ,vc-module-export
                   ,vc-module-file-experience-api
