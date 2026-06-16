@@ -249,6 +249,27 @@ jobs:
               --field permission=${TEAMS[$TEAM]}
           done
 
+      - name: Configure pull request webhook
+        # Registers the new repo with the pull-request automation Logic App.
+        # The URL contains a signature, so it is stored as a secret rather than
+        # hardcoded. Skipped automatically when the secret is not configured.
+        # Failure here does not fail the workflow — repo setup is already complete.
+        if: ${{ env.PR_WEBHOOK_URL != '' }}
+        continue-on-error: true
+        env:
+          PR_WEBHOOK_URL: ${{ secrets.MODULE_PR_WEBHOOK_URL }}
+        run: |
+          jq -n --arg url "$PR_WEBHOOK_URL" '{
+            name: "web",
+            active: true,
+            events: ["pull_request"],
+            config: { url: $url, content_type: "json", insecure_ssl: "0" }
+          }' | gh api \
+            --method POST \
+            /repos/$REPO_FULL_NAME/hooks \
+            --input -
+          echo "Pull request webhook configured for $REPO_FULL_NAME."
+
       - name: Checkout .github (workflow templates)
         uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
         with:

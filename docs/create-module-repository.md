@@ -9,6 +9,7 @@ Provisions a complete, standards-compliant VirtoCommerce module repository from 
 3. **Requests approval** — pauses for a designated reviewer via the `create-org-repo` environment gate.
 4. **Creates the GitHub repository** with the computed name `vc-module-{kebab}` and the requested visibility.
 5. **Configures the repository**: merge strategy (squash-only), Actions permissions (`allowed_actions=all`), team permissions, branch structure (`main` + `dev`), and branch protection rules.
+   - Registers a `pull_request` webhook pointing at the automation Logic App (skipped when `MODULE_PR_WEBHOOK_URL` is not set).
 6. **Generates module code** using the selected [vc-cli-module-template](https://github.com/VirtoCommerce/vc-cli-module-template) and commits it.
 7. **Wires up CI/CD**: copies workflow templates (`module-ci.yml`, `release.yml`, `publish-nugets.yml`, `module-release-hotfix.yml`) and writes the cloud deployment config.
 8. **Provisions SonarCloud** (public repos only): creates and binds the project to GitHub, grants project-level admin to the token user, disables Automatic Analysis, and sets the New Code definition to "Previous version".
@@ -24,6 +25,7 @@ Provisions a complete, standards-compliant VirtoCommerce module repository from 
 |--------|-------------|
 | `MODULE_REPO_MGMT_TOKEN` | PAT with `repo` and `admin:org` (team write) scopes. Used for all GitHub API calls and git operations. |
 | `SONARCLOUD_TOKEN` | SonarCloud user token with `Administer` permission on the organization. The workflow self-grants project-level admin after provisioning, so the token does not need to belong to the org owner. Required for public repos. |
+| `MODULE_PR_WEBHOOK_URL` | Full URL (including the `sig` signature) of the pull-request automation Logic App. Registered as a `pull_request` webhook on the new repo. Optional — the webhook step is skipped if this secret is not set. |
 
 ### Variables (Settings → Secrets and variables → Actions → Variables)
 
