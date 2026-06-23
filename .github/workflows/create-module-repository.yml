@@ -88,6 +88,7 @@ jobs:
     outputs:
       repoName:        ${{ steps.names.outputs.repoName }}
       moduleId:        ${{ steps.names.outputs.moduleId }}
+      moduleNameWords: ${{ steps.names.outputs.moduleNameWords }}
       sonarProjectKey: ${{ steps.names.outputs.sonarProjectKey }}
     steps:
       - name: Validate module name
@@ -124,13 +125,37 @@ jobs:
       - name: Compute and print names
         id: names
         run: |
-          KEBAB=$(echo "$MODULE_NAME" | sed 's/\([A-Z]\)/-\1/g' | sed 's/^-//' | tr '[:upper:]' '[:lower:]')
+          # Split the PascalCase moduleName into space-separated words, treating a run
+          # of capitals (an acronym) as one word, so the module template's own pascal
+          # and kebab transforms see real word boundaries:
+          #   "TestModuleMCP" -> "Test Module MCP",  "NewsArticle" -> "News Article"
+          # This spaced form is what we pass to `dotnet new --ModuleName` below.
+          MODULE_WORDS=$(echo "$MODULE_NAME" \
+            | sed -E 's/([a-z0-9])([A-Z])/\1 \2/g' \
+            | sed -E 's/([A-Z]+)([A-Z][a-z])/\1 \2/g')
+
+          # Repo name: words joined by hyphens, lowercased -> "vc-module-test-module-mcp"
+          KEBAB=$(echo "$MODULE_WORDS" | tr '[:upper:]' '[:lower:]' | tr ' ' '-')
           REPO_NAME="vc-module-${KEBAB}"
-          MODULE_ID="${COMPANY_NAME}.${MODULE_NAME}"
+
+          # Derive MODULE_ID exactly as the module template derives its {Namespace},
+          # from the SAME spaced module name passed to `dotnet new`, so the cloudDeploy
+          # artifactKey and the module-id property match the <id> written into the
+          # generated module.manifest. The template's "pascal" form is
+          # lowercase -> title-case each whitespace word -> remove spaces, and
+          # {Namespace} = pascal(CompanyName).pascal(ModuleName).
+          pascal() {
+            echo "$1" \
+              | tr '[:upper:]' '[:lower:]' \
+              | sed -E 's/(^|[[:space:]])([a-z])/\1\u\2/g' \
+              | tr -d '[:space:]'
+          }
+          MODULE_ID="$(pascal "$COMPANY_NAME").$(pascal "$MODULE_WORDS")"
           SONAR_KEY="${GITHUB_REPOSITORY_OWNER}_${REPO_NAME}"
-          echo "repoName=${REPO_NAME}"        >> $GITHUB_OUTPUT
-          echo "moduleId=${MODULE_ID}"        >> $GITHUB_OUTPUT
-          echo "sonarProjectKey=${SONAR_KEY}" >> $GITHUB_OUTPUT
+          echo "repoName=${REPO_NAME}"            >> $GITHUB_OUTPUT
+          echo "moduleId=${MODULE_ID}"            >> $GITHUB_OUTPUT
+          echo "moduleNameWords=${MODULE_WORDS}"  >> $GITHUB_OUTPUT
+          echo "sonarProjectKey=${SONAR_KEY}"     >> $GITHUB_OUTPUT
 
           echo "### Inputs"                                                              >> $GITHUB_STEP_SUMMARY
           echo "| Parameter       | Value |"                                            >> $GITHUB_STEP_SUMMARY
@@ -170,6 +195,7 @@ jobs:
       SONAR_PROJECT_KEY: ${{ needs.summarize-inputs.outputs.sonarProjectKey }}
       VISIBILITY:       ${{ inputs.visibility }}
       MODULE_NAME:      ${{ inputs.moduleName }}
+      MODULE_NAME_WORDS: ${{ needs.summarize-inputs.outputs.moduleNameWords }}
       COMPANY_NAME:     ${{ inputs.companyName }}
       AUTHOR:           ${{ inputs.author }}
       TEMPLATE:         ${{ inputs.template }}
@@ -287,10 +313,13 @@ jobs:
 
       - name: Generate module code
         run: |
-          # Common args accepted by all module templates
+          # Common args accepted by all module templates.
+          # ModuleName is passed in space-separated form (e.g. "Test Module MCP") so the
+          # template's pascal/kebab transforms produce a correctly cased namespace and
+          # folder names; raw PascalCase would flatten to "Testmodulemcp".
           ARGS=(
             --output /tmp/generated
-            --ModuleName    "$MODULE_NAME"
+            --ModuleName    "$MODULE_NAME_WORDS"
             --CompanyName   "$COMPANY_NAME"
             --Author        "$AUTHOR"
           )
