@@ -103,7 +103,6 @@ jobs:
                   ,vc-module-system-operations
                   ,vc-module-task-management
                   ,vc-module-tax
-                  ,vc-module-test-mcp-server
                   ,vc-module-u-c-p
                   ,vc-module-webhooks
                   ,vc-module-white-labeling
