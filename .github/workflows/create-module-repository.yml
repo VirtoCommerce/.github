@@ -124,7 +124,14 @@ jobs:
       - name: Compute and print names
         id: names
         run: |
-          KEBAB=$(echo "$MODULE_NAME" | sed 's/\([A-Z]\)/-\1/g' | sed 's/^-//' | tr '[:upper:]' '[:lower:]')
+          # Convert PascalCase to kebab-case, keeping acronyms intact:
+          #   - boundary between a lowercase/digit and an uppercase letter (e.g. "tM" -> "t-M")
+          #   - boundary between an acronym and a following word (e.g. "MCPServer" -> "MCP-Server")
+          # so "TestModuleMCP" -> "test-module-mcp" (not "test-module-m-c-p").
+          KEBAB=$(echo "$MODULE_NAME" \
+            | sed -E 's/([a-z0-9])([A-Z])/\1-\2/g' \
+            | sed -E 's/([A-Z]+)([A-Z][a-z])/\1-\2/g' \
+            | tr '[:upper:]' '[:lower:]')
           REPO_NAME="vc-module-${KEBAB}"
           MODULE_ID="${COMPANY_NAME}.${MODULE_NAME}"
           SONAR_KEY="${GITHUB_REPOSITORY_OWNER}_${REPO_NAME}"
