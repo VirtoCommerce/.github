@@ -89,6 +89,7 @@ jobs:
                   ,vc-module-push-messages
                   ,vc-module-quote
                   ,vc-module-return
+                  ,vc-module-sales-rep
                   ,vc-module-search
                   ,vc-module-seo
                   ,vc-module-seq-log
