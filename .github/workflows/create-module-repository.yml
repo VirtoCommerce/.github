@@ -21,7 +21,7 @@ on:
         description: 'Company namespace prefix, used for module template compiling'
         required: false
         type: string
-        default: 'VirtoCommerce'
+        default: 'Virto Commerce'
       author:
         description: 'Module author name'
         required: false
