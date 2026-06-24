@@ -260,6 +260,10 @@ jobs:
         with:
           githubToken: ${{ secrets.REPO_TOKEN }}
 
+      # NOTE: This step is intentionally NOT gated on swagger-validation. In the normal flow swagger
+      # runs (and must pass) on the PR into dev before code is merged, so anything reaching dev/master/main
+      # is already validated. The only uncovered case is a direct push that bypasses the PR; that is closed
+      # by the branch protection rule on dev (required swagger check + no direct pushes), not in-workflow.
       - name: Publish Manifest
         if: ${{ (github.ref == 'refs/heads/dev' && github.event_name != 'workflow_dispatch') || github.ref == 'refs/heads/master' || github.ref == 'refs/heads/main' }}
         uses: VirtoCommerce/vc-github-actions/publish-manifest@master
