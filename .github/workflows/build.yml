@@ -92,7 +92,7 @@ jobs:
       run: |
         echo "FETCH_DEPTH=0" >> $GITHUB_ENV
 
-    - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
+    - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
       with:
         fetch-depth: ${{ env.FETCH_DEPTH }}
         persist-credentials: false
@@ -144,7 +144,7 @@ jobs:
 
     - name: Cache build artifacts
       if: ${{ inputs.uploadPackage == 'true' }}
-      uses: actions/cache@27d5ce7f107fe9357f9df03efb73ab90386fccae # v5
+      uses: actions/cache@2c8a9bd7457de244a408f35966fab2fb45fda9c8 # v6.0.0
       with:
         key: ${{ steps.cache-key.outputs.packageFullKey }}
         path: |
@@ -170,7 +170,7 @@ jobs:
 
     - name: Cache Docker image
       if: ${{ inputs.uploadDocker == 'true' }}
-      uses: actions/cache@27d5ce7f107fe9357f9df03efb73ab90386fccae # v5
+      uses: actions/cache@2c8a9bd7457de244a408f35966fab2fb45fda9c8 # v6.0.0
       with:
         key: ${{ steps.cache-key.outputs.dockerFullKey }}
         path: |
