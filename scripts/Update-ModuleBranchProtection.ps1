@@ -19,10 +19,25 @@
     applied by the create-module-repository workflow. Branches that don't
     exist are still skipped.
 
+    Add-only (no removal): to just add one or more checks without removing
+    anything, pass an empty -OldChecks, list only the new check(s) in
+    -NewChecks, and use -AddIfMissing. Existing contexts are read and
+    preserved automatically, so -NewChecks need not repeat them. Because no
+    old check is present to trigger the swap path, -AddIfMissing is required
+    for the addition to apply (note it will also create protection from
+    scratch on unprotected branches).
+
 .EXAMPLE
     pwsh ./Update-ModuleBranchProtection.ps1 -WhatIf
     pwsh ./Update-ModuleBranchProtection.ps1
     pwsh ./Update-ModuleBranchProtection.ps1 -Repos vc-module-news,vc-module-cart
+
+.EXAMPLE
+    # Add a single check without removing any existing ones.
+    pwsh ./Update-ModuleBranchProtection.ps1 `
+        -OldChecks @() `
+        -NewChecks 'swagger-validation' `
+        -AddIfMissing -WhatIf
 #>
 [CmdletBinding(SupportsShouldProcess = $true)]
 param(
@@ -121,6 +136,17 @@ function Invoke-PutProtection {
         [System.IO.File]::WriteAllText($tmp.FullName, $json, [System.Text.UTF8Encoding]::new($false))
         $out = gh api --method PUT "/repos/$RepoFull/branches/$Branch/protection" --input $tmp.FullName 2>&1
         if ($LASTEXITCODE -ne 0) {
+            # Renamed repos answer unsafe methods with 301/307 pointing at the
+            # canonical resource by id (repositories/<id>/...). gh auto-follows
+            # redirects for GET but not for PUT, so on that one case resolve the
+            # current name and retry once. Other failures pass straight through.
+            $canonical = Resolve-RenamedRepo -Output "$out"
+            if ($canonical -and $canonical -ne $RepoFull) {
+                $out = gh api --method PUT "/repos/$canonical/branches/$Branch/protection" --input $tmp.FullName 2>&1
+                if ($LASTEXITCODE -eq 0) {
+                    return [pscustomobject]@{ Status = 'OK'; Reason = "$Action (repo renamed -> $canonical)" }
+                }
+            }
             return [pscustomobject]@{ Status = 'ERROR'; Reason = "$out" }
         }
     }
@@ -128,6 +154,18 @@ function Invoke-PutProtection {
         Remove-Item $tmp.FullName -ErrorAction SilentlyContinue
     }
     return [pscustomobject]@{ Status = 'OK'; Reason = $Action }
+}
+
+# When a write fails with a rename redirect (301/307 carrying a
+# repositories/<id>/... URL), resolve the repo's current full_name from that id.
+# Returns $null when the output isn't such a redirect or the id won't resolve.
+function Resolve-RenamedRepo {
+    param([string]$Output)
+    if ("$Output" -notmatch '\b30[17]\b' -or "$Output" -notmatch 'repositories/(\d+)') { return $null }
+    $repoId = $Matches[1]
+    $full = gh api "repositories/$repoId" --jq '.full_name' 2>&1
+    if ($LASTEXITCODE -ne 0) { return $null }
+    return "$full".Trim()
 }
 
 function Update-BranchProtection {

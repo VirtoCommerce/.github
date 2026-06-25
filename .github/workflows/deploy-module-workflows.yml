@@ -39,7 +39,7 @@ jobs:
                   ,vc-module-bulk-actions
                   ,vc-module-cart
                   ,vc-module-catalog
-                  ,vc-module-catalog-csv-import
+                  ,vc-module-catalog-csv-export-import
                   ,vc-module-catalog-personalization
                   ,vc-module-catalog-publishing
                   ,vc-module-content
@@ -104,7 +104,7 @@ jobs:
                   ,vc-module-system-operations
                   ,vc-module-task-management
                   ,vc-module-tax
-                  ,vc-module-u-c-p
+                  ,vc-module-ucp
                   ,vc-module-webhooks
                   ,vc-module-white-labeling
                   ,vc-module-x-api
