@@ -1,31 +1,26 @@
 #requires -Version 7.0
 <#
 .SYNOPSIS
-    Swap required status checks on protected branches of existing module repos.
+    Declaratively enforce the required status checks on protected branches of
+    existing module repos.
 
 .DESCRIPTION
-    Mirrors the change applied to new repos by
-    .github/workflows/create-module-repository.yml (the "Protect branches" step):
-    replaces the old required status checks with the configured new ones on
-    `dev`. Any of the configured old checks that are present get
-    removed; any of the new checks that are missing get added.
+    Forces the required status checks to be EXACTLY -DesiredChecks on every
+    targeted branch, regardless of what each repo currently has: missing checks
+    are added and any check not in the list is removed. -DesiredChecks defaults
+    to the canonical policy in
+    .github/workflows/create-module-repository.yml (the "Protect branches"
+    step), so a bare run converges every repo to that set.
 
-    Read-modify-write: fetches each branch's current protection, updates only the
-    contexts list, and PUTs it back. Other settings (reviews, enforce_admins,
-    restrictions, etc.) are preserved as-is.
+    Read-modify-write: fetches each branch's current protection, replaces only
+    the status-check contexts list, and PUTs it back. All other settings
+    (reviews, enforce_admins, restrictions, etc.) are preserved as-is.
 
     With -AddIfMissing, the script also creates protection on branches that
-    exist but have no protection rules at all, mirroring the default policy
-    applied by the create-module-repository workflow. Branches that don't
-    exist are still skipped.
-
-    Add-only (no removal): to just add one or more checks without removing
-    anything, pass an empty -OldChecks, list only the new check(s) in
-    -NewChecks, and use -AddIfMissing. Existing contexts are read and
-    preserved automatically, so -NewChecks need not repeat them. Because no
-    old check is present to trigger the swap path, -AddIfMissing is required
-    for the addition to apply (note it will also create protection from
-    scratch on unprotected branches).
+    exist but have no protection rules at all (mirroring the default policy
+    applied by the create-module-repository workflow), and enables status-check
+    enforcement on branches that are protected but have it switched off.
+    Branches that don't exist are still skipped.
 
 .EXAMPLE
     pwsh ./Update-ModuleBranchProtection.ps1 -WhatIf
@@ -33,27 +28,27 @@
     pwsh ./Update-ModuleBranchProtection.ps1 -Repos vc-module-news,vc-module-cart
 
 .EXAMPLE
-    # Add a single check without removing any existing ones.
+    # Converge to an explicit custom set instead of the canonical default.
     pwsh ./Update-ModuleBranchProtection.ps1 `
-        -OldChecks @() `
-        -NewChecks 'swagger-validation' `
-        -AddIfMissing -WhatIf
+        -DesiredChecks 'ci', 'SonarCloud Code Analysis', 'swagger-validation' `
+        -WhatIf
 #>
 [CmdletBinding(SupportsShouldProcess = $true)]
 param(
     [string]$Org = 'VirtoCommerce',
     [string[]]$Repos,
     [string[]]$Branches = @('dev'),
-    [string[]]$OldChecks = @(
-        'module-katalon-tests / e2e-tests',
-        'UI-auto-tests / ui-autotests',
-        'UI-auto-tests / dry-run',
-        'auto-tests / auto-autotests'
-    ),
-    [string[]]$NewChecks = @(
+    # The required checks to enforce, verbatim: any check not listed is removed
+    # from each branch. Default mirrors the canonical policy in
+    # .github/workflows/create-module-repository.yml.
+    [string[]]$DesiredChecks = @(
+        'license/cla',
+        'ci',
+        'SonarCloud Code Analysis',
         'auto-tests / auto-autotests (mysql)',
         'auto-tests / auto-autotests (postgres)',
-        'auto-tests / auto-autotests (sqlserver)'
+        'auto-tests / auto-autotests (sqlserver)',
+        'swagger-validation'
     ),
     [switch]$AddIfMissing,
     # PAT with repo admin on the target repos. If omitted, falls back to existing
@@ -94,15 +89,11 @@ function Get-Enabled {
 # Default protection policy for newly-created protection. Mirrors the
 # "Protect branches" step in .github/workflows/create-module-repository.yml.
 function New-DefaultProtectionPayload {
-    param([string[]]$NewChecks)
+    param([string[]]$Contexts)
     return [ordered]@{
         required_status_checks = [ordered]@{
             strict   = $false
-            contexts = @(
-                'license/cla',
-                'ci',
-                'SonarCloud Code Analysis'
-            ) + $NewChecks
+            contexts = @($Contexts)
         }
         enforce_admins                = $false
         required_pull_request_reviews = [ordered]@{
@@ -173,8 +164,7 @@ function Update-BranchProtection {
     param(
         [string]$RepoFull,
         [string]$Branch,
-        [string[]]$OldChecks,
-        [string[]]$NewChecks,
+        [string[]]$DesiredChecks,
         [bool]$AddIfMissing
     )
 
@@ -186,7 +176,7 @@ function Update-BranchProtection {
             if (-not $AddIfMissing) {
                 return [pscustomobject]@{ Status = 'SKIP'; Reason = 'no protection (use -AddIfMissing to create)' }
             }
-            $payload = New-DefaultProtectionPayload -NewChecks $NewChecks
+            $payload = New-DefaultProtectionPayload -Contexts $DesiredChecks
             $action  = "create protection -> [$($payload.required_status_checks.contexts -join ', ')]"
             return Invoke-PutProtection -RepoFull $RepoFull -Branch $Branch -Payload $payload -Action $action
         }
@@ -203,27 +193,21 @@ function Update-BranchProtection {
             return [pscustomobject]@{ Status = 'SKIP'; Reason = 'no required_status_checks (use -AddIfMissing to add)' }
         }
         # Branch is protected but status-check enforcement is off; synthesize an
-        # empty block so the add-new-check path below enables it without
-        # touching the rest of the existing protection.
+        # empty block so the logic below enables it with the desired checks
+        # without touching the rest of the existing protection.
         $rsc = [pscustomobject]@{ strict = $false; contexts = @() }
     }
 
-    $contexts   = @($rsc.contexts)
-    $toRemove   = @($OldChecks  | Where-Object { $contexts -contains $_ })
-    $toAdd      = @($NewChecks  | Where-Object { $contexts -notcontains $_ })
-    $hasAnyOld  = $toRemove.Count -gt 0
-    $hasAllNew  = $toAdd.Count -eq 0
-
-    if ($hasAnyOld) {
-        $contexts = @($contexts | Where-Object { $toRemove -notcontains $_ }) + $toAdd
+    # Force the set to be exactly $DesiredChecks: add what's missing, drop
+    # anything not listed.
+    $contexts = @($rsc.contexts)
+    $desired  = @($DesiredChecks)
+    $missing  = @($desired  | Where-Object { $contexts -notcontains $_ })
+    $extra    = @($contexts | Where-Object { $desired  -notcontains $_ })
+    if ($missing.Count -eq 0 -and $extra.Count -eq 0) {
+        return [pscustomobject]@{ Status = 'SKIP'; Reason = 'already up to date' }
     }
-    elseif ($AddIfMissing -and -not $hasAllNew) {
-        $contexts = @($contexts) + $toAdd
-    }
-    else {
-        $reason = if ($hasAllNew) { 'already up to date' } else { 'no old checks present (use -AddIfMissing to add anyway)' }
-        return [pscustomobject]@{ Status = 'SKIP'; Reason = $reason }
-    }
+    $contexts = $desired
 
     # GET returns nested { enabled: bool } objects; PUT expects flat booleans.
     $payload = [ordered]@{
@@ -281,7 +265,7 @@ try {
         foreach ($branch in $Branches) {
             $r = Update-BranchProtection `
                 -RepoFull $repo -Branch $branch `
-                -OldChecks $OldChecks -NewChecks $NewChecks `
+                -DesiredChecks $DesiredChecks `
                 -AddIfMissing:$AddIfMissing
             $line = [pscustomobject]@{
                 Repo   = $repo
