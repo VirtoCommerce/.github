@@ -452,7 +452,8 @@ jobs:
                 "SonarCloud Code Analysis",
                 "auto-tests / auto-autotests (mysql)",
                 "auto-tests / auto-autotests (postgres)",
-                "auto-tests / auto-autotests (sqlserver)"
+                "auto-tests / auto-autotests (sqlserver)",
+                "swagger-validation"
               ]
             },
             "enforce_admins": false,
