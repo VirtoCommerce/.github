@@ -1,13 +1,19 @@
-name: Deploy Module workflows
+name: Deploy Module build props
 
 on:
+  # TEST ONLY — remove before merge. A workflow_dispatch-only workflow can't be
+  # triggered from a non-default branch, so a push trigger on the feature branch
+  # lets us exercise this new workflow before it lands on main.
+  push:
+    branches:
+      - VCST-5372
   workflow_dispatch:
     inputs:
       version:
         description: 'Version to deploy'
         required: true
         type: string
-        default: 'v3.800.39'
+        default: 'VCST-5372' #'v3.800.39'
 
 # Least privilege: pushes use the REPO_TOKEN PAT, so GITHUB_TOKEN needs only read.
 permissions:
@@ -17,7 +23,7 @@ jobs:
 
   # Load the shared module list (modules.json at repo root) once and expose it as
   # a JSON array so the deploy matrix can fan out over it. Single source of truth
-  # shared with deploy-module-build-props.yml.
+  # shared with deploy-module-workflows.yml.
   prepare:
     runs-on: ubuntu-latest
     outputs:
@@ -26,12 +32,12 @@ jobs:
     - name: Checkout .github
       uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
       with:
-        ref: ${{ inputs.version }}
+        ref: ${{ inputs.version || github.ref_name }} #${{ inputs.version }}
         persist-credentials: false
 
     - name: Load module list
       id: load
-      run: echo "repos=$(jq -c . modules.json)" >> "$GITHUB_OUTPUT"
+      run: echo 'repos=["vc-module-catalog"]' >> "$GITHUB_OUTPUT" #echo "repos=$(jq -c . modules.json)" >> "$GITHUB_OUTPUT"
 
   deploy:
     needs: prepare
@@ -47,16 +53,19 @@ jobs:
       TARGET_REPO: ${{ github.repository_owner }}/${{ matrix.repoName }}
       # Modules use 'dev' as their default/integration branch — target it explicitly
       # rather than relying on the repo's default-branch pointer.
-      TARGET_BRANCH: 'dev'
+      TARGET_BRANCH: 'test-VCST-5372' #'dev'
       TEMPLATE_REPO_FOLDER: 'main'
-      TEMPLATES_LIST: 'release.yml publish-nugets.yml module-release-hotfix.yml module-ci.yml'
+      # Fully-owned props files copied verbatim into each module root (overwrite = safe,
+      # we own them). They are imported by — never merged into — the module's own
+      # Directory.Build.props, so per-module settings (VersionPrefix, etc.) are preserved.
+      BUILD_PROPS_LIST: 'nuget-audit.props'
       WORKING_DIR: ${{ github.workspace }}
     steps:
 
     - name: Checkout .github
       uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
       with:
-        ref: ${{ inputs.version }}
+        ref: ${{ inputs.version || github.ref_name }} #${{ inputs.version }}
         path: ${{ env.TEMPLATE_REPO_FOLDER }}
         persist-credentials: false
 
@@ -69,16 +78,18 @@ jobs:
         token: ${{ secrets.REPO_TOKEN }}
         persist-credentials: false
 
-    - name: Copy workflows
-      working-directory: ${{ env.WORKING_DIR }}/${{ env.TEMPLATE_REPO_FOLDER }}/workflow-templates
-      env:
-        DEST_FOLDER: '${{ env.WORKING_DIR }}/${{ matrix.repoName }}/.github/workflows/'
+    - name: Copy build props and ensure import
+      # Shared with create-module-repository.yml so the managed-block markers stay
+      # identical across both call sites.
       run: |
-        cp ${{ env.TEMPLATES_LIST }} ${DEST_FOLDER}
+        bash "${WORKING_DIR}/${TEMPLATE_REPO_FOLDER}/scripts/ensure-build-props-import.sh" \
+          "${WORKING_DIR}/${{ matrix.repoName }}" \
+          "${WORKING_DIR}/${TEMPLATE_REPO_FOLDER}/common-build-props" \
+          "${BUILD_PROPS_LIST}"
 
     - name: Setup Git Credentials
       uses: VirtoCommerce/vc-github-actions/setup-git-credentials-github@master
-      with: 
+      with:
         githubToken: ${{ secrets.REPO_TOKEN }}
 
     - name: Commit changes to ${{ env.TARGET_REPO }}
@@ -97,5 +108,5 @@ jobs:
           echo "::warning::No changes for $TARGET_REPO — already up to date."
           exit 0
         fi
-        git commit -m "ci: Auto update Github Action workflows"
+        git commit -m "ci: Auto update common build props"
         git push origin "HEAD:${TARGET_BRANCH}"

@@ -391,6 +391,16 @@ jobs:
           cp dotgithub/workflow-templates/module-release-hotfix.yml  repo/.github/workflows/
           echo "Workflows added: module-ci.yml, release.yml, publish-nugets.yml, module-release-hotfix.yml"
 
+      - name: Add common build props
+        # Same shared script as deploy-module-build-props.yml — the new module is
+        # born with the owned props (e.g. nuget-audit.props) imported by its
+        # generated Directory.Build.props, so NuGet auditing is on from day one.
+        run: |
+          bash dotgithub/scripts/ensure-build-props-import.sh \
+            repo \
+            dotgithub/common-build-props \
+            "nuget-audit.props"
+
       - name: Add .github community files
         run: |
           cat > repo/.github/CODEOWNERS << 'EOF'
@@ -577,54 +587,47 @@ jobs:
             --input -
           echo "Repository custom properties set."
 
-      - name: Register repository in deploy-module-workflows.yml
-        # Inserts the new repo into the sorted matrix list and commits back.
+      - name: Register repository in modules.json
+        # Adds the new repo to the shared module list (modules.json), consumed by
+        # deploy-module-workflows.yml and deploy-module-build-props.yml, then commits back.
         # Failure here does not fail the workflow — repo setup is already complete.
         # Git user identity is already configured by the Setup Git credentials step.
         continue-on-error: true
         working-directory: dotgithub
         run: |
           NEW_REPO="$REPO_NAME"
-          FILE=".github/workflows/deploy-module-workflows.yml"
+          FILE="modules.json"
 
           python3 - "$NEW_REPO" "$FILE" << 'PYEOF'
-          import sys, re
+          import sys, json
           repo, path = sys.argv[1], sys.argv[2]
           with open(path) as f:
-              content = f.read()
-          m = re.search(r'(        repoName: \[)([\s\S]*?)(\])', content)
-          if not m:
-              sys.exit('repoName list not found')
-          entries = [e.strip().lstrip(',') for e in m.group(2).splitlines() if e.strip()]
+              entries = json.load(f)
           if repo in entries:
               print(f'{repo} already in list — nothing to do')
               sys.exit(0)
-          entries.append(repo)
-          entries.sort()
-          indent_match = re.search(r'\n( +),', m.group(2))
-          indent = indent_match.group(1) if indent_match else ' ' * (len(m.group(1)) - 1)
-          new_body = entries[0] + ''.join(f'\n{indent},{e}' for e in entries[1:])
-          new_content = content[:m.start()] + m.group(1) + new_body + '\n' + indent + m.group(3) + content[m.end():]
+          entries = sorted(set(entries) | {repo})
           with open(path, 'w') as f:
-              f.write(new_content)
+              json.dump(entries, f, indent=2)
+              f.write('\n')
           print(f'Added {repo}')
           PYEOF
 
           git add "$FILE"
           if git diff --cached --quiet; then
-            echo "$NEW_REPO was already in deploy-module-workflows.yml — no commit needed."
+            echo "$NEW_REPO was already in modules.json — no commit needed."
           else
-            git commit -m "ci: Add $NEW_REPO to deploy-module-workflows"
+            git commit -m "ci: Add $NEW_REPO to modules.json"
             # Pull and rebase to handle concurrent pushes, then retry once.
             if ! git push; then
               echo "Push failed — pulling and rebasing..."
               if git pull --rebase && git push; then
-                echo "$NEW_REPO registered in deploy-module-workflows.yml."
+                echo "$NEW_REPO registered in modules.json."
               else
-                echo "::warning::Could not register $NEW_REPO in deploy-module-workflows.yml after rebase — add it manually."
+                echo "::warning::Could not register $NEW_REPO in modules.json after rebase — add it manually."
               fi
             else
-              echo "$NEW_REPO registered in deploy-module-workflows.yml."
+              echo "$NEW_REPO registered in modules.json."
             fi
           fi
 
