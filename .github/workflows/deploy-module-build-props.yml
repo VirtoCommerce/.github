@@ -1,19 +1,13 @@
 name: Deploy Module build props
 
 on:
-  # TEST ONLY — remove before merge. A workflow_dispatch-only workflow can't be
-  # triggered from a non-default branch, so a push trigger on the feature branch
-  # lets us exercise this new workflow before it lands on main.
-  push:
-    branches:
-      - VCST-5372
   workflow_dispatch:
     inputs:
       version:
         description: 'Version to deploy'
         required: true
         type: string
-        default: 'VCST-5372' #'v3.800.39'
+        default: 'v3.800.39'
 
 # Least privilege: pushes use the REPO_TOKEN PAT, so GITHUB_TOKEN needs only read.
 permissions:
@@ -32,12 +26,12 @@ jobs:
     - name: Checkout .github
       uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
       with:
-        ref: ${{ inputs.version || github.ref_name }} #${{ inputs.version }}
+        ref: ${{ inputs.version }}
         persist-credentials: false
 
     - name: Load module list
       id: load
-      run: echo 'repos=["vc-module-catalog"]' >> "$GITHUB_OUTPUT" #echo "repos=$(jq -c . modules.json)" >> "$GITHUB_OUTPUT"
+      run: echo "repos=$(jq -c . modules.json)" >> "$GITHUB_OUTPUT"
 
   deploy:
     needs: prepare
@@ -53,7 +47,7 @@ jobs:
       TARGET_REPO: ${{ github.repository_owner }}/${{ matrix.repoName }}
       # Modules use 'dev' as their default/integration branch — target it explicitly
       # rather than relying on the repo's default-branch pointer.
-      TARGET_BRANCH: 'test-VCST-5372' #'dev'
+      TARGET_BRANCH: 'dev'
       TEMPLATE_REPO_FOLDER: 'main'
       # Fully-owned props files copied verbatim into each module root (overwrite = safe,
       # we own them). They are imported by — never merged into — the module's own
@@ -65,7 +59,7 @@ jobs:
     - name: Checkout .github
       uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
       with:
-        ref: ${{ inputs.version || github.ref_name }} #${{ inputs.version }}
+        ref: ${{ inputs.version }}
         path: ${{ env.TEMPLATE_REPO_FOLDER }}
         persist-credentials: false
 
@@ -92,21 +86,21 @@ jobs:
       with:
         githubToken: ${{ secrets.REPO_TOKEN }}
 
-    - name: Commit changes to ${{ env.TARGET_REPO }}
-      working-directory: ${{ matrix.repoName }}
-      env:
-        GH_TOKEN: ${{ secrets.REPO_TOKEN }}
-      run: |
-        # Skip archived repos (push is rejected) — TARGET_REPO comes from job env.
-        if [ "$(gh api "repos/$TARGET_REPO" --jq '.archived')" = "true" ]; then
-          echo "::warning::$TARGET_REPO is archived — skipping."
-          exit 0
-        fi
-        git add .
-        # Skip repos already up to date so a no-op doesn't fail the job.
-        if git diff --cached --quiet; then
-          echo "::warning::No changes for $TARGET_REPO — already up to date."
-          exit 0
-        fi
-        git commit -m "ci: Auto update common build props"
-        git push origin "HEAD:${TARGET_BRANCH}"
+    # - name: Commit changes to ${{ env.TARGET_REPO }}
+    #   working-directory: ${{ matrix.repoName }}
+    #   env:
+    #     GH_TOKEN: ${{ secrets.REPO_TOKEN }}
+    #   run: |
+    #     # Skip archived repos (push is rejected) — TARGET_REPO comes from job env.
+    #     if [ "$(gh api "repos/$TARGET_REPO" --jq '.archived')" = "true" ]; then
+    #       echo "::warning::$TARGET_REPO is archived — skipping."
+    #       exit 0
+    #     fi
+    #     git add .
+    #     # Skip repos already up to date so a no-op doesn't fail the job.
+    #     if git diff --cached --quiet; then
+    #       echo "::warning::No changes for $TARGET_REPO — already up to date."
+    #       exit 0
+    #     fi
+    #     git commit -m "ci: Auto update common build props"
+    #     git push origin "HEAD:${TARGET_BRANCH}"

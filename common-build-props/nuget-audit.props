@@ -18,8 +18,7 @@
     <!-- Audit direct AND transitive dependencies -->
     <NuGetAuditMode>all</NuGetAuditMode>
     <!-- Report advisories at high severity and above (high + critical; skip moderate/low to reduce noise) -->
-    <!-- TEST ONLY — restore to 'high'. Lowered to NuGet's previous default to broaden test coverage. -->
-    <NuGetAuditLevel>low</NuGetAuditLevel>
+    <NuGetAuditLevel>high</NuGetAuditLevel>
   </PropertyGroup>
 
   <ItemGroup>
@@ -31,10 +30,6 @@
     <!-- AutoMapper DoS via uncontrolled recursion (CVE-2026-32933); transitive via VirtoCommerce,
          no fixed version published yet. -->
     <NuGetAuditSuppress Include="https://github.com/advisories/GHSA-rvv3-g6hj-g44x" />
-    <!-- TEST ONLY — remove. RestSharp high advisory (GHSA-9pq7-rcxv-47vq); paired with the
-         temporary vulnerable PackageReference in vc-module-catalog to verify the suppression path
-         lets CI pass. -->
-    <NuGetAuditSuppress Include="https://github.com/advisories/GHSA-9pq7-rcxv-47vq" />
   </ItemGroup>
 
 </Project>
