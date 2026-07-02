@@ -65,3 +65,29 @@ else
   ' "${DBP}" > "${DBP}.tmp" && mv "${DBP}.tmp" "${DBP}"
   echo "Injected managed import block into existing ${DBP}."
 fi
+
+# Surface any NuGet audit settings the module defines on its OWN (element tags
+# outside the managed block — the import line uses the lowercase file name, so it
+# never matches). The imported props override property VALUES (evaluated last),
+# but <NuGetAuditSuppress> items are additive: a stale local suppress can silently
+# outlive a central change. Report to the workflow run summary when available, and
+# always as a warning annotation / log line.
+inline_audit=$(grep -nE '<NuGetAudit' "${DBP}" || true)
+if [ -n "${inline_audit}" ]; then
+  module=$(basename "${TARGET_DIR}")
+  echo "::warning::${module}: Directory.Build.props defines its own NuGet audit settings; these are centrally managed via ${PROPS_LIST}. Property values are overridden by the import; NuGetAuditSuppress items are additive — remove the inline settings to keep one source of truth."
+  if [ -n "${GITHUB_STEP_SUMMARY:-}" ]; then
+    {
+      echo "### ⚠️ ${module}: inline NuGet audit settings found"
+      echo ""
+      echo "\`Directory.Build.props\` defines NuGet audit settings outside the managed block, now centrally managed by the imported \`${PROPS_LIST}\`:"
+      echo "- Property values (\`NuGetAudit\` / \`NuGetAuditMode\` / \`NuGetAuditLevel\`) are **overridden** by the import (evaluated last)."
+      echo "- \`NuGetAuditSuppress\` items are **additive** — a stale local entry can outlive a central change. Remove them to keep a single source of truth."
+      echo ""
+      echo "Found:"
+      echo '```'
+      printf '%s\n' "${inline_audit}"
+      echo '```'
+    } >> "${GITHUB_STEP_SUMMARY}"
+  fi
+fi
