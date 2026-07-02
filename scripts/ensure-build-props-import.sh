@@ -1,21 +1,11 @@
 #!/usr/bin/env bash
-# Ensure a module's root Directory.Build.props IMPORTS the fully-owned common
-# build props (e.g. nuget-audit.props). Shared by:
-#   - deploy-module-build-props.yml   (distribute to existing modules)
-#   - create-module-repository.yml    (scaffold at module creation)
-#
-# Keeping this in one place means the managed-block markers are identical across
-# both call sites, so the in-place "refresh" path always matches what was written.
-#
-# Behaviour: copy each owned props file into the target repo root (overwrite =
-# safe, we own them) and inject/refresh a marker-delimited managed block that
-# imports them. Everything outside the markers is left untouched. A module with
-# no Directory.Build.props is an anomaly — fail loudly rather than fabricate one.
+# Ensure a module's root Directory.Build.props imports the owned common build props
+# (e.g. nuget-audit.props). Shared by deploy-module-build-props.yml and
+# create-module-repository.yml so the managed-block markers stay identical.
+# Copies each owned props file into the target root and injects/refreshes a
+# marker-delimited <Import> block; content outside the markers is untouched.
 #
 # Usage: ensure-build-props-import.sh <target_dir> <props_src_dir> <props_list>
-#   target_dir     module repo working copy (must contain Directory.Build.props)
-#   props_src_dir  dir holding the owned *.props files (…/common-build-props)
-#   props_list     space-separated props filenames to copy and import
 set -euo pipefail
 
 if [ "$#" -ne 3 ]; then
@@ -31,12 +21,13 @@ BEGIN='<!-- BEGIN managed: VirtoCommerce common build props -->'
 END='<!-- END managed: VirtoCommerce common build props -->'
 DBP="${TARGET_DIR}/Directory.Build.props"
 
+# A module is expected to own a root Directory.Build.props — fail loudly, don't fabricate.
 if [ ! -f "${DBP}" ]; then
   echo "::error::${DBP} not found — expected the module to own a root Directory.Build.props. Not creating one."
   exit 1
 fi
 
-# Copy each owned props file to the target root and build the <Import> lines.
+# Copy each owned props file to the target root and build its <Import> line.
 imports=''
 for f in ${PROPS_LIST}; do
   cp "${PROPS_SRC_DIR}/${f}" "${TARGET_DIR}/${f}"
@@ -45,19 +36,21 @@ done
 
 block="  ${BEGIN}"$'\n'"${imports}  ${END}"
 
-# Values are passed to awk via the environment and read with ENVIRON[] rather than
-# `-v`, because `-v` interprets backslash escape sequences in the value; ENVIRON is
-# literal for any content. (Shell quoting is unaffected either way.)
+# awk values are passed via env and read with ENVIRON[] (not -v, which interprets
+# backslash escapes); ENVIRON is literal for any content.
 if grep -qF "${BEGIN}" "${DBP}"; then
-  # Managed block already present — replace everything between the markers.
-  # Guard first: the refresh below skips every line from BEGIN until it sees END,
-  # so a missing or misplaced END would drop the rest of the file (including
-  # </Project>) and commit invalid XML. Require a well-formed END after BEGIN,
-  # otherwise refuse to rewrite and fail loudly for manual repair.
+  # Refresh: replace everything between the markers. Guard first — a missing or
+  # misplaced END would make the awk skip to EOF and drop </Project>. Test marker
+  # presence with grep -q inside `if` (set -e safe); computing line numbers via a
+  # failing $() would trip set -e and abort before the diagnostic could print.
+  if ! grep -qF "${END}" "${DBP}"; then
+    echo "::error::${DBP}: managed block is malformed (BEGIN without a matching END). Refusing to rewrite — fix the markers manually."
+    exit 1
+  fi
   begin_ln=$(grep -nF "${BEGIN}" "${DBP}" | head -1 | cut -d: -f1)
   end_ln=$(grep -nF "${END}" "${DBP}" | head -1 | cut -d: -f1)
-  if [ -z "${end_ln}" ] || [ "${end_ln}" -le "${begin_ln}" ]; then
-    echo "::error::${DBP}: managed block is malformed (BEGIN marker without a matching END after it). Refusing to rewrite to avoid corrupting the file — fix the markers manually."
+  if [ "${end_ln}" -le "${begin_ln}" ]; then
+    echo "::error::${DBP}: managed block is malformed (END appears before BEGIN). Refusing to rewrite — fix the markers manually."
     exit 1
   fi
   BLOCK="${block}" BEGIN_MARK="${BEGIN}" END_MARK="${END}" awk '
@@ -68,20 +61,26 @@ if grep -qF "${BEGIN}" "${DBP}"; then
   ' "${DBP}" > "${DBP}.tmp" && mv "${DBP}.tmp" "${DBP}"
   echo "Refreshed managed import block in ${DBP}."
 else
-  # No managed block yet — inject it just before the final </Project>.
+  # Inject before the final </Project>.
   BLOCK="${block}" awk '
     /<\/Project>/ && !done { print ENVIRON["BLOCK"]; done=1 }
     { print }
-  ' "${DBP}" > "${DBP}.tmp" && mv "${DBP}.tmp" "${DBP}"
+  ' "${DBP}" > "${DBP}.tmp"
+  # No </Project> (missing or self-closing) means nothing was added — verify the block
+  # landed rather than deploy a props file with no import (which leaves audit off).
+  if ! grep -qF "${BEGIN}" "${DBP}.tmp"; then
+    rm -f "${DBP}.tmp"
+    echo "::error::${DBP}: could not inject the managed import block (no </Project> to anchor it). Refusing to proceed — fix the file."
+    exit 1
+  fi
+  mv "${DBP}.tmp" "${DBP}"
   echo "Injected managed import block into existing ${DBP}."
 fi
 
-# Surface any NuGet audit settings the module defines on its OWN (element tags
-# outside the managed block — the import line uses the lowercase file name, so it
-# never matches). The imported props override property VALUES (evaluated last),
-# but <NuGetAuditSuppress> items are additive: a stale local suppress can silently
-# outlive a central change. Report to the workflow run summary when available, and
-# always as a warning annotation / log line.
+# Warn if the module defines its own NuGet audit settings outside the managed block
+# (the import line is lowercase, so it never matches <NuGetAudit). Property values are
+# overridden by the import, but <NuGetAuditSuppress> items are additive — a stale local
+# suppress can outlive a central change, so surface it for cleanup.
 inline_audit=$(grep -nE '<NuGetAudit' "${DBP}" || true)
 if [ -n "${inline_audit}" ]; then
   module=$(basename "${TARGET_DIR}")
