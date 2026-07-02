@@ -50,6 +50,16 @@ block="  ${BEGIN}"$'\n'"${imports}  ${END}"
 # literal for any content. (Shell quoting is unaffected either way.)
 if grep -qF "${BEGIN}" "${DBP}"; then
   # Managed block already present — replace everything between the markers.
+  # Guard first: the refresh below skips every line from BEGIN until it sees END,
+  # so a missing or misplaced END would drop the rest of the file (including
+  # </Project>) and commit invalid XML. Require a well-formed END after BEGIN,
+  # otherwise refuse to rewrite and fail loudly for manual repair.
+  begin_ln=$(grep -nF "${BEGIN}" "${DBP}" | head -1 | cut -d: -f1)
+  end_ln=$(grep -nF "${END}" "${DBP}" | head -1 | cut -d: -f1)
+  if [ -z "${end_ln}" ] || [ "${end_ln}" -le "${begin_ln}" ]; then
+    echo "::error::${DBP}: managed block is malformed (BEGIN marker without a matching END after it). Refusing to rewrite to avoid corrupting the file — fix the markers manually."
+    exit 1
+  fi
   BLOCK="${block}" BEGIN_MARK="${BEGIN}" END_MARK="${END}" awk '
     index($0, ENVIRON["BEGIN_MARK"]) { print ENVIRON["BLOCK"]; skip=1; next }
     skip && index($0, ENVIRON["END_MARK"]) { skip=0; next }
