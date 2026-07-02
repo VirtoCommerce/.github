@@ -59,6 +59,28 @@ You can also use `main` as version tag to use latest version from the main branc
 
 ![Templates-list](docs/media/templates-list.png)
 
+## Distribute common build props
+
+Alongside workflow templates, shared MSBuild settings are distributed to module repos. The canonical files live in the `common-build-props` folder (sibling of `workflow-templates`) and are fully owned here — for example `nuget-audit.props`, which enables NuGet vulnerable-dependency auditing (`NuGetAudit` / NU190x) with a per-advisory suppression list.
+
+The `Deploy Module build props` workflow (`deploy-module-build-props.yml`) copies these files into each module's repository root and ensures the module's own `Directory.Build.props` **imports** them via a marker-delimited managed block:
+
+```xml
+<!-- BEGIN managed: VirtoCommerce common build props -->
+<Import Project="$(MSBuildThisFileDirectory)nuget-audit.props" Condition="Exists('$(MSBuildThisFileDirectory)nuget-audit.props')" />
+<!-- END managed: VirtoCommerce common build props -->
+```
+
+The props files are imported, never merged, so each module keeps its own settings (`VersionPrefix`, `TreatWarningsAsErrors`, etc.). Only the region between the markers is managed; everything else in the module's `Directory.Build.props` is left untouched, and the deploy fails loudly if a module has no `Directory.Build.props` rather than fabricating one.
+
+The copy-and-import logic lives in a single shared script, `scripts/ensure-build-props-import.sh`, used by both `deploy-module-build-props.yml` (distribute to existing modules) and `create-module-repository.yml` (scaffold at creation), so a new module is born with the props already imported.
+
+To change the distributed settings: edit the file under `common-build-props`, tag a new version, and run `Deploy Module build props` with that version — the same version/tag flow as workflow templates. To distribute an additional props file, add its name to the `BUILD_PROPS_LIST` environment variable in `deploy-module-build-props.yml`.
+
+## Shared module list
+
+The list of module repositories that deploy workflows fan out over lives in a single file, `modules.json` (repo root), consumed by both `deploy-module-workflows.yml` and `deploy-module-build-props.yml`. Each workflow has a small `prepare` job that reads `modules.json` and feeds it into the deploy matrix via `fromJson`. Add or remove a module in one place — `modules.json` — and every dependent workflow picks it up.
+
 ## Supply-chain security: pinned third-party actions
 
 Every third-party `uses:` reference in this repo (anything not under `VirtoCommerce/*`) is pinned to a full 40-character commit SHA with a trailing `# tag` comment, per the [GitHub Actions hardening guide](https://docs.github.com/en/actions/security-for-github-actions/security-guides/security-hardening-for-github-actions#using-third-party-actions). Tags are mutable; SHAs are not.
