@@ -45,19 +45,22 @@ done
 
 block="  ${BEGIN}"$'\n'"${imports}  ${END}"
 
+# Values are passed to awk via the environment and read with ENVIRON[] rather than
+# `-v`, because `-v` interprets backslash escape sequences in the value; ENVIRON is
+# literal for any content. (Shell quoting is unaffected either way.)
 if grep -qF "${BEGIN}" "${DBP}"; then
   # Managed block already present — replace everything between the markers.
-  awk -v block="${block}" -v b="${BEGIN}" -v e="${END}" '
-    index($0, b) { print block; skip=1; next }
-    skip && index($0, e) { skip=0; next }
+  BLOCK="${block}" BEGIN_MARK="${BEGIN}" END_MARK="${END}" awk '
+    index($0, ENVIRON["BEGIN_MARK"]) { print ENVIRON["BLOCK"]; skip=1; next }
+    skip && index($0, ENVIRON["END_MARK"]) { skip=0; next }
     skip { next }
     { print }
   ' "${DBP}" > "${DBP}.tmp" && mv "${DBP}.tmp" "${DBP}"
   echo "Refreshed managed import block in ${DBP}."
 else
   # No managed block yet — inject it just before the final </Project>.
-  awk -v block="${block}" '
-    /<\/Project>/ && !done { print block; done=1 }
+  BLOCK="${block}" awk '
+    /<\/Project>/ && !done { print ENVIRON["BLOCK"]; done=1 }
     { print }
   ' "${DBP}" > "${DBP}.tmp" && mv "${DBP}.tmp" "${DBP}"
   echo "Injected managed import block into existing ${DBP}."
