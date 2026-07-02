@@ -86,21 +86,21 @@ jobs:
       with:
         githubToken: ${{ secrets.REPO_TOKEN }}
 
-    # - name: Commit changes to ${{ env.TARGET_REPO }}
-    #   working-directory: ${{ matrix.repoName }}
-    #   env:
-    #     GH_TOKEN: ${{ secrets.REPO_TOKEN }}
-    #   run: |
-    #     # Skip archived repos (push is rejected) — TARGET_REPO comes from job env.
-    #     if [ "$(gh api "repos/$TARGET_REPO" --jq '.archived')" = "true" ]; then
-    #       echo "::warning::$TARGET_REPO is archived — skipping."
-    #       exit 0
-    #     fi
-    #     git add .
-    #     # Skip repos already up to date so a no-op doesn't fail the job.
-    #     if git diff --cached --quiet; then
-    #       echo "::warning::No changes for $TARGET_REPO — already up to date."
-    #       exit 0
-    #     fi
-    #     git commit -m "ci: Auto update common build props"
-    #     git push origin "HEAD:${TARGET_BRANCH}"
+    - name: Commit changes to ${{ env.TARGET_REPO }}
+      working-directory: ${{ matrix.repoName }}
+      env:
+        GH_TOKEN: ${{ secrets.REPO_TOKEN }}
+      run: |
+        # Skip archived repos (push is rejected) — TARGET_REPO comes from job env.
+        if [ "$(gh api "repos/$TARGET_REPO" --jq '.archived')" = "true" ]; then
+          echo "::warning::$TARGET_REPO is archived — skipping."
+          exit 0
+        fi
+        git add .
+        # Skip repos already up to date so a no-op doesn't fail the job.
+        if git diff --cached --quiet; then
+          echo "::warning::No changes for $TARGET_REPO — already up to date."
+          exit 0
+        fi
+        git commit -m "ci: Auto update common build props"
+        git push origin "HEAD:${TARGET_BRANCH}"
