@@ -61,10 +61,12 @@ jobs:
           echo "Files changed:"; git diff --name-only "$BEFORE" "$AFTER"
 
           # version-only when every changed +/- line is a "<VersionPrefix|version>X.Y.Z</...>" bump.
+          # || true: a content-less diff (rename/mode-only) makes grep match nothing (exit 1), which
+          # pipefail+set -e would turn into a step failure; fall through and let CI decide instead.
           CHANGED=$(git diff --unified=0 "$BEFORE" "$AFTER" | grep -E '^[+-]' | grep -vE '^(\+\+\+|---)' \
-            | sed -E 's/^[+-][[:space:]]*//; s/[[:space:]]*$//')
+            | sed -E 's/^[+-][[:space:]]*//; s/[[:space:]]*$//' || true)
           NON_VERSION=$(echo "$CHANGED" \
-            | grep -vxE '<(VersionPrefix|version)>[0-9]+\.[0-9]+\.[0-9]+</(VersionPrefix|version)>' \
+            | grep -vxE '<VersionPrefix>[0-9]+\.[0-9]+\.[0-9]+</VersionPrefix>|<version>[0-9]+\.[0-9]+\.[0-9]+</version>' \
             | grep -v '^$' || true)
 
           if [ -n "$CHANGED" ] && [ -z "$NON_VERSION" ]; then
