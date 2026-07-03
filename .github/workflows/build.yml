@@ -79,7 +79,7 @@ jobs:
         node-version: '24'
 
     - name: Set up Java 17
-      uses: actions/setup-java@ad2b38190b15e4d6bdf0c97fb4fca8412226d287 # v5.3.0
+      uses: actions/setup-java@1bcf9fb12cf4aa7d266a90ae39939e61372fe520 # v5.4.0
       with:
         distribution: 'temurin'
         java-version: '17'
@@ -144,7 +144,7 @@ jobs:
 
     - name: Cache build artifacts
       if: ${{ inputs.uploadPackage == 'true' }}
-      uses: actions/cache@2c8a9bd7457de244a408f35966fab2fb45fda9c8 # v6.0.0
+      uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
       with:
         key: ${{ steps.cache-key.outputs.packageFullKey }}
         path: |
@@ -170,7 +170,7 @@ jobs:
 
     - name: Cache Docker image
       if: ${{ inputs.uploadDocker == 'true' }}
-      uses: actions/cache@2c8a9bd7457de244a408f35966fab2fb45fda9c8 # v6.0.0
+      uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
       with:
         key: ${{ steps.cache-key.outputs.dockerFullKey }}
         path: |
