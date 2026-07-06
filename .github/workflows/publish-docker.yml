@@ -57,7 +57,7 @@ jobs:
     steps: 
 
     - name: Get Docker image from cache
-      uses: actions/cache@2c8a9bd7457de244a408f35966fab2fb45fda9c8 # v6.0.0
+      uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
       id: restore-build
       with:
         key: ${{ inputs.fullKey }}
@@ -80,7 +80,7 @@ jobs:
         dockerTar: ${{ env.DOCKER_TAR }}
 
     - name: Docker Login
-      uses: docker/login-action@650006c6eb7dba73a995cc03b0b2d7f5ca915bee # v4.2.0
+      uses: docker/login-action@c99871dec2022cc055c062a10cc1a1310835ceb4 # v4.3.0
       with:
         registry: ${{ env.PACKAGE_SERVER }}
         username: $GITHUB_ACTOR
