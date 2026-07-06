@@ -353,7 +353,7 @@ jobs:
     if: ${{ ((github.ref == 'refs/heads/dev') && (github.event_name == 'push')) ||
         (github.event_name == 'workflow_dispatch') || ((github.base_ref == 'dev') && (github.event_name == 'pull_request')) }}
     needs: ci
-    uses: VirtoCommerce/.github/.github/workflows/pytest-tests.yml@v3.800.39
+    uses: VirtoCommerce/.github/.github/workflows/pytest-tests.yml@v3.800.41
     with:
       installModules: 'false'
       installCustomModule: 'true'
@@ -408,7 +408,7 @@ jobs:
     permissions:
       contents: read
       deployments: write
-    uses: VirtoCommerce/.github/.github/workflows/deploy-cloud.yml@v3.800.39
+    uses: VirtoCommerce/.github/.github/workflows/deploy-cloud.yml@v3.800.41
     with:
       releaseSource: module
       moduleId: ${{ needs.ci.outputs.moduleId }}
@@ -416,4 +416,4 @@ jobs:
       moduleBlob: ${{ needs.ci.outputs.blobId }}
       jiraKeys: ${{ needs.ci.outputs.jira-keys }}
       matrix: '{"include":${{ needs.ci.outputs.matrix }}}'
-    secrets: inherit # zizmor: ignore[secrets-inherit] deploy-cloud.yml@v3.800.39 reads undeclared org secrets; explicit passing needs a new release + tag bump
+    secrets: inherit # zizmor: ignore[secrets-inherit] deploy-cloud.yml@v3.800.41 reads undeclared org secrets; explicit passing needs a new release + tag bump
