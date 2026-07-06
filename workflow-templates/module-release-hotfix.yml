@@ -1,4 +1,4 @@
-# v3.800.40
+# v3.800.41
 # https://virtocommerce.atlassian.net/browse/VCST-5372
 name: Release hotfix
 
@@ -17,12 +17,12 @@ permissions:
 
 jobs:
   test:
-    uses: VirtoCommerce/.github/.github/workflows/test-and-sonar.yml@v3.800.40
+    uses: VirtoCommerce/.github/.github/workflows/test-and-sonar.yml@v3.800.41
     secrets:
       sonarToken: ${{ secrets.SONAR_TOKEN }}
 
   build:
-    uses: VirtoCommerce/.github/.github/workflows/build.yml@v3.800.40    
+    uses: VirtoCommerce/.github/.github/workflows/build.yml@v3.800.41    
     with:
       uploadPackage: 'true'
       uploadDocker: 'false'
@@ -55,7 +55,7 @@ jobs:
       pull-requests: write
     needs:
       [build, test, get-metadata]
-    uses: VirtoCommerce/.github/.github/workflows/publish-github.yml@v3.800.40
+    uses: VirtoCommerce/.github/.github/workflows/publish-github.yml@v3.800.41
     with:
       fullKey: ${{ needs.build.outputs.packageFullKey }}
       changeLog: '${{ needs.get-metadata.outputs.changeLog }}'
