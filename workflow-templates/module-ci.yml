@@ -362,8 +362,10 @@ jobs:
           STEPS_PUSH_BUILD_INFO_TO_JIRA_OUTPUTS_RESPONSE: ${{ steps.push_build_info_to_jira.outputs.response }}
 
   auto-tests:
-    if: ${{ ((github.ref == 'refs/heads/dev') && (github.event_name == 'push')) ||
-        (github.event_name == 'workflow_dispatch') || ((github.base_ref == 'dev') && (github.event_name == 'pull_request')) }}
+    # !cancelled() keeps this running when detect-version-bump is skipped (PR); ci.result == 'success' still gates on the build.
+    if: ${{ !cancelled() && needs.ci.result == 'success' && (
+        ((github.ref == 'refs/heads/dev') && (github.event_name == 'push')) ||
+        (github.event_name == 'workflow_dispatch') || ((github.base_ref == 'dev') && (github.event_name == 'pull_request'))) }}
     needs: ci
     uses: VirtoCommerce/.github/.github/workflows/pytest-tests.yml@v3.800.40
     with:
@@ -382,8 +384,10 @@ jobs:
       sendgridApiKey: ${{ secrets.SENDGRID_APIKEY_4E2E_AUTOTESTS }}
 
   swagger-validation:
-    if: ${{ github.ref == 'refs/heads/dev' ||
-        (github.event_name == 'pull_request' && github.base_ref == 'dev') }}
+    # !cancelled() keeps this running when detect-version-bump is skipped (PR); ci.result == 'success' still gates on the build.
+    if: ${{ !cancelled() && needs.ci.result == 'success' && (
+        github.ref == 'refs/heads/dev' ||
+        (github.event_name == 'pull_request' && github.base_ref == 'dev')) }}
     needs: ci
     runs-on: ubuntu-24.04
     permissions:
