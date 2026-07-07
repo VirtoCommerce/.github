@@ -628,6 +628,29 @@ jobs:
             fi
           fi
 
+      - name: NuGet Trusted Publishing instructions
+        # nuget.org has no API for Trusted Publishing policies and requires a
+        # federated (MFA) login, so the 3 policies for this repo can't be created
+        # from CI. Surface the exact manual command for an operator to run locally.
+        # See .github/scripts/nuget-trusted-publishers/README.md.
+        run: |
+          {
+            echo "### ⚠️ Manual step: NuGet Trusted Publishing"
+            echo ""
+            echo "nuget.org has no API for Trusted Publishing policies (federated MFA login only),"
+            echo "so the 3 publishing policies for **\`$REPO_NAME\`** must be created manually."
+            echo ""
+            echo "Log in to nuget.org in your browser, then from a checkout of the \`.github\` repo run"
+            echo "(you'll be prompted to paste your nuget.org \`cookie:\` header — see the README):"
+            echo ""
+            echo '```bash'
+            echo "cd .github/scripts/nuget-trusted-publishers"
+            echo "node add-nuget-trusted-publishers.mjs --repos $REPO_NAME"
+            echo '```'
+            echo ""
+            echo "This creates policies for \`module-ci.yml\`, \`publish-nugets.yml\` and \`module-release-hotfix.yml\`."
+          } >> "$GITHUB_STEP_SUMMARY"
+
       - name: Delete GitHub repository (rollback)
         if: failure() && steps.create-repo.outputs.created == 'true'
         run: |
