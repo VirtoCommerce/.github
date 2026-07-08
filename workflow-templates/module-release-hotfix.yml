@@ -52,8 +52,10 @@ jobs:
   # job boundaries (GitHub redacts masked values from job outputs), and the push can't move
   # into the cross-repo publish-github.yml (its job_workflow_ref wouldn't match this repo's
   # policy — NuGet/login issues #6/#9). job_workflow_ref here is module-release-hotfix.yml, which matches.
+  # needs get-metadata too: a metadata failure must block the push, else the package publishes while
+  # publish-github-release (which needs get-metadata) is skipped — package with no GitHub release.
   publish-nuget:
-    needs: [build, test]
+    needs: [build, test, get-metadata]
     runs-on: ubuntu-24.04
     permissions:
       contents: read
