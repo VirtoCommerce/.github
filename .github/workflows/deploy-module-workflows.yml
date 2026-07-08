@@ -90,11 +90,13 @@ jobs:
                   ,vc-module-quote
                   ,vc-module-return
                   ,vc-module-sales-rep
+                  ,vc-module-sanity
                   ,vc-module-search
                   ,vc-module-seo
                   ,vc-module-seq-log
                   ,vc-module-shipping
                   ,vc-module-shipstation
+                  ,vc-module-shopify-taxonomy
                   ,vc-module-sitemaps
                   ,vc-module-skyflow
                   ,vc-module-sql-queries
