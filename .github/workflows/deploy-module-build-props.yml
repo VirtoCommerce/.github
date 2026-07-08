@@ -1,4 +1,4 @@
-name: Deploy Module workflows
+name: Deploy Module build props
 
 on:
   workflow_dispatch:
@@ -17,7 +17,7 @@ jobs:
 
   # Load the shared module list (modules.json at repo root) once and expose it as
   # a JSON array so the deploy matrix can fan out over it. Single source of truth
-  # shared with deploy-module-build-props.yml.
+  # shared with deploy-module-workflows.yml.
   prepare:
     runs-on: ubuntu-latest
     outputs:
@@ -49,7 +49,10 @@ jobs:
       # rather than relying on the repo's default-branch pointer.
       TARGET_BRANCH: 'dev'
       TEMPLATE_REPO_FOLDER: 'main'
-      TEMPLATES_LIST: 'release.yml publish-nugets.yml module-release-hotfix.yml module-ci.yml'
+      # Fully-owned props files copied verbatim into each module root (overwrite = safe,
+      # we own them). They are imported by — never merged into — the module's own
+      # Directory.Build.props, so per-module settings (VersionPrefix, etc.) are preserved.
+      BUILD_PROPS_LIST: 'nuget-audit.props'
       WORKING_DIR: ${{ github.workspace }}
     steps:
 
@@ -69,16 +72,21 @@ jobs:
         token: ${{ secrets.REPO_TOKEN }}
         persist-credentials: false
 
-    - name: Copy workflows
-      working-directory: ${{ env.WORKING_DIR }}/${{ env.TEMPLATE_REPO_FOLDER }}/workflow-templates
+    - name: Copy build props and ensure import
+      # Shared with create-module-repository.yml so the managed-block markers stay
+      # identical across both call sites. matrix.repoName is passed via env (not
+      # interpolated into the shell) to avoid a template-injection sink.
       env:
-        DEST_FOLDER: '${{ env.WORKING_DIR }}/${{ matrix.repoName }}/.github/workflows/'
+        MODULE_DIR: ${{ matrix.repoName }}
       run: |
-        cp ${{ env.TEMPLATES_LIST }} ${DEST_FOLDER}
+        bash "${WORKING_DIR}/${TEMPLATE_REPO_FOLDER}/scripts/ensure-build-props-import.sh" \
+          "${WORKING_DIR}/${MODULE_DIR}" \
+          "${WORKING_DIR}/${TEMPLATE_REPO_FOLDER}/common-build-props" \
+          "${BUILD_PROPS_LIST}"
 
     - name: Setup Git Credentials
       uses: VirtoCommerce/vc-github-actions/setup-git-credentials-github@master
-      with: 
+      with:
         githubToken: ${{ secrets.REPO_TOKEN }}
 
     - name: Commit changes to ${{ env.TARGET_REPO }}
@@ -97,5 +105,5 @@ jobs:
           echo "::warning::No changes for $TARGET_REPO — already up to date."
           exit 0
         fi
-        git commit -m "ci: Auto update Github Action workflows"
+        git commit -m "ci: Auto update common build props"
         git push origin "HEAD:${TARGET_BRANCH}"
