@@ -167,7 +167,7 @@ jobs:
 
       - name: Teams notification
         if: ${{ github.event_name == 'schedule' && steps.collect-deprecation-warnings.outputs.result == 'true' }}
-        uses: VirtoCommerce/vc-github-actions/publish-teams-webhook-notification@master
+        uses: VirtoCommerce/.github/actions/publish-teams-webhook-notification@VCST-5414
         with:
           teamsWebhookUrl: ${{ env.TEAMS_WEBHOOK_URL }}
           mentions: '@(@{id = "859369bc-81d3-498d-a3a8-ceba4dd6c8a4"; name = "Andrew.Kubyshkin" })'

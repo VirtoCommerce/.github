@@ -139,10 +139,10 @@ jobs:
 
     steps:
     - name: Install VirtoCommerce.GlobalTool
-      uses: VirtoCommerce/vc-github-actions/setup-vcbuild@master
+      uses: VirtoCommerce/.github/actions/setup-vcbuild@VCST-5414
 
     - name: Docker Env Full
-      uses: VirtoCommerce/vc-github-actions/docker-env-full@master
+      uses: VirtoCommerce/.github/actions/docker-env-full@VCST-5414
       with:
         frontendZipUrl: ${{ inputs.frontendZipUrl }}
         installModules: ${{ inputs.installModules }}
@@ -159,7 +159,7 @@ jobs:
         appInsightsInstrumentationKey: ${{ secrets.appInsightsInstrumentationKey }}
 
     - name: Run Auto Tests
-      uses: VirtoCommerce/vc-github-actions/run-pytest-tests@master
+      uses: VirtoCommerce/.github/actions/run-pytest-tests@VCST-5414
       with:
         adminPassword: ${{ inputs.adminPassword }}
         adminUsername: ${{ inputs.adminUsername }}

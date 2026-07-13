@@ -77,7 +77,7 @@ jobs:
         cp ${{ env.TEMPLATES_LIST }} ${DEST_FOLDER}
 
     - name: Setup Git Credentials
-      uses: VirtoCommerce/vc-github-actions/setup-git-credentials-github@master
+      uses: VirtoCommerce/.github/actions/setup-git-credentials-github@VCST-5414
       with: 
         githubToken: ${{ secrets.REPO_TOKEN }}
 

@@ -36,7 +36,7 @@ jobs:
     steps: 
     
     - name: Start deployment
-      uses: VirtoCommerce/vc-github-actions/gh-deployments@master
+      uses: VirtoCommerce/.github/actions/gh-deployments@VCST-5414
       id: deployment
       with:
         step: start
@@ -106,7 +106,7 @@ jobs:
       run: echo "BUILD_STATE=failed"  >> $GITHUB_ENV
 
     - name: Update GitHub deployment status
-      uses: VirtoCommerce/vc-github-actions/gh-deployments@master
+      uses: VirtoCommerce/.github/actions/gh-deployments@VCST-5414
       if: always()
       with:
         step: finish
