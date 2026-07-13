@@ -1,0 +1,21 @@
+name: 'publish-artifact-link'
+description: 'Publishes artifact link to PR comment'
+inputs:
+  githubToken:
+    description: "GitHub token"
+    required: false
+  repoOrg:
+    description: "repo org"
+    required: false
+    default: "VirtoCommerce"
+  artifactUrl:
+    description: "Link to artifact"
+    required: true
+  downloadComment:
+    description: "Comment template"
+    required: false
+    default: "Download artifact URL:"
+
+runs:
+  using: 'node24'
+  main: 'dist/index.js' 

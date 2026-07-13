@@ -1,0 +1,23 @@
+{
+  "name": "msteams-send-message",
+  "version": "1.0.0",
+  "description": "Publishes artifact link to PR comment",
+  "main": "index.js",
+  "dependencies": {
+    "typescript": "^4.3.5",
+    "@actions/core": "^1.4.0",
+    "request": "^2.88.2"
+  },
+  "devDependencies": {
+    "@types/request": "^2.48.6",
+    "@vercel/ncc": "^0.38.0",
+    "typescript": "^5.8.3"
+  },
+  "scripts": {
+    "build": "ncc build src/index.ts -o dist --source-map --license licenses.txt",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC"
+}

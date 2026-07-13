@@ -1,0 +1,235 @@
+name: 'Docker Environment'
+description: 'Runs Docker Environment'
+inputs:
+  githubUser:
+    description: 'User for github packages'
+    required: true
+  githubToken:
+    description: 'Token for github packages'
+    required: true
+  dockerTag:
+    description: 'Docker tag'
+    required: false
+  platformDockerTag:
+    description: 'Platform Docker Tag'
+    required: false
+    default: 'local-latest'
+  platformImage:
+    description: 'Platform Docker Image'
+    required: false
+  validateSwagger:
+    description: 'Enable or disable swagger validation'
+    required: false
+    default: 'true'
+  installCustomModule:
+    description: 'Enable or disable custom module ver. installation'
+    required: false
+    default: 'false'
+  customModuleId:
+    description: 'Custom Module id'
+    required: false
+    default: ''
+  customModuleUrl:
+    description: 'Custom module Module url'
+    required: false
+    default: ''
+  requiredModulesListUrl:
+    description: 'The URL of the JSON file with the required modules list'
+    required: false
+    default: ''
+  installModules:
+    description: 'Enable or disable "Install Modules" step'
+    required: false
+    default: 'true'
+  installSampleData:
+    description: 'Enable or disable "Install Sample Data" step'
+    required: true
+    default: 'true'
+  envDir:
+    description: 'Directory with environment files'
+    required: true
+    default: '.'
+  appInsightsInstrumentationKey:
+    description: 'Application Insights instrumentation key (GUID). Passed to the platform container as `ApplicationInsights:InstrumentationKey`. When set, the run waits ~40s at the end so the short-lived container flushes its telemetry.'
+    required: false
+    default: ''
+
+
+runs:
+  using: "composite"
+  steps:
+
+    - name: Install Commerce Bundle Modules
+      if: ${{ inputs.installModules  == 'true' }}
+      working-directory: ${{ github.action_path }}
+      env: 
+        INSTALL_FOLDER: 'modules'
+      shell: pwsh
+      run: |
+        Write-Host "`e[33mInstall Modules step started."
+        # Pre-create modules/modules so vc-build's default DiscoveryPath exists on first
+        # run; otherwise it emits a "Discovery path not found" workflow annotation.
+        New-Item -Path "./${{ env.INSTALL_FOLDER}}/modules" -ItemType "directory" -Force | Out-Null
+        Push-Location ./${{ env.INSTALL_FOLDER}}
+        vc-build install -Edge -skip InstallPlatform
+
+    - name: Install Custom Module
+      if: ${{ inputs.installCustomModule == 'true' }}
+      working-directory: ${{ github.action_path }}
+      shell: pwsh
+      run: |
+        Write-Host "::group::Start Custom Module step started."
+        ./scripts/common-packages-list.ps1 -customModuleId ${{ inputs.customModuleId }} -customModuleUrl ${{ inputs.customModuleUrl }} -requiredModulesListUrl "${{ inputs.requiredModulesListUrl }}"
+        Write-Host "::endgroup::"
+        $dockerFiles = "https://raw.githubusercontent.com/VirtoCommerce/vc-docker/feat/net10/linux/platform/Dockerfile;https://raw.githubusercontent.com/VirtoCommerce/vc-docker/master/linux/platform/wait-for-it.sh"
+        Write-Host "`e[32mDownload Dockerfile and build image"
+        $dockerFilesArray = $dockerFiles.Split(';')
+        foreach($file in $dockerFilesArray){
+            try {
+                $fileName = Split-Path $file -Leaf
+                Invoke-WebRequest -Uri $file -OutFile $fileName -UseBasicParsing -OperationTimeoutSeconds 15 -RetryIntervalSec 1 -MaximumRetryCount 3
+                Write-Host "Downloaded '$fileName' successfully"
+            }
+            catch {
+                Write-Error "Failed to download $file. Error: $_"
+                exit 1
+            }
+        }
+        Write-Host "::group::Build platform docker image"
+        docker build ./ --build-arg SOURCE=. --tag "${{ inputs.platformImage }}:${{ inputs.platformDockerTag }}"
+        Write-Host "::endgroup::"
+
+    - name: .env files
+      env:
+        ENV_DIR: ${{ inputs.envDir }}
+      shell: bash
+      working-directory: ${{ github.action_path }}
+      run: |
+        echo -e '\033[33m.env files started.'
+        mkdir -p ${{ inputs.envDir }}/.docker
+        touch ${{ inputs.envDir }}/.docker/platform.env
+        echo -e 'Platform environment variables:'
+        cat ${{ inputs.envDir }}/.docker/platform.env
+
+    - name: Generate Application Insights configuration
+      shell: pwsh
+      env:
+        APP_INSIGHTS_IKEY_INPUT: ${{ inputs.appInsightsInstrumentationKey }}
+      run: |
+        # ROLE_NAME identifies this platform container in Application Insights:
+        # <repo>-<run>-<attempt>-<job>. Exported via $GITHUB_ENV for downstream actions.
+        $repoName = "$env:GITHUB_REPOSITORY".Split('/')[-1]
+        $jobSuffix = if ($env:GITHUB_JOB) { "-$env:GITHUB_JOB" } else { '' }
+        $roleName = "$repoName-$env:GITHUB_RUN_ID-$env:GITHUB_RUN_ATTEMPT$jobSuffix"
+        Add-Content -Path $env:GITHUB_ENV -Value "ROLE_NAME=$roleName"
+        # Surface the role name on the run summary page (annotations section).
+        Write-Host "::notice title=Application Insights role name::$roleName"
+        $aiKey = $env:APP_INSIGHTS_IKEY_INPUT
+        if ($aiKey) {
+          Write-Host "::add-mask::$aiKey"
+          Add-Content -Path $env:GITHUB_ENV -Value "APPLICATIONINSIGHTS_INSTRUMENTATIONKEY=$aiKey"
+        }
+
+    - name: Start containers
+      env:
+        PLATFORM_IMAGE: ${{ inputs.platformImage }}
+        PLATFORM_DOCKER_TAG: ${{ inputs.platformDockerTag }}
+        ENV_DIR: ${{ inputs.envDir }}
+      shell: pwsh
+      working-directory: ${{ github.action_path }}
+      run: |
+        Write-Host "`e[33mStart Containers step started."
+        $platformContainer = "virtocommerce-vc-platform-web-1"
+        . ./scripts/inspect-docker-status.ps1 -ContainerId $platformContainer
+        # Mount installed modules via a static overlay file (no PSGallery powershell-yaml).
+        $composeFiles = @('-f', 'docker-compose.yml')
+        echo "inputs.installModules is ${{ inputs.installModules }}"
+        if ( '${{ inputs.installModules }}' -eq 'true' ){
+          Write-Host "Mount installed modules via docker-compose.modules.yml overlay"
+          $composeFiles += @('-f', 'docker-compose.modules.yml')
+        }
+        # Start the validator now so it warms up during platform boot (no sleep later).
+        if ( '${{ inputs.validateSwagger }}' -eq 'true' ){
+          Write-Host "::group::Start swagger validator"
+          docker run -d -p 85:8080 swaggerapi/swagger-validator-v2
+          Write-Host "::endgroup::"
+        }
+        Write-Host "::group::Start containers"
+        docker compose --project-name virtocommerce $composeFiles up -d
+        Write-Host "::endgroup::"
+        InspectContainerStatus -ContainerId $platformContainer -TimeoutMinutes 5 -RetrySeconds 5 -WaitSeconds 0
+        Write-Host "`e[32mContainers started."
+        
+    - name: Check Installed Modules
+      if: ${{ inputs.installModules == 'true' || inputs.installCustomModule == 'true' }}
+      working-directory: ${{ github.action_path }}
+      shell: pwsh
+      run: |
+        Write-Host "`e[33mCheck Installed Modules step started."
+        $platformContainer = "virtocommerce-vc-platform-web-1"
+        scripts/check-installed-modules.ps1 -ApiUrl http://localhost:8090 -ContainerId $platformContainer
+        Write-Host "`e[32mInstalled Modules checked."
+
+    - name: Install Sample Data
+      if: ${{ inputs.installSampleData == 'true' }}
+      working-directory: ${{ github.action_path }}
+      shell: pwsh
+      run: |
+        Write-Host "::group::Install Sample Data step started."
+        Write-Host "`e[33mInstall Sample Data step started."
+        scripts/setup-sampledata.ps1 -ApiUrl http://localhost:8090 -Verbose -Debug
+        Write-Host "::endgroup::"
+
+    - name: Swagger Schema Validation
+      if: ${{ inputs.validateSwagger == 'true' }}
+      shell: pwsh
+      run: |
+        Write-Host "`e[33mSwagger Schema Validation step started."
+        $platformContainer = "virtocommerce-vc-platform-web-1"
+        . "${{ github.action_path }}/scripts/watch-url-up.ps1"
+        $platformIsUp = (Watch-Url-Up -ApiUrl http://localhost:8090 -TimeoutMinutes 15 -RetrySeconds 5 -WaitSeconds 0 -ContainerId $platformContainer)
+        if ($platformIsUp) {
+          # Validator was started during "Start containers"; poll briefly instead of a
+          # fixed sleep. -SkipHttpErrorCheck: any HTTP response (even an error) = listening.
+          Write-Host "`e[33mWait for swagger validator on http://localhost:85 to respond."
+          $validatorReady = $false
+          foreach ($i in 1..20) {
+            try {
+              Invoke-WebRequest -Uri "http://localhost:85/" -Method Get -TimeoutSec 5 -SkipHttpErrorCheck | Out-Null
+              $validatorReady = $true
+              Write-Host "`e[32mSwagger validator is up (attempt $i)."
+              break
+            } catch {
+              Write-Host "Swagger validator not ready yet (attempt $i of 20); retrying in 2s..."
+              Start-Sleep -Seconds 2
+            }
+          }
+          if (-not $validatorReady) {
+            Write-Host "`e[33mSwagger validator did not respond in time; attempting validation anyway."
+          }
+          # Fetch quietly: -Verbose/-Debug dumps the whole schema into the log. The full
+          # schema is published below only on validation failure.
+          ${{ github.action_path }}/scripts/get-swagger.ps1 -ApiUrl http://localhost:8090 -OutFile ${{ github.action_path }}/swaggerSchema.json
+          Get-Content -Path ${{ github.action_path }}/swaggerSchema.json -TotalCount 10
+          vc-build ValidateSwaggerSchema -SwaggerSchemaPath ${{ github.action_path }}/swaggerSchema.json -SwaggerValidatorUri http://localhost:85/validator/debug
+          $validateExitCode = $LASTEXITCODE
+          if ($validateExitCode -ne 0) {
+            # Validation failed — surface the full schema (collapsed) for diagnosis.
+            Write-Host "::group::Swagger schema (full) — published because validation failed"
+            Get-Content -Path ${{ github.action_path }}/swaggerSchema.json
+            Write-Host "::endgroup::"
+            exit $validateExitCode
+          }
+        }
+        Write-Host "`e[32mSwagger Schema validated."
+
+    - name: Flush Application Insights telemetry
+      # The platform is killed within seconds of the job ending — before the AI SDK's
+      # ~30s batch flushes. Keep it alive one batch interval so telemetry transmits.
+      # Proper fix: Flush()+sleep on shutdown in vc-module-app-insights. Runs on failure too.
+      if: ${{ always() && inputs.appInsightsInstrumentationKey != '' }}
+      shell: pwsh
+      run: |
+        $flushSeconds = 40
+        Write-Host "`e[33mWaiting ${flushSeconds}s for the platform to flush Application Insights telemetry."
+        Start-Sleep -Seconds $flushSeconds

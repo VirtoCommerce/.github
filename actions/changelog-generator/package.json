@@ -1,0 +1,25 @@
+{
+  "name": "changelog-generator",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "build": "ncc build index.js --out dist --minify --source-map --license LICENSES"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "@actions/core": "^1.10.0",
+    "@actions/exec": "^1.0.4",
+    "@actions/github": "^4.0.0",
+    "@virtocommerce/vc-actions-lib": "^1.2.16"
+  },
+  "devDependencies": {
+    "@types/node": "^25.9.3",
+    "@vercel/ncc": "^0.38.1",
+    "ts-node": "^10.9.2",
+    "typescript": "^6.0.3"
+  }
+}

@@ -1,0 +1,29 @@
+name: 'cache-get-key'
+description: 'Calculate unique key for artifact caching'
+inputs:
+  runnerOs:
+    description: 'OS runner'
+    default: 'Linux'
+    required: false
+  artifactName:
+    description: 'Artifact name'
+    default: 'platform_image'
+    required: false
+outputs:
+  shortKey:
+    description: 'Short cache key'
+  fullKey:
+    description: 'Full cache key'
+  dockerShortKey:
+    description: 'Short cache key for docker image cache'
+  dockerFullKey:
+    description: 'Full cache key for docker image cache'
+  packageShortKey:
+    description: 'Short cache key for zip package cache'
+  packageFullKey:
+    description: 'Full cache key for zip package cache'
+
+
+runs:
+  using: 'node24'
+  main: 'dist/index.js' 

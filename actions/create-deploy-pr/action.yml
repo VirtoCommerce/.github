@@ -1,0 +1,47 @@
+name: 'create-deploy-pr'
+description: 'Create deployment PR'
+inputs:
+  githubToken:
+    description: "GitHub token"
+    required: false
+  gitUserEmail:
+    description: "git config user.email"
+    required: false
+    default: "ci@virtocommerce.com"
+  gitUserName:
+    description: "git config user.name"
+    default: "vc-ci"
+    required: false
+  repoOrg:
+    description: "Repo org"
+    required: false
+    default: "VirtoCommerce"
+  deployRepo:
+    description: "Deployment repository name"
+    required: true
+    default: "vc-webstore-deploy"
+  deployBranch:
+    description: "Base branch for new deployment PR"
+    required: true
+    default: "qa"
+  artifactKey:
+    description: "ArgoCD config map key for changed artifact"
+    required: true
+  artifactUrl:
+      description: "Link to changed artifact"
+      required: true
+  taskNumber:
+    description: "Jira task number to create deploy PR in QA or Demo environment"
+    required: true
+  cmPath:
+    description: "Path to config map in repository"
+    required: true
+    default: "webstore-app/resources/deployment-cm.yaml"
+  forceCommit:
+    description: "Flag to create deploy commit without PR. If true - create commit into deployBranch and don`t create PR"
+    required: true
+    default: "false"
+
+runs:
+  using: 'node24'
+  main: 'dist/index.js' 

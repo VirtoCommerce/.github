@@ -1,0 +1,25 @@
+{
+  "name": "@virtocommerce/publish-artifact-link",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "build": "ncc build src/index.ts -o dist --source-map --license licenses.txt",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "Maksim Kopnov",
+  "license": "ISC",
+  "dependencies": {
+    "@actions/core": "^1.2.6",
+    "@actions/exec": "^3.0.0",
+    "@actions/github": "^4.0.0",
+    "@types/node": "^25.9.3",
+    "js-yaml": "^4.1.0"
+  },
+  "devDependencies": {
+    "@types/js-yaml": "^4.0.9",
+    "@vercel/ncc": "^0.38.0",
+    "typescript": "^5.8.3"
+  }
+}
