@@ -632,7 +632,7 @@ jobs:
         # nuget.org has no API for Trusted Publishing policies and requires a
         # federated (MFA) login, so the 3 policies for this repo can't be created
         # from CI. Surface the exact manual command for an operator to run locally.
-        # See .github/scripts/nuget-trusted-publishers/README.md.
+        # See scripts/nuget-trusted-publishers/README.md.
         run: |
           {
             echo "### ⚠️ Manual step: NuGet Trusted Publishing"
@@ -644,7 +644,7 @@ jobs:
             echo "(you'll be prompted to paste your nuget.org \`cookie:\` header — see the README):"
             echo ""
             echo '```bash'
-            echo "cd .github/scripts/nuget-trusted-publishers"
+            echo "cd scripts/nuget-trusted-publishers"
             echo "node add-nuget-trusted-publishers.mjs --repos $REPO_NAME"
             echo '```'
             echo ""

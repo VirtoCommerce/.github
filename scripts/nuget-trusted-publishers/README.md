@@ -39,7 +39,7 @@ and never written to disk. There is no browser and no dependency to install
 ## Usage
 
 ```bash
-cd .github/scripts/nuget-trusted-publishers
+cd scripts/nuget-trusted-publishers
 
 # After creating a new module repo (you'll be prompted to paste the cookie):
 node add-nuget-trusted-publishers.mjs --repos vc-module-cart
