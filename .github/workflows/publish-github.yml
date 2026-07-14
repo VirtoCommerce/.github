@@ -1,5 +1,5 @@
-# v3.800.41
-# https://virtocommerce.atlassian.net/browse/VCST-5439
+# v3.800.42
+# https://virtocommerce.atlassian.net/browse/VCST-5373
 name: VC Publish Github release and Nuget package
 
 on:
@@ -100,6 +100,11 @@ jobs:
         makeLatest: ${{ inputs.makeLatest }}
       uses: VirtoCommerce/vc-github-actions/publish-github-release@master
 
+    # Pushes with the caller-supplied `nugetKey`. Do NOT add NuGet/login (OIDC) here to mint the
+    # key: this is a cross-repo reusable, so the OIDC token's job_workflow_ref would be this file
+    # (in the .github repo), not the caller's workflow, and no per-repo trust policy would match
+    # it (NuGet/login issues #6 and #9). Callers using Trusted Publishing mint the short-lived key
+    # in their OWN job and pass it in via the `nugetKey` secret.
     - name: Publish Nuget
       if: ${{ inputs.forceNuget }}
       uses: VirtoCommerce/vc-github-actions/publish-nuget@master
