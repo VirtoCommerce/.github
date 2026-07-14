@@ -32,14 +32,18 @@
  *   node add-nuget-trusted-publishers.mjs --repos vc-module-cart,vc-module-news
  *   node add-nuget-trusted-publishers.mjs --repos vc-module-cart --dry-run
  *   node add-nuget-trusted-publishers.mjs --repos vc-module-cart --curl ./req.txt
+ *   node add-nuget-trusted-publishers.mjs --activate           # refresh ALL temporary policy timers to 7 days
  *
  * OPTIONS:
- *   --repos a,b,c     Explicit repo names (with or without the owner/ prefix). Required.
+ *   --repos a,b,c     Explicit repo names (with or without the owner/ prefix). Required unless --activate.
  *   --owner <name>    NuGet.org package owner that will own the policies.  Default: VirtoCommerce
  *   --github-owner    GitHub org used as the policy's RepositoryOwner.      Default: VirtoCommerce
  *   --workflows a,b   Override the workflow file list (comma-separated).
  *   --curl <file>     Read the cookie from a saved "Copy as cURL" file instead of prompting.
- *   --dry-run         Show what would be created; do not POST.
+ *   --dry-run         Show what would be done; do not POST.
+ *   --activate        Re-enable every NON-permanent policy (restarts its 7-day window). Does NOT
+ *                     make policies permanent — only a successful publish does; this just refreshes
+ *                     the timer so pending policies don't silently lapse. Ignores --repos/--workflows.
  *   --help            Show this help.
  *
  * Requires Node 18+ (uses built-in fetch). No npm install needed.
@@ -66,6 +70,7 @@ function parseArgs(argv) {
     workflows: DEFAULT_WORKFLOWS,
     curl: '',
     dryRun: false,
+    activate: false,
     help: false,
   };
   for (let i = 0; i < argv.length; i++) {
@@ -78,6 +83,7 @@ function parseArgs(argv) {
       case '--workflows': args.workflows = splitList(next()); break;
       case '--curl': args.curl = next(); break;
       case '--dry-run': args.dryRun = true; break;
+      case '--activate': args.activate = true; break;
       case '--help': case '-h': args.help = true; break;
       default: throw new Error(`Unknown argument: ${a}`);
     }
@@ -196,9 +202,12 @@ async function fetchTpState(jar) {
   const generateUrl = initial?.GenerateUrl
     ? new URL(initial.GenerateUrl, NUGET_ORIGIN).toString()
     : `${NUGET_ORIGIN}/account/GenerateTrustedPublisherPolicy`;
+  const enableUrl = initial?.EnableUrl
+    ? new URL(initial.EnableUrl, NUGET_ORIGIN).toString()
+    : `${NUGET_ORIGIN}/account/EnableTrustedPublisherPolicy`;
   const owners = (initial?.PackageOwners || []).map((o) => (typeof o === 'string' ? o : o.Owner || o.Username || o.name));
   const policies = initial?.Policies || [];
-  return { authed: true, token, generateUrl, owners, policies };
+  return { authed: true, token, generateUrl, enableUrl, owners, policies };
 }
 
 function extractToken(html) {
@@ -301,24 +310,73 @@ async function createPolicy(jar, { generateUrl, token, policyName, owner, criter
 
 const snippet = (t) => String(t).replace(/\s+/g, ' ').trim().slice(0, 300);
 
+const isPermanent = (p) => Boolean(p.PolicyDetails?.IsPermanentlyEnabled ?? p.IsPermanentlyEnabled);
+const daysLeft = (p) => p.PolicyDetails?.EnabledDaysLeft ?? p.EnabledDaysLeft;
+
+// Re-enable a temporary policy — restarts its 7-day window (the "Activate for 7 days" action).
+// Note: this does NOT make it permanent; only a successful publish does. This just refreshes the timer.
+async function activatePolicy(jar, { enableUrl, token, key }) {
+  const res = await fetch(enableUrl, {
+    method: 'POST',
+    headers: {
+      Cookie: serializeJar(jar),
+      'User-Agent': USER_AGENT,
+      'Content-Type': 'application/x-www-form-urlencoded',
+      'X-Requested-With': 'XMLHttpRequest',
+      Referer: TP_URL,
+    },
+    body: new URLSearchParams({ federatedCredentialKey: String(key), __RequestVerificationToken: token }),
+    redirect: 'manual',
+  });
+  applySetCookies(jar, res.headers.getSetCookie?.());
+  const status = res.status;
+  const text = await res.text();
+  if (status >= 200 && status < 300) {
+    if (/"?(error|Message)"?\s*:/i.test(text) && !/success|EnabledDaysLeft|PolicyDetails|Key/i.test(text)) {
+      return { ok: false, reason: snippet(text) };
+    }
+    return { ok: true };
+  }
+  return { ok: false, reason: `HTTP ${status}: ${snippet(text)}` };
+}
+
+// --activate: refresh every non-permanent policy's 7-day timer so none silently lapse.
+async function runActivate(args, jar, state) {
+  const temp = state.policies.filter((p) => !isPermanent(p));
+  const permanent = state.policies.length - temp.length;
+  console.log(`Mode:      ACTIVATE (refresh temporary policies to 7 days)`);
+  console.log(`Policies:  ${state.policies.length} total | ${permanent} permanent | ${temp.length} temporary to refresh`);
+  if (args.dryRun) console.log('           DRY RUN (no changes will be made)');
+  console.log('');
+
+  const results = [];
+  for (const p of temp) {
+    const d = p.PolicyDetails || {};
+    const label = p.PolicyName || `${d.RepositoryOwner}/${d.Repository}:${d.WorkflowFile}`;
+    const was = daysLeft(p);
+    if (args.dryRun) {
+      results.push({ status: 'DRYRUN' });
+      log('DRYRUN', label, `would refresh (currently ${was ?? '?'}d left)`);
+      continue;
+    }
+    const r = await activatePolicy(jar, { enableUrl: state.enableUrl, token: state.token, key: p.Key });
+    if (r.ok) { results.push({ status: 'OK' }); log('OK', label, `refreshed -> 7d (was ${was ?? '?'}d)`); }
+    else { results.push({ status: 'ERROR' }); log('ERROR', label, r.reason); }
+  }
+
+  console.log('\nSummary:');
+  const byStatus = results.reduce((m, r) => ((m[r.status] = (m[r.status] || 0) + 1), m), {});
+  for (const [k, v] of Object.entries(byStatus)) console.log(`  ${k.padEnd(7)} ${v}`);
+  if (temp.length === 0) console.log('  (nothing to do — all policies already permanent)');
+  return results.some((r) => r.status === 'ERROR') ? 1 : 0;
+}
+
 // ---------------------------------------------------------------------------
 // Main
 // ---------------------------------------------------------------------------
 async function main() {
   const args = parseArgs(process.argv.slice(2));
   if (args.help) { printHelp(); return 0; }
-
-  const repos = [...new Set(args.repos.map(bareRepo))].sort();
-  if (repos.length === 0) {
-    throw new Error('No repos specified. Use --repos <a,b,c>.');
-  }
-
-  console.log(`Owner (nuget):   ${args.owner}`);
-  console.log(`RepositoryOwner: ${args.githubOwner}`);
-  console.log(`Workflows:       ${args.workflows.join(', ')}`);
-  console.log(`Repos (${repos.length}):       ${repos.join(', ')}`);
-  if (args.dryRun) console.log('Mode:            DRY RUN (no changes will be made)');
-  console.log('');
 
   const jar = parseCookieHeader(await readCookie(args.curl));
   const state = await fetchTpState(jar);
@@ -328,6 +386,21 @@ async function main() {
         'and paste a fresh "cookie:" header.',
     );
   }
+
+  // --activate: refresh timers on all temporary policies; no --repos needed.
+  if (args.activate) return runActivate(args, jar, state);
+
+  const repos = [...new Set(args.repos.map(bareRepo))].sort();
+  if (repos.length === 0) {
+    throw new Error('No repos specified. Use --repos <a,b,c> (or --activate to refresh policy timers).');
+  }
+
+  console.log(`Owner (nuget):   ${args.owner}`);
+  console.log(`RepositoryOwner: ${args.githubOwner}`);
+  console.log(`Workflows:       ${args.workflows.join(', ')}`);
+  console.log(`Repos (${repos.length}):       ${repos.join(', ')}`);
+  if (args.dryRun) console.log('Mode:            DRY RUN (no changes will be made)');
+  console.log('');
 
   if (state.owners.length && !state.owners.some((o) => o.toLowerCase() === args.owner.toLowerCase())) {
     console.warn(
@@ -397,6 +470,8 @@ function printHelp() {
   console.log('  node add-nuget-trusted-publishers.mjs --repos vc-module-cart,vc-module-news');
   console.log('  node add-nuget-trusted-publishers.mjs --repos vc-module-cart --dry-run');
   console.log('  node add-nuget-trusted-publishers.mjs --repos vc-module-cart --curl ./req.txt');
+  console.log('  node add-nuget-trusted-publishers.mjs --activate            # refresh all temporary policy timers to 7d');
+  console.log('  node add-nuget-trusted-publishers.mjs --activate --dry-run  # preview which would be refreshed');
 }
 
 main()

@@ -52,7 +52,23 @@ node add-nuget-trusted-publishers.mjs --repos vc-module-cart --dry-run
 
 # Read the cookie from a saved "Copy as cURL" file instead of pasting:
 node add-nuget-trusted-publishers.mjs --repos vc-module-cart --curl ./req.txt
+
+# Refresh the 7-day timer on EVERY temporary (not-yet-permanent) policy:
+node add-nuget-trusted-publishers.mjs --activate
+node add-nuget-trusted-publishers.mjs --activate --dry-run   # preview only
 ```
+
+## Keeping policies alive (`--activate`)
+
+A freshly created policy is **temporary**: nuget.org shows *"Use within 7 days to keep it
+permanently active."* It becomes **permanent only after a successful publish** (the OIDC token
+supplies the GitHub repo/owner IDs). If no publish happens within 7 days, it lapses to inactive.
+
+`--activate` restarts the 7-day window on **all** non-permanent policies at once — a bulk
+equivalent of clicking "Activate for 7 days" on each. Use it as a safety net so pending policies
+don't silently lapse before their repos publish (e.g. matrix repos waiting on the template
+rollout). It does **not** make policies permanent — only a real publish does; it just refreshes
+the timer. It needs the same session cookie and ignores `--repos`/`--workflows`.
 
 The script is **idempotent**: existing identical policies are detected and skipped,
 so re-running is safe. If the cookie has expired it will tell you to grab a fresh one.
@@ -66,7 +82,8 @@ so re-running is safe. If the cookie has expired it will tell you to grab a fres
 | `--github-owner`  | `VirtoCommerce`| GitHub org used as the policy's `RepositoryOwner`.   |
 | `--workflows a,b` | the 3 above    | Override the workflow file list.                     |
 | `--curl <file>`   | *(prompt)*     | Read the cookie from a saved "Copy as cURL" file.    |
-| `--dry-run`       | off            | Show what would be created; do not POST.             |
+| `--dry-run`       | off            | Show what would be done; do not POST.                |
+| `--activate`      | off            | Refresh the 7-day timer on all non-permanent policies (ignores `--repos`). |
 
 ## New-repo checklist
 
