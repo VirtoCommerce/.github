@@ -77,12 +77,11 @@ Virto Commerce ships as **modules** — independently versioned, independently d
 
 | Month | Live deck | Source notes |
 | --- | --- | --- |
+| **July 2026** | [📊 View deck](https://virtocommerce.github.io/vc-release-notes/2026-07/) | [Notes](https://www.virtocommerce.org/t/virto-s-release-notes-july-2026/857) |
 | **June 2026** | [📊 View deck](https://virtocommerce.github.io/vc-release-notes/2026-06/) | [Notes](https://www.virtocommerce.org/t/virto-s-release-notes-june-2026/854) |
 | **May 2026** | [📊 View deck](https://virtocommerce.github.io/vc-release-notes/2026-05/) | [Notes](https://www.virtocommerce.org/t/virto-s-release-notes-may-2026-comics-edition/849/) |
-| **April 2026** | [📊 View deck](https://virtocommerce.github.io/vc-release-notes/2026-04/) | [Notes](https://www.virtocommerce.org/t/virto-s-release-notes-april-2026/847) |
-| **March 2026** | [📊 View deck](https://virtocommerce.github.io/vc-release-notes/2026-03/) | [Notes](https://www.virtocommerce.org/t/virto-s-release-notes-march-2026/839) |
 
-[Previuos Releases](https://www.virtocommerce.org/c/news-digest/15) 
+[Previuos Releases](https://virtocommerce.github.io/vc-release-notes/) 
 
 ## 🤝 Contributing
 
