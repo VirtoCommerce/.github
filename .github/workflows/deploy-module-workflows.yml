@@ -77,6 +77,7 @@ jobs:
                   ,vc-module-notification
                   ,vc-module-open-search
                   ,vc-module-openid-connect
+                  ,vc-module-opentelemetry
                   ,vc-module-order
                   ,vc-module-order-management
                   ,vc-module-pages
