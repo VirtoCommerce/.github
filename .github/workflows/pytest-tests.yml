@@ -278,8 +278,9 @@ jobs:
         retention-days: 3
 
   auto-autotests:
-    # !cancelled(): build-image is intentionally skipped (not failed) when a prebuilt artifact is supplied.
-    if: ${{ !cancelled() }}
+    # build-image is intentionally skipped (not failed) when a prebuilt artifact is already
+    # supplied — proceed on skip, but don't cascade into 3 doomed matrix legs on a real build failure.
+    if: ${{ !cancelled() && (needs.build-image.result == 'success' || needs.build-image.result == 'skipped') }}
     needs: build-image
     runs-on: ubuntu-22.04
 
