@@ -139,9 +139,9 @@ jobs:
     - name: Install VirtoCommerce.GlobalTool
       uses: VirtoCommerce/vc-github-actions/setup-vcbuild@master
 
-    # Fetches common-packages-list.ps1, needed only by the installCustomModule step below.
+    # Fetches common-packages-list.ps1 (installCustomModule step below) and the nginx/ Dockerfile
+    # + nginx.conf (frontend build step below) — both live only in vc-github-actions, not here.
     - name: Checkout vc-github-actions scripts
-      if: ${{ inputs.installCustomModule == 'true' }}
       uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
       with:
         repository: VirtoCommerce/vc-github-actions
@@ -257,6 +257,10 @@ jobs:
         Write-Host "::group::Unzip frontend zip"
         unzip -o $fileName -d ./frontend
         Write-Host "::endgroup::"
+        # nginx/Dockerfile + nginx/nginx.conf live in vc-github-actions (checked out above), not
+        # here — the Dockerfile's COPY paths are relative to this build context, so copy the whole
+        # folder in rather than just pointing -f at the checked-out copy.
+        Copy-Item -Path ./vc-github-actions-scripts/docker-env-full/nginx -Destination ./nginx -Recurse -Force
         Write-Host "::group::Build frontend docker image"
         docker build -f ./nginx/Dockerfile -t "nginx_frontend:local-latest" .
         Write-Host "::endgroup::"
