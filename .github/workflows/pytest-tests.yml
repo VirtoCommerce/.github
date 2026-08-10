@@ -74,7 +74,7 @@ on:
         type: string
         default: 'local-latest'
       prebuiltImageArtifact:
-        description: 'Name of a workflow artifact containing a docker save tar of the platform+frontend images. When set, build-image is skipped and this is loaded as-is.'
+        description: 'Name of a workflow artifact containing a docker save tar of the platform image. When set, the action downloads and loads it instead of building or pulling, and installModules / installCustomModule / customPackagesJsonUrl must be unset.'
         required: false
         type: string
         default: ''
@@ -126,162 +126,7 @@ on:
         required: false
 
 jobs:
-  # Builds the platform image (with any modules baked in) and the frontend image once, shared
-  # across the DB-provider matrix below, instead of building both once per leg. docker-env-full
-  # never builds or pulls either image itself — it only loads what this job produces.
-  # Skipped when the caller already supplies prebuiltImageArtifact.
-  build-image:
-    if: ${{ inputs.prebuiltImageArtifact == '' }}
-    runs-on: ubuntu-22.04
-    outputs:
-      artifactName: platform-image-${{ github.run_id }}-${{ github.run_attempt }}
-    steps:
-    - name: Install VirtoCommerce.GlobalTool
-      uses: VirtoCommerce/vc-github-actions/setup-vcbuild@master
-
-    # Fetches common-packages-list.ps1 (installCustomModule step below) and the nginx/ Dockerfile
-    # + nginx.conf (frontend build step below) — both live only in vc-github-actions, not here.
-    - name: Checkout vc-github-actions scripts
-      uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
-      with:
-        repository: VirtoCommerce/vc-github-actions
-        ref: master
-        path: vc-github-actions-scripts
-
-    - name: Use custom packages.json and build platform docker image
-      if: ${{ inputs.customPackagesJsonUrl != '' }}
-      shell: pwsh
-      run: |
-        Invoke-WebRequest -Uri ${{ inputs.customPackagesJsonUrl }} -OutFile packages.json
-        Write-Host "`e[32mDownloaded custom packages.json from ${{ inputs.customPackagesJsonUrl }} file successfully. Build backend..."
-        vc-build install --package-manifest-path ./packages.json --root ./publish --skip-dependency-solving
-        Write-Host "`e[32mDownload platform Dockerfile and build image"
-        $dockerFilesArray = "https://raw.githubusercontent.com/VirtoCommerce/vc-docker/feat/net10/linux/platform/Dockerfile;https://raw.githubusercontent.com/VirtoCommerce/vc-docker/master/linux/platform/wait-for-it.sh".Split(';')
-        foreach($file in $dockerFilesArray){
-            try {
-                $fileName = Split-Path $file -Leaf
-                Invoke-WebRequest -Uri $file -OutFile $fileName -UseBasicParsing -OperationTimeoutSeconds 15 -RetryIntervalSec 1 -MaximumRetryCount 3
-                Write-Host "Downloaded '$fileName' successfully"
-            }
-            catch {
-                Write-Error "Failed to download $file. Error: $_"
-                exit 1
-            }
-        }
-        Write-Host "::group::Build platform docker image"
-        docker build -f ./Dockerfile -t "platform:local-latest" .
-        Write-Host "::endgroup::"
-
-    # Bakes the extra bundle modules directly into the pulled image (a thin extra layer) instead
-    # of the old runtime volume-mount overlay — the saved image is now fully self-contained, so
-    # docker-env-full needs no modules-aware logic at all.
-    - name: Install Commerce Bundle Modules and bake into platform image
-      if: ${{ inputs.installModules == 'true' }}
-      env:
-        INSTALL_FOLDER: 'modules'
-      shell: pwsh
-      run: |
-        Write-Host "`e[33mInstall Modules step started."
-        # Pre-create modules/modules so vc-build's default DiscoveryPath exists on first
-        # run; otherwise it emits a "Discovery path not found" workflow annotation.
-        New-Item -Path "./${{ env.INSTALL_FOLDER}}/modules" -ItemType "directory" -Force | Out-Null
-        Push-Location ./${{ env.INSTALL_FOLDER}}
-        vc-build install -Edge -skip InstallPlatform
-        vc-build install -module VirtoCommerce.Quote VirtoCommerce.XPickup VirtoCommerce.MarketingExperienceApi VirtoCommerce.Pages
-        Pop-Location
-        Write-Host "`e[32mPull platform docker image to local storage"
-        docker pull ghcr.io/virtocommerce/platform:${{ inputs.platformDockerTag }}
-        docker tag ghcr.io/virtocommerce/platform:${{ inputs.platformDockerTag }} "platform:local-latest"
-        Write-Host "::group::Bake bundle modules into platform image"
-        Set-Content -Path Dockerfile.modules -Value @'
-        FROM platform:local-latest
-        COPY modules/modules /opt/virtocommerce/platform/modules
-        COPY modules/app_data /opt/virtocommerce/platform/app_data
-        '@
-        docker build -f Dockerfile.modules -t "platform:local-latest" .
-        Write-Host "::endgroup::"
-
-    - name: Install custom module and build platform image
-      if: ${{ inputs.installCustomModule == 'true' }}
-      shell: pwsh
-      run: |
-        ./vc-github-actions-scripts/docker-env/scripts/common-packages-list.ps1 -customModuleId ${{ inputs.customModuleId }} -customModuleUrl ${{ inputs.customModuleUrl }} -requiredModulesListUrl "${{ inputs.requiredModulesListUrl }}"
-        Write-Host "`e[32mDownload platform Dockerfile and build image"
-        $dockerFilesArray = "https://raw.githubusercontent.com/VirtoCommerce/vc-docker/feat/net10/linux/platform/Dockerfile;https://raw.githubusercontent.com/VirtoCommerce/vc-docker/master/linux/platform/wait-for-it.sh".Split(';')
-        foreach($file in $dockerFilesArray){
-            try {
-                $fileName = Split-Path $file -Leaf
-                Invoke-WebRequest -Uri $file -OutFile $fileName -UseBasicParsing -OperationTimeoutSeconds 15 -RetryIntervalSec 1 -MaximumRetryCount 3
-                Write-Host "Downloaded '$fileName' successfully"
-            }
-            catch {
-                Write-Error "Failed to download $file. Error: $_"
-                exit 1
-            }
-        }
-        Write-Host "::group::Build platform docker image"
-        docker build -f ./Dockerfile -t "platform:local-latest" .
-        Write-Host "::endgroup::"
-
-    # Moved out of docker-env-full: this used to rebuild once per DB-provider leg, identically
-    # each time, since the frontend image doesn't depend on the DB provider either.
-    - name: Build frontend docker image
-      shell: pwsh
-      env:
-        GH_TOKEN: ${{ github.token }}
-      run: |
-        if ( "${{ inputs.frontendZipUrl }}" -eq 'latest' ) {
-          $headers = @{
-            Authorization          = "Bearer $env:GH_TOKEN"
-            Accept                 = 'application/vnd.github+json'
-            'X-GitHub-Api-Version' = '2022-11-28'
-          }
-          $frontendReleaseInfo = Invoke-RestMethod -Uri "https://api.github.com/repos/VirtoCommerce/vc-frontend/releases/latest" -Headers $headers
-          $frontendZipUrl = $frontendReleaseInfo.assets.browser_download_url
-          Write-Host "`e[32mDownload latest frontend zip and build image"
-        }
-        else {
-          $frontendZipUrl = "${{ inputs.frontendZipUrl }}"
-          Write-Host "`e[32mDownload frontend zip from $frontendZipUrl and build image"
-        }
-        $fileName = Split-Path $frontendZipUrl -Leaf
-        try {
-          Invoke-WebRequest -Uri $frontendZipUrl -OutFile $fileName -UseBasicParsing -OperationTimeoutSeconds 15 -RetryIntervalSec 1 -MaximumRetryCount 3
-          Write-Host "Downloaded '$fileName' successfully"
-        }
-        catch {
-          Write-Error "Failed to download $frontendZipUrl. Error: $_"
-          exit 1
-        }
-        mkdir -p ./frontend
-        Write-Host "::group::Unzip frontend zip"
-        unzip -o $fileName -d ./frontend
-        Write-Host "::endgroup::"
-        # nginx/Dockerfile + nginx/nginx.conf live in vc-github-actions (checked out above), not
-        # here — the Dockerfile's COPY paths are relative to this build context, so copy the whole
-        # folder in rather than just pointing -f at the checked-out copy.
-        Copy-Item -Path ./vc-github-actions-scripts/docker-env-full/nginx -Destination ./nginx -Recurse -Force
-        Write-Host "::group::Build frontend docker image"
-        docker build -f ./nginx/Dockerfile -t "nginx_frontend:local-latest" .
-        Write-Host "::endgroup::"
-
-    # Both images, one tar — docker-env-full docker-loads it and expects to find both fixed tags.
-    - name: Save images to tar
-      shell: bash
-      run: docker save -o platform-image.tar "platform:local-latest" "nginx_frontend:local-latest"
-
-    - name: Upload images artifact
-      uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
-      with:
-        name: platform-image-${{ github.run_id }}-${{ github.run_attempt }}
-        path: platform-image.tar
-        retention-days: 3
-
   auto-autotests:
-    # build-image is intentionally skipped (not failed) when a prebuilt artifact is already
-    # supplied — proceed on skip, but don't cascade into 3 doomed matrix legs on a real build failure.
-    if: ${{ !cancelled() && (needs.build-image.result == 'success' || needs.build-image.result == 'skipped') }}
-    needs: build-image
     runs-on: ubuntu-22.04
 
     strategy:
@@ -293,16 +138,24 @@ jobs:
       GITHUB_TOKEN: ${{ secrets.envPAT }}
 
     steps:
-    # docker-env-full only ever loads a ready-made image now — no build/pull/install inputs to pass,
-    # and nothing left in this job's chain (docker-env-full, run-pytest-tests) uses vc-build anymore —
-    # that all moved into build-image, which has its own "Install VirtoCommerce.GlobalTool" step.
+    - name: Install VirtoCommerce.GlobalTool
+      uses: VirtoCommerce/vc-github-actions/setup-vcbuild@master
+
     - name: Docker Env Full
       uses: VirtoCommerce/vc-github-actions/docker-env-full@VCST-5510 #master
       with:
+        frontendZipUrl: ${{ inputs.frontendZipUrl }}
+        installModules: ${{ inputs.installModules }}
+        installCustomModule: ${{ inputs.installCustomModule }}
+        platformDockerTag: ${{ inputs.platformDockerTag }}
+        requiredModulesListUrl: ${{ inputs.requiredModulesListUrl }}
         testSecretEnvFile: ${{ secrets.testSecretEnvFile }}
+        customPackagesJsonUrl: ${{ inputs.customPackagesJsonUrl }}
+        customModuleId: ${{ inputs.customModuleId }}
+        customModuleUrl: ${{ inputs.customModuleUrl }}
         sendgridApiKey: ${{ secrets.sendgridApiKey }}
         databaseProvider: ${{ matrix.databaseProvider }}
-        prebuiltImageArtifact: ${{ needs.build-image.outputs.artifactName || inputs.prebuiltImageArtifact }}
+        prebuiltImageArtifact: ${{ inputs.prebuiltImageArtifact }}
         appInsightsInstrumentationKey: ${{ secrets.appInsightsInstrumentationKey }}
 
     - name: Run Auto Tests
