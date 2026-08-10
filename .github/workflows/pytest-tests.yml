@@ -201,7 +201,7 @@ jobs:
         docker build -f Dockerfile.modules -t "platform:local-latest" .
         Write-Host "::endgroup::"
 
-    - name: Build platform docker image
+    - name: Install custom module and build platform image
       if: ${{ inputs.installCustomModule == 'true' }}
       shell: pwsh
       run: |
