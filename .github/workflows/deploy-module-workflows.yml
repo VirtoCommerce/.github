@@ -100,6 +100,7 @@ jobs:
                   ,vc-module-shopify-taxonomy
                   ,vc-module-sitemaps
                   ,vc-module-skyflow
+                  ,vc-module-solution-architecture-map
                   ,vc-module-sql-queries
                   ,vc-module-state-machine
                   ,vc-module-store
