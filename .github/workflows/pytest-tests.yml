@@ -88,6 +88,16 @@ on:
         required: false
         type: string
         default: ''
+      searchEngineVersion:
+        description: 'Search engine image tag. Leave empty to use the default for the selected searchProvider: elasticsearch8 -> 8.18.0, elasticsearch9 -> 9.5.1, opensearch -> 2.18.0.'
+        required: false
+        type: string
+        default: ''
+      searchProvider:
+        description: 'Search engine the platform is tested against: elasticsearch8 | elasticsearch9 | opensearch. The platform image must ship the matching module (VirtoCommerce.ElasticSearch8 / VirtoCommerce.ElasticSearch9 / VirtoCommerce.OpenSearch).'
+        required: false
+        type: string
+        default: 'elasticsearch8'
       skipDocCountVerification:
         description: 'Comma-separated document types whose post-reindex count check should be skipped (reindex still runs). Use when the seed dataset has 0 records for a type. Example: ''PickupLocation'' or ''PickupLocation,ContentFile''.'
         required: false
@@ -155,6 +165,8 @@ jobs:
         customModuleUrl: ${{ inputs.customModuleUrl }}
         sendgridApiKey: ${{ secrets.sendgridApiKey }}
         databaseProvider: ${{ matrix.databaseProvider }}
+        searchProvider: ${{ inputs.searchProvider }}
+        searchEngineVersion: ${{ inputs.searchEngineVersion }}
         prebuiltImageArtifact: ${{ inputs.prebuiltImageArtifact }}
         appInsightsInstrumentationKey: ${{ secrets.appInsightsInstrumentationKey }}
 
