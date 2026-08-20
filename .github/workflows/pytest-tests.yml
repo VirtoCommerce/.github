@@ -93,11 +93,11 @@ on:
         required: false
         type: string
         default: ''
-      searchProvider:
-        description: 'Search engine the platform is tested against: elasticsearch8 | elasticsearch9 | opensearch. Leave empty to resolve automatically — a customModuleId of VirtoCommerce.ElasticSearch8 / ElasticSearch9 / OpenSearch selects that engine, everything else gets elasticsearch8. Set a value only to override that. The platform image must ship the matching module.'
+      searchProviders:
+        description: 'JSON array of search engines to cover in addition to the database matrix. Any subset of: elasticsearch8, elasticsearch9, opensearch. Each entry ADDS one job pinned to postgres; it does not cross with databaseProviders. The databaseProviders jobs resolve their own engine (from customModuleId, or a customPackagesJsonUrl pinning exactly one provider, else elasticsearch8). Empty means no extra jobs. The platform image must ship the module for every engine listed.'
         required: false
         type: string
-        default: ''
+        default: '[]'
       skipDocCountVerification:
         description: 'Comma-separated document types whose post-reindex count check should be skipped (reindex still runs). Use when the seed dataset has 0 records for a type. Example: ''PickupLocation'' or ''PickupLocation,ContentFile''.'
         required: false
@@ -136,13 +136,36 @@ on:
         required: false
 
 jobs:
+  # The matrix is a union, not a cross product: one job per database (engine auto-resolved),
+  # plus one postgres job per extra engine. GitHub can only express that via `include`, and
+  # expressions cannot map an array of strings into include objects — hence this job.
+  build-matrix:
+    runs-on: ubuntu-22.04
+    outputs:
+      include: ${{ steps.build.outputs.include }}
+    steps:
+      - name: Build test matrix
+        id: build
+        shell: bash
+        env:
+          DATABASE_PROVIDERS: ${{ inputs.databaseProviders }}
+          SEARCH_PROVIDERS: ${{ inputs.searchProviders }}
+        run: |
+          include=$(jq -cn --argjson dbs "$DATABASE_PROVIDERS" --argjson engines "$SEARCH_PROVIDERS" \
+            '[$dbs[] | {databaseProvider: ., searchProvider: "auto"}]
+             + [$engines[] | {databaseProvider: "postgres", searchProvider: .}]')
+          echo "include=$include" >> "$GITHUB_OUTPUT"
+          echo "::notice title=Test matrix::$(jq -r 'length' <<<"$include") job(s)"
+          jq . <<<"$include"
+
   auto-autotests:
+    needs: build-matrix
     runs-on: ubuntu-22.04
 
     strategy:
       fail-fast: false
       matrix:
-        databaseProvider: ${{ fromJSON(inputs.databaseProviders) }}
+        include: ${{ fromJSON(needs.build-matrix.outputs.include) }}
 
     env:
       GITHUB_TOKEN: ${{ secrets.envPAT }}
@@ -166,7 +189,10 @@ jobs:
         customModuleUrl: ${{ inputs.customModuleUrl }}
         sendgridApiKey: ${{ secrets.sendgridApiKey }}
         databaseProvider: ${{ matrix.databaseProvider }}
-        searchProvider: ${{ inputs.searchProvider }}
+        # 'auto' means "let the action resolve it", passed on as an empty string. The condition
+        # is inverted on purpose: `== 'auto' && '' || matrix.searchProvider` would yield 'auto',
+        # because an empty true-branch is falsy and GitHub falls through to the right-hand side.
+        searchProvider: ${{ matrix.searchProvider != 'auto' && matrix.searchProvider || '' }}
         searchEngineVersion: ${{ inputs.searchEngineVersion }}
         prebuiltImageArtifact: ${{ inputs.prebuiltImageArtifact }}
         appInsightsInstrumentationKey: ${{ secrets.appInsightsInstrumentationKey }}
