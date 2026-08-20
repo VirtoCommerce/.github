@@ -94,10 +94,10 @@ on:
         type: string
         default: ''
       searchProvider:
-        description: 'Search engine the platform is tested against: elasticsearch8 | elasticsearch9 | opensearch. The platform image must ship the matching module (VirtoCommerce.ElasticSearch8 / VirtoCommerce.ElasticSearch9 / VirtoCommerce.OpenSearch).'
+        description: 'Search engine the platform is tested against: elasticsearch8 | elasticsearch9 | opensearch. Leave empty to resolve automatically — a customModuleId of VirtoCommerce.ElasticSearch8 / ElasticSearch9 / OpenSearch selects that engine, everything else gets elasticsearch8. Set a value only to override that. The platform image must ship the matching module.'
         required: false
         type: string
-        default: 'elasticsearch8'
+        default: ''
       skipDocCountVerification:
         description: 'Comma-separated document types whose post-reindex count check should be skipped (reindex still runs). Use when the seed dataset has 0 records for a type. Example: ''PickupLocation'' or ''PickupLocation,ContentFile''.'
         required: false
@@ -152,6 +152,7 @@ jobs:
       uses: VirtoCommerce/vc-github-actions/setup-vcbuild@master
 
     - name: Docker Env Full
+      id: docker-env
       uses: VirtoCommerce/vc-github-actions/docker-env-full@VCST-5146 #master
       with:
         frontendZipUrl: ${{ inputs.frontendZipUrl }}
@@ -185,5 +186,8 @@ jobs:
         vctestingPath: ${{ inputs.vctestingPath }}
         vctestingRepo: ${{ inputs.vctestingRepo }}
         vctestingRepoBranch: ${{ inputs.vctestingRepoBranch }}
-        artifactSuffix: -${{ matrix.databaseProvider }}
+        # Engine included so one run can cover several database/engine combinations without
+        # the uploads colliding. searchProvider is resolved inside docker-env-full, so it is
+        # read back from that step's output rather than from inputs.
+        artifactSuffix: -${{ matrix.databaseProvider }}-${{ steps.docker-env.outputs.searchProvider }}
         skipDocCountVerification: ${{ inputs.skipDocCountVerification }}
