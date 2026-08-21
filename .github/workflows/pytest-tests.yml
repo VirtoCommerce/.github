@@ -160,7 +160,10 @@ jobs:
           # Otherwise take it from the modules the caller's manifests install. Both manifest
           # flavours are read, since callers pass one or the other: packages.json nests modules
           # under .Sources[].Modules[], the required-modules list is a flat [{Id,Version}] array.
-          found='[]'
+          # Every module id, not just the engines: a manifest that lists modules but no engine
+          # among them is a hard error below, and that has to be told apart from one we failed
+          # to parse (where the ids are simply unknown).
+          allIds='[]'
           for url in "$CUSTOM_PACKAGES_JSON_URL" "$REQUIRED_MODULES_LIST_URL"; do
             [[ -z "$url" ]] && continue
             if ! manifest=$(curl -fsSL --retry 3 "$url"); then
@@ -170,18 +173,27 @@ jobs:
             # A 2xx carrying a non-JSON body (proxy or sign-in page) must degrade to the
             # default engine, not fail the step and skip every test job with it. Testing for
             # empty output as well as a bad exit code: an empty body gives jq no input values
-            # at all, so it prints nothing and still exits 0 — which would leave $found empty
+            # at all, so it prints nothing and still exits 0 — which would leave $allIds empty
             # and blow up on --argjson further down.
-            if ! ids=$(jq -c --argjson map "$MAP" --argjson acc "$found" \
+            if ! ids=$(jq -c --argjson acc "$allIds" \
                 '$acc + [((objects | .Sources[]?.Modules[]?), (arrays | .[]))
-                         | .Id? // empty | strings | ascii_downcase | $map[.] // empty]
+                         | .Id? // empty | strings | ascii_downcase]
                  | unique' <<<"$manifest" 2>/dev/null) || [[ -z "$ids" ]]; then
               echo "::warning title=Test matrix::$url did not return JSON in a known manifest shape; its modules do not take part in picking the engine."
               continue
             fi
-            found="$ids"
+            allIds="$ids"
           done
+          found=$(jq -c --argjson map "$MAP" '[.[] | $map[.] // empty] | unique' <<<"$allIds")
           echo "Search provider modules in the manifests: $found"
+
+          # No engine module and nothing to fall back on: the platform would come up with no
+          # registered search provider and only say so when seeding hits the first indexed API,
+          # minutes in and once per database job. Say it here instead, before anything starts.
+          if [[ -z "$primary" && "$(jq length <<<"$found")" -eq 0 && "$(jq length <<<"$allIds")" -gt 0 ]]; then
+            echo "::error title=Test matrix::The manifests install no search provider this workflow can run. Found search-related modules: $(jq -r '[.[] | select(test("search"))] | if length > 0 then join(", ") else "none" end' <<<"$allIds"). Add one of $(jq -r '[.[]] | sort | join(", ")' <<<"$MAP") to the manifest, or set customModuleId to a provider module."
+            exit 1
+          fi
 
           # ElasticSearch8 and ElasticSearch9 ship different majors of the same client
           # assembly and only one loads per process, so only the newest is testable.
