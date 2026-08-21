@@ -150,10 +150,51 @@ jobs:
         env:
           DATABASE_PROVIDERS: ${{ inputs.databaseProviders }}
           SEARCH_PROVIDERS: ${{ inputs.searchProviders }}
+          CUSTOM_MODULE_ID: ${{ inputs.customModuleId }}
+          CUSTOM_PACKAGES_JSON_URL: ${{ inputs.customPackagesJsonUrl }}
         run: |
-          include=$(jq -cn --argjson dbs "$DATABASE_PROVIDERS" --argjson engines "$SEARCH_PROVIDERS" \
-            '[$dbs[] | {databaseProvider: ., searchProvider: "auto"}]
-             + [$engines[] | {databaseProvider: "postgres", searchProvider: .}]')
+          # The only place module ids map to engines — docker-env-full just takes what it is given.
+          MAP='{"virtocommerce.elasticsearch8":"elasticsearch8",
+                "virtocommerce.elasticsearch9":"elasticsearch9",
+                "virtocommerce.opensearch":"opensearch"}'
+
+          # A provider module under test names its own engine.
+          primary=$(jq -rn --arg id "${CUSTOM_MODULE_ID,,}" --argjson map "$MAP" '$map[$id] // empty')
+
+          # Otherwise take it from the modules the custom manifest installs.
+          usable='[]'
+          if [[ -n "$CUSTOM_PACKAGES_JSON_URL" ]]; then
+            if manifest=$(curl -fsSL --retry 3 "$CUSTOM_PACKAGES_JSON_URL"); then
+              found=$(jq -c --argjson map "$MAP" \
+                '[.Sources[]? | (.Modules // [])[] | .Id | ascii_downcase | $map[.] // empty] | unique' <<<"$manifest")
+              echo "Search provider modules in the manifest: $found"
+
+              # ElasticSearch8 and ElasticSearch9 ship different majors of the same client
+              # assembly and only one loads per process, so only the newest is testable.
+              elastic=$(jq -c '[.[] | select(startswith("elasticsearch"))]
+                               | sort_by(ltrimstr("elasticsearch") | tonumber)' <<<"$found")
+              if [[ "$(jq length <<<"$elastic")" -gt 1 ]]; then
+                echo "::warning title=Test matrix::Manifest installs several Elasticsearch modules ($(jq -r 'join(", ")' <<<"$elastic")); only $(jq -r 'last' <<<"$elastic") can load, so the others are skipped."
+              fi
+              # Usable engines: newest Elasticsearch (if any) plus OpenSearch (separate client).
+              usable=$(jq -c --argjson e "$elastic" '($e | if length > 0 then [last] else [] end)
+                               + [.[] | select(. == "opensearch")]' <<<"$found")
+            else
+              echo "::warning title=Test matrix::Could not read $CUSTOM_PACKAGES_JSON_URL; assuming the default engine."
+            fi
+          fi
+
+          [[ -z "$primary" ]] && primary=$(jq -r '.[0] // "elasticsearch8"' <<<"$usable")
+
+          # Extra engines get one postgres job each; the database jobs already cover the primary.
+          extras="$SEARCH_PROVIDERS"
+          [[ "$(jq length <<<"$extras")" -eq 0 ]] && extras="$usable"
+          extras=$(jq -c --arg p "$primary" '[.[] | select(. != $p)]' <<<"$extras")
+          echo "Primary engine: $primary; extra jobs for: $extras"
+
+          include=$(jq -cn --argjson dbs "$DATABASE_PROVIDERS" --arg primary "$primary" --argjson extras "$extras" \
+            '[$dbs[] | {databaseProvider: ., searchProvider: $primary}]
+             + [$extras[] | {databaseProvider: "postgres", searchProvider: .}]')
           echo "include=$include" >> "$GITHUB_OUTPUT"
           echo "::notice title=Test matrix::$(jq -r 'length' <<<"$include") job(s)"
           jq . <<<"$include"
@@ -189,10 +230,7 @@ jobs:
         customModuleUrl: ${{ inputs.customModuleUrl }}
         sendgridApiKey: ${{ secrets.sendgridApiKey }}
         databaseProvider: ${{ matrix.databaseProvider }}
-        # 'auto' means "let the action resolve it", passed on as an empty string. The condition
-        # is inverted on purpose: `== 'auto' && '' || matrix.searchProvider` would yield 'auto',
-        # because an empty true-branch is falsy and GitHub falls through to the right-hand side.
-        searchProvider: ${{ matrix.searchProvider != 'auto' && matrix.searchProvider || '' }}
+        searchProvider: ${{ matrix.searchProvider }}
         searchEngineVersion: ${{ inputs.searchEngineVersion }}
         prebuiltImageArtifact: ${{ inputs.prebuiltImageArtifact }}
         appInsightsInstrumentationKey: ${{ secrets.appInsightsInstrumentationKey }}
