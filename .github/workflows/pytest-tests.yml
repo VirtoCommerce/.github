@@ -1,5 +1,5 @@
-# v3.800.42
-# https://virtocommerce.atlassian.net/browse/VCST-5373
+# v3.800.43
+# https://virtocommerce.atlassian.net/browse/VCST-5146
 name: Auto tests
 
 on:
@@ -248,7 +248,6 @@ jobs:
       uses: VirtoCommerce/vc-github-actions/setup-vcbuild@master
 
     - name: Docker Env Full
-      id: docker-env
       uses: VirtoCommerce/vc-github-actions/docker-env-full@master
       with:
         frontendZipUrl: ${{ inputs.frontendZipUrl }}
