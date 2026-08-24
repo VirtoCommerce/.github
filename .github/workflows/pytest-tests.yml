@@ -249,7 +249,7 @@ jobs:
 
     - name: Docker Env Full
       id: docker-env
-      uses: VirtoCommerce/vc-github-actions/docker-env-full@VCST-5146 #master
+      uses: VirtoCommerce/vc-github-actions/docker-env-full@master
       with:
         frontendZipUrl: ${{ inputs.frontendZipUrl }}
         installModules: ${{ inputs.installModules }}
@@ -281,9 +281,5 @@ jobs:
         vctestingPath: ${{ inputs.vctestingPath }}
         vctestingRepo: ${{ inputs.vctestingRepo }}
         vctestingRepoBranch: ${{ inputs.vctestingRepoBranch }}
-        # Engine included so one run can cover several database/engine combinations without
-        # the uploads colliding. Both come from the matrix, which is also what the step above
-        # was passed — reading the engine back from its output would only add a way for the
-        # two to disagree.
         artifactSuffix: -${{ matrix.databaseProvider }}-${{ matrix.searchProvider }}
         skipDocCountVerification: ${{ inputs.skipDocCountVerification }}
