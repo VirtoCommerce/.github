@@ -131,108 +131,105 @@ on:
         required: false
 
 jobs:
-  # The matrix is a union, not a cross product: one job per database (engine auto-resolved),
-  # plus one postgres job per extra engine. GitHub can only express that via `include`, and
-  # expressions cannot map an array of strings into include objects — hence this job.
+  # A union, not a cross product: one job per database, plus one postgres job per extra
+  # engine. Only `include` expresses that, and expressions cannot build it — hence this job.
   build-matrix:
     runs-on: ubuntu-22.04
     outputs:
       include: ${{ steps.build.outputs.include }}
     steps:
+      # Fetching can fail, the rules cannot: kept apart so a bad manifest is visible on its own.
+      - name: Read the modules the manifests install
+        id: manifests
+        shell: bash
+        env:
+          CUSTOM_PACKAGES_JSON_URL: ${{ inputs.customPackagesJsonUrl }}
+          REQUIRED_MODULES_LIST_URL: ${{ inputs.requiredModulesListUrl }}
+        run: |
+          # Lowercased module ids from either manifest shape: .Sources[].Modules[] or a flat [{Id,Version}]
+          ids='[]'
+          for url in "$CUSTOM_PACKAGES_JSON_URL" "$REQUIRED_MODULES_LIST_URL"; do
+            [[ -z "$url" ]] && continue
+          # If nothing read, the default engine applies
+            if body=$(curl -fsSL --retry 3 "$url") &&
+               found=$(jq -c '[((objects | .Sources[]?.Modules[]?), (arrays | .[]))
+                               | .Id? // empty | strings | ascii_downcase]' <<<"$body" 2>/dev/null) &&
+               [[ -n "$found" ]]; then # jq exits 0 on an empty body
+              ids=$(jq -cn --argjson a "$ids" --argjson b "$found" '$a + $b | unique')
+            else
+              echo "::warning title=Test matrix::Could not read a module list from $url; it does not take part in picking the search engine."
+            fi
+          done
+          echo "Modules installed by the manifests: $(jq -r 'length' <<<"$ids")"
+          echo "ids=$ids" >> "$GITHUB_OUTPUT"
+
       - name: Build test matrix
         id: build
-        shell: bash
+        shell: pwsh
         env:
           DATABASE_PROVIDERS: ${{ inputs.databaseProviders }}
           SEARCH_PROVIDERS: ${{ inputs.searchProviders }}
           CUSTOM_MODULE_ID: ${{ inputs.customModuleId }}
-          CUSTOM_PACKAGES_JSON_URL: ${{ inputs.customPackagesJsonUrl }}
-          REQUIRED_MODULES_LIST_URL: ${{ inputs.requiredModulesListUrl }}
+          MODULE_IDS: ${{ steps.manifests.outputs.ids }}
         run: |
-          # The only place module ids map to engines — docker-env-full just takes what it is given.
-          MAP='{"virtocommerce.elasticsearch8":"elasticsearch8",
-                "virtocommerce.elasticsearch9":"elasticsearch9",
-                "virtocommerce.opensearch":"opensearch"}'
+          # Map module id to the search provider
+          $engines = [ordered]@{
+            'virtocommerce.elasticsearch8' = 'elasticsearch8'
+            'virtocommerce.elasticsearch9' = 'elasticsearch9'
+            'virtocommerce.opensearch'     = 'opensearch'
+          }
 
-          # A provider module under test names its own engine.
-          primary=$(jq -rn --arg id "${CUSTOM_MODULE_ID,,}" --argjson map "$MAP" '$map[$id] // empty')
-
-          # Otherwise take it from the modules the caller's manifests install. Both manifest
-          # flavours are read, since callers pass one or the other: packages.json nests modules
-          # under .Sources[].Modules[], the required-modules list is a flat [{Id,Version}] array.
-          # Every module id, not just the engines: a manifest that lists modules but no engine
-          # among them is a hard error below, and that has to be told apart from one we failed
-          # to parse (where the ids are simply unknown).
-          allIds='[]'
-          for url in "$CUSTOM_PACKAGES_JSON_URL" "$REQUIRED_MODULES_LIST_URL"; do
-            [[ -z "$url" ]] && continue
-            if ! manifest=$(curl -fsSL --retry 3 "$url"); then
-              echo "::warning title=Test matrix::Could not read $url; its modules do not take part in picking the engine."
-              continue
-            fi
-            # A 2xx carrying a non-JSON body (proxy or sign-in page) must degrade to the
-            # default engine, not fail the step and skip every test job with it. Testing for
-            # empty output as well as a bad exit code: an empty body gives jq no input values
-            # at all, so it prints nothing and still exits 0 — which would leave $allIds empty
-            # and blow up on --argjson further down.
-            if ! ids=$(jq -c --argjson acc "$allIds" \
-                '$acc + [((objects | .Sources[]?.Modules[]?), (arrays | .[]))
-                         | .Id? // empty | strings | ascii_downcase]
-                 | unique' <<<"$manifest" 2>/dev/null) || [[ -z "$ids" ]]; then
-              echo "::warning title=Test matrix::$url did not return JSON in a known manifest shape; its modules do not take part in picking the engine."
-              continue
-            fi
-            allIds="$ids"
-          done
-          found=$(jq -c --argjson map "$MAP" '[.[] | $map[.] // empty] | unique' <<<"$allIds")
-          echo "Search provider modules in the manifests: $found"
-
-          # No engine module and nothing to fall back on: the platform would come up with no
-          # registered search provider and only say so when seeding hits the first indexed API,
-          # minutes in and once per database job. Say it here instead, before anything starts.
-          if [[ -z "$primary" && "$(jq length <<<"$found")" -eq 0 && "$(jq length <<<"$allIds")" -gt 0 ]]; then
-            echo "::error title=Test matrix::The manifests install no search provider this workflow can run. Found search-related modules: $(jq -r '[.[] | select(test("search"))] | if length > 0 then join(", ") else "none" end' <<<"$allIds"). Add one of $(jq -r '[.[]] | sort | join(", ")' <<<"$MAP") to the manifest, or set customModuleId to a provider module."
+          function Fail($message) {
+            Write-Host "::error title=Test matrix::$message"
             exit 1
-          fi
+          }
 
-          # ElasticSearch8 and ElasticSearch9 ship different majors of the same client
-          # assembly and only one loads per process, so only the newest is testable.
-          elastic=$(jq -c '[.[] | select(startswith("elasticsearch"))]
-                           | sort_by(ltrimstr("elasticsearch") | tonumber)' <<<"$found")
-          if [[ "$(jq length <<<"$elastic")" -gt 1 ]]; then
-            echo "::warning title=Test matrix::The manifests install several Elasticsearch modules ($(jq -r 'join(", ")' <<<"$elastic")); only $(jq -r 'last' <<<"$elastic") can load, so the others are skipped."
-          fi
-          # Usable engines: newest Elasticsearch (if any) plus OpenSearch (separate client).
-          usable=$(jq -c --argjson e "$elastic" '($e | if length > 0 then [last] else [] end)
-                           + [.[] | select(. == "opensearch")]' <<<"$found")
+          function Read-JsonArray($raw, $name) {
+            if ([string]::IsNullOrWhiteSpace($raw)) { return @() }
+            try { return @($raw | ConvertFrom-Json) }
+            catch { Fail "$name must be a JSON array, got '$raw'." }
+          }
 
-          [[ -z "$primary" ]] && primary=$(jq -r '.[0] // "elasticsearch8"' <<<"$usable")
+          # ES8 and ES9 ship different majors of one client assembly; only the newest loads
+          function Select-Usable($installed) {
+            $es = @($installed | Where-Object { $_.StartsWith('elasticsearch') } |
+                    Sort-Object { [int]($_ -replace '^elasticsearch') })
+            if ($es.Count -gt 1) {
+              Write-Host "::warning title=Test matrix::The manifests install several Elasticsearch modules ($($es -join ', ')); only $($es[-1]) can load, so the others are skipped."
+            }
+            @($es | Select-Object -Last 1) + @($installed | Where-Object { $_ -eq 'opensearch' })
+          }
 
-          # Reject a malformed searchProviders here: `jq length` would print nothing, the
-          # emptiness test below would pass, and the requested engines would vanish silently.
-          if ! jq -e 'arrays' >/dev/null 2>&1 <<<"$SEARCH_PROVIDERS"; then
-            echo "::error title=Test matrix::searchProviders must be a JSON array, got '$SEARCH_PROVIDERS'. Example: '[\"elasticsearch9\"]'."
-            exit 1
-          fi
-          unknown=$(jq -r --argjson map "$MAP" '[.[] | select(IN($map[]) | not)] | join(", ")' <<<"$SEARCH_PROVIDERS")
-          if [[ -n "$unknown" ]]; then
-            echo "::error title=Test matrix::Unknown searchProviders entries: $unknown. Allowed values: $(jq -r '[.[]] | sort | join(", ")' <<<"$MAP")."
-            exit 1
-          fi
+          $moduleIds = Read-JsonArray $env:MODULE_IDS 'MODULE_IDS'
+          $installed = @($moduleIds | ForEach-Object { $engines[$_] } | Where-Object { $_ } | Sort-Object -Unique)
+          $usable = Select-Usable $installed
 
-          # Extra engines get one postgres job each; the database jobs already cover the primary.
-          extras="$SEARCH_PROVIDERS"
-          [[ "$(jq length <<<"$extras")" -eq 0 ]] && extras="$usable"
-          # unique: a duplicate entry would mean two identical jobs and an artifact name clash.
-          extras=$(jq -c --arg p "$primary" '[.[] | select(. != $p)] | unique' <<<"$extras")
-          echo "Primary engine: $primary; extra jobs for: $extras"
+          # Module under test names its engine; else the manifests, else default
+          $ownEngine = $engines["$env:CUSTOM_MODULE_ID".ToLowerInvariant()]
+          if (-not $ownEngine -and $installed.Count -eq 0 -and $moduleIds.Count -gt 0) {
+            # Fail now, not minutes into every database job
+            Fail 'The manifests install no search provider this workflow can run.'
+          }
+          $primary = $ownEngine ?? ($usable | Select-Object -First 1) ?? 'elasticsearch8'
 
-          include=$(jq -cn --argjson dbs "$DATABASE_PROVIDERS" --arg primary "$primary" --argjson extras "$extras" \
-            '[$dbs[] | {databaseProvider: ., searchProvider: $primary}]
-             + [$extras[] | {databaseProvider: "postgres", searchProvider: .}]')
-          echo "include=$include" >> "$GITHUB_OUTPUT"
-          echo "::notice title=Test matrix::$(jq -r 'length' <<<"$include") job(s)"
-          jq . <<<"$include"
+          $requested = Read-JsonArray $env:SEARCH_PROVIDERS 'searchProviders'
+          $unknown = @($requested | Where-Object { $_ -notin $engines.Values })
+          if ($unknown.Count -gt 0) {
+            Fail "Unknown searchProviders entries: $($unknown -join ', '). Allowed values: $($engines.Values -join ', ')."
+          }
+
+          # One postgres job per extra engine. Explicit searchProviders wins over the manifests.
+          $wanted = if ($requested.Count -gt 0) { $requested } else { $usable }
+          $extras = @($wanted | Where-Object { $_ -ne $primary } | Sort-Object -Unique)
+
+          $databases = Read-JsonArray $env:DATABASE_PROVIDERS 'databaseProviders'
+          $include = @($databases | ForEach-Object { [ordered]@{ databaseProvider = $_; searchProvider = $primary } }) +
+                     @($extras | ForEach-Object { [ordered]@{ databaseProvider = 'postgres'; searchProvider = $_ } })
+
+          Write-Host "Primary engine: $primary; extra jobs for: $(if ($extras) { $extras -join ', ' } else { 'none' })"
+          Write-Host "::notice title=Test matrix::$($include.Count) job(s)"
+          Add-Content -Path $env:GITHUB_OUTPUT -Value "include=$($include | ConvertTo-Json -Depth 5 -Compress -AsArray)"
+          $include | ConvertTo-Json -Depth 5
 
   auto-autotests:
     needs: build-matrix
