@@ -1,5 +1,5 @@
-# v3.800.42
-# https://virtocommerce.atlassian.net/browse/VCST-5373
+# v3.800.43
+# https://virtocommerce.atlassian.net/browse/VCST-5146
 name: Auto tests
 
 on:
@@ -88,6 +88,11 @@ on:
         required: false
         type: string
         default: ''
+      searchProviders:
+        description: 'JSON array of search engines to cover in addition to the database matrix. Any subset of: elasticsearch8, elasticsearch9, opensearch. Each entry ADDS one job pinned to postgres; it does not cross with databaseProviders. The databaseProviders jobs resolve their own engine (from customModuleId, or the engine modules the caller''s manifests install, else elasticsearch8). Empty (the default) derives the extra jobs from those same manifests instead: every installed engine other than the primary one gets a job. Pass a non-empty array to override that. The platform image must ship the module for every engine listed.'
+        required: false
+        type: string
+        default: '[]'
       skipDocCountVerification:
         description: 'Comma-separated document types whose post-reindex count check should be skipped (reindex still runs). Use when the seed dataset has 0 records for a type. Example: ''PickupLocation'' or ''PickupLocation,ContentFile''.'
         required: false
@@ -126,13 +131,114 @@ on:
         required: false
 
 jobs:
+  # A union, not a cross product: one job per database, plus one postgres job per extra
+  # engine. Only `include` expresses that, and expressions cannot build it — hence this job.
+  build-matrix:
+    runs-on: ubuntu-22.04
+    outputs:
+      include: ${{ steps.build.outputs.include }}
+    steps:
+      # Fetching can fail, the rules cannot: kept apart so a bad manifest is visible on its own.
+      - name: Read the modules the manifests install
+        id: manifests
+        shell: bash
+        env:
+          CUSTOM_PACKAGES_JSON_URL: ${{ inputs.customPackagesJsonUrl }}
+          REQUIRED_MODULES_LIST_URL: ${{ inputs.requiredModulesListUrl }}
+        run: |
+          # Lowercased module ids from either manifest shape: .Sources[].Modules[] or a flat [{Id,Version}]
+          ids='[]'
+          for url in "$CUSTOM_PACKAGES_JSON_URL" "$REQUIRED_MODULES_LIST_URL"; do
+            [[ -z "$url" ]] && continue
+          # If nothing read, the default engine applies
+            if body=$(curl -fsSL --retry 3 "$url") &&
+               found=$(jq -c '[((objects | .Sources[]?.Modules[]?), (arrays | .[]))
+                               | .Id? // empty | strings | ascii_downcase]' <<<"$body" 2>/dev/null) &&
+               [[ -n "$found" ]]; then # jq exits 0 on an empty body
+              ids=$(jq -cn --argjson a "$ids" --argjson b "$found" '$a + $b | unique')
+            else
+              echo "::warning title=Test matrix::Could not read a module list from $url; it does not take part in picking the search engine."
+            fi
+          done
+          echo "Modules installed by the manifests: $(jq -r 'length' <<<"$ids")"
+          echo "ids=$ids" >> "$GITHUB_OUTPUT"
+
+      - name: Build test matrix
+        id: build
+        shell: pwsh
+        env:
+          DATABASE_PROVIDERS: ${{ inputs.databaseProviders }}
+          SEARCH_PROVIDERS: ${{ inputs.searchProviders }}
+          CUSTOM_MODULE_ID: ${{ inputs.customModuleId }}
+          MODULE_IDS: ${{ steps.manifests.outputs.ids }}
+        run: |
+          # Map module id to the search provider
+          $engines = [ordered]@{
+            'virtocommerce.elasticsearch8' = 'elasticsearch8'
+            'virtocommerce.elasticsearch9' = 'elasticsearch9'
+            'virtocommerce.opensearch'     = 'opensearch'
+          }
+
+          function Fail($message) {
+            Write-Host "::error title=Test matrix::$message"
+            exit 1
+          }
+
+          function Read-JsonArray($raw, $name) {
+            if ([string]::IsNullOrWhiteSpace($raw)) { return @() }
+            try { return @($raw | ConvertFrom-Json) }
+            catch { Fail "$name must be a JSON array, got '$raw'." }
+          }
+
+          # ES8 and ES9 ship different majors of one client assembly; only the newest loads
+          function Select-Usable($installed) {
+            $es = @($installed | Where-Object { $_.StartsWith('elasticsearch') } |
+                    Sort-Object { [int]($_ -replace '^elasticsearch') })
+            if ($es.Count -gt 1) {
+              Write-Host "::warning title=Test matrix::The manifests install several Elasticsearch modules ($($es -join ', ')); only $($es[-1]) can load, so the others are skipped."
+            }
+            @($es | Select-Object -Last 1) + @($installed | Where-Object { $_ -eq 'opensearch' })
+          }
+
+          $moduleIds = Read-JsonArray $env:MODULE_IDS 'MODULE_IDS'
+          $installed = @($moduleIds | ForEach-Object { $engines[$_] } | Where-Object { $_ } | Sort-Object -Unique)
+          $usable = Select-Usable $installed
+
+          # Module under test names its engine; else the manifests, else default
+          $ownEngine = $engines["$env:CUSTOM_MODULE_ID".ToLowerInvariant()]
+          if (-not $ownEngine -and $installed.Count -eq 0 -and $moduleIds.Count -gt 0) {
+            # Fail now, not minutes into every database job
+            Fail 'The manifests install no search provider this workflow can run.'
+          }
+          $primary = $ownEngine ?? ($usable | Select-Object -First 1) ?? 'elasticsearch8'
+
+          $requested = Read-JsonArray $env:SEARCH_PROVIDERS 'searchProviders'
+          $unknown = @($requested | Where-Object { $_ -notin $engines.Values })
+          if ($unknown.Count -gt 0) {
+            Fail "Unknown searchProviders entries: $($unknown -join ', '). Allowed values: $($engines.Values -join ', ')."
+          }
+
+          # One postgres job per extra engine. Explicit searchProviders wins over the manifests.
+          $wanted = if ($requested.Count -gt 0) { $requested } else { $usable }
+          $extras = @($wanted | Where-Object { $_ -ne $primary } | Sort-Object -Unique)
+
+          $databases = Read-JsonArray $env:DATABASE_PROVIDERS 'databaseProviders'
+          $include = @($databases | ForEach-Object { [ordered]@{ databaseProvider = $_; searchProvider = $primary } }) +
+                     @($extras | ForEach-Object { [ordered]@{ databaseProvider = 'postgres'; searchProvider = $_ } })
+
+          Write-Host "Primary engine: $primary; extra jobs for: $(if ($extras) { $extras -join ', ' } else { 'none' })"
+          Write-Host "::notice title=Test matrix::$($include.Count) job(s)"
+          Add-Content -Path $env:GITHUB_OUTPUT -Value "include=$($include | ConvertTo-Json -Depth 5 -Compress -AsArray)"
+          $include | ConvertTo-Json -Depth 5
+
   auto-autotests:
+    needs: build-matrix
     runs-on: ubuntu-22.04
 
     strategy:
       fail-fast: false
       matrix:
-        databaseProvider: ${{ fromJSON(inputs.databaseProviders) }}
+        include: ${{ fromJSON(needs.build-matrix.outputs.include) }}
 
     env:
       GITHUB_TOKEN: ${{ secrets.envPAT }}
@@ -142,7 +248,7 @@ jobs:
       uses: VirtoCommerce/vc-github-actions/setup-vcbuild@master
 
     - name: Docker Env Full
-      uses: VirtoCommerce/vc-github-actions/docker-env-full@master
+      uses: VirtoCommerce/vc-github-actions/docker-env-full@VCST-5146 #master
       with:
         frontendZipUrl: ${{ inputs.frontendZipUrl }}
         installModules: ${{ inputs.installModules }}
@@ -155,11 +261,12 @@ jobs:
         customModuleUrl: ${{ inputs.customModuleUrl }}
         sendgridApiKey: ${{ secrets.sendgridApiKey }}
         databaseProvider: ${{ matrix.databaseProvider }}
+        searchProvider: ${{ matrix.searchProvider }}
         prebuiltImageArtifact: ${{ inputs.prebuiltImageArtifact }}
         appInsightsInstrumentationKey: ${{ secrets.appInsightsInstrumentationKey }}
 
     - name: Run Auto Tests
-      uses: VirtoCommerce/vc-github-actions/run-pytest-tests@master
+      uses: VirtoCommerce/vc-github-actions/run-pytest-tests@VCST-5146 #master
       with:
         adminPassword: ${{ inputs.adminPassword }}
         adminUsername: ${{ inputs.adminUsername }}
@@ -173,5 +280,5 @@ jobs:
         vctestingPath: ${{ inputs.vctestingPath }}
         vctestingRepo: ${{ inputs.vctestingRepo }}
         vctestingRepoBranch: ${{ inputs.vctestingRepoBranch }}
-        artifactSuffix: -${{ matrix.databaseProvider }}
+        artifactSuffix: -${{ matrix.databaseProvider }}-${{ matrix.searchProvider }}
         skipDocCountVerification: ${{ inputs.skipDocCountVerification }}
