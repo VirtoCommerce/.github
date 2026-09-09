@@ -80,6 +80,7 @@ jobs:
                   ,vc-module-opentelemetry
                   ,vc-module-order
                   ,vc-module-order-management
+                  ,vc-module-otp
                   ,vc-module-pages
                   ,vc-module-payment
                   ,vc-module-power-bi-reports
