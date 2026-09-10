@@ -88,6 +88,7 @@ jobs:
                   ,vc-module-pricing
                   ,vc-module-product-snapshot
                   ,vc-module-profile-experience-api
+                  ,vc-module-punchout
                   ,vc-module-push-messages
                   ,vc-module-quote
                   ,vc-module-return
