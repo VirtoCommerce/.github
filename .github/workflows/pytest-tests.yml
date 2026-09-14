@@ -68,6 +68,11 @@ on:
         required: false
         type: string
         default: 'true'
+      moduleDependencies:
+        description: 'JSON array of module ids the module under test depends on, as declared in its module.manifest. Only used to pick the search engine: a dependency on a provider module is what makes the matrix run against that engine. The module-CI path supplies it from the checkout it already has, because there it is the only manifest naming the engine. Unlike the module lists behind customPackagesJsonUrl / requiredModulesListUrl, carrying no provider here is normal and never fails the run.'
+        required: false
+        type: string
+        default: '[]'
       platformDockerTag:
         description: 'Platform docker tag'
         required: false
@@ -171,6 +176,7 @@ jobs:
           SEARCH_PROVIDERS: ${{ inputs.searchProviders }}
           CUSTOM_MODULE_ID: ${{ inputs.customModuleId }}
           MODULE_IDS: ${{ steps.manifests.outputs.ids }}
+          DEPENDENCY_IDS: ${{ inputs.moduleDependencies }}
         run: |
           # Map module id to the search provider
           $engines = [ordered]@{
@@ -195,18 +201,23 @@ jobs:
             $es = @($installed | Where-Object { $_.StartsWith('elasticsearch') } |
                     Sort-Object { [int]($_ -replace '^elasticsearch') })
             if ($es.Count -gt 1) {
-              Write-Host "::warning title=Test matrix::The manifests install several Elasticsearch modules ($($es -join ', ')); only $($es[-1]) can load, so the others are skipped."
+              Write-Host "::warning title=Test matrix::Several Elasticsearch modules are in play ($($es -join ', ')); only $($es[-1]) can load, so the others are skipped."
             }
             @($es | Select-Object -Last 1) + @($installed | Where-Object { $_ -eq 'opensearch' })
           }
 
-          $moduleIds = Read-JsonArray $env:MODULE_IDS 'MODULE_IDS'
-          $installed = @($moduleIds | ForEach-Object { $engines[$_] } | Where-Object { $_ } | Sort-Object -Unique)
+          # The manifests say what gets installed; the module under test says what it needs.
+          # Both are read, but only the manifests can fail the run below.
+          $manifestIds = Read-JsonArray $env:MODULE_IDS 'MODULE_IDS'
+          $dependencyIds = @(Read-JsonArray $env:DEPENDENCY_IDS 'moduleDependencies' |
+                             ForEach-Object { "$_".ToLowerInvariant() })
+          $installed = @($manifestIds + $dependencyIds | ForEach-Object { $engines[$_] } |
+                         Where-Object { $_ } | Sort-Object -Unique)
           $usable = Select-Usable $installed
 
           # Module under test names its engine; else the manifests, else default
           $ownEngine = $engines["$env:CUSTOM_MODULE_ID".ToLowerInvariant()]
-          if (-not $ownEngine -and $installed.Count -eq 0 -and $moduleIds.Count -gt 0) {
+          if (-not $ownEngine -and $installed.Count -eq 0 -and $manifestIds.Count -gt 0) {
             # Fail now, not minutes into every database job
             Fail 'The manifests install no search provider this workflow can run.'
           }

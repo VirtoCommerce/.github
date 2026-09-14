@@ -110,6 +110,7 @@ jobs:
       matrix: ${{ steps.deployment-matrix.outputs.matrix }}
       deployment-folder-exists: ${{ steps.check_deployment_folder.outputs.exists }}
       requiredModulesListUrl: ${{ steps.extract_required_modules_list_url_from_pr.outputs.url }}
+      moduleDependencies: ${{ steps.module_dependencies.outputs.ids }}
 
     steps:
 
@@ -147,6 +148,20 @@ jobs:
       - name: Get Artifact Version
         uses: VirtoCommerce/vc-github-actions/get-image-version@master
         id: artifact_ver
+
+      # Read here rather than in the test workflow: this job already has the checkout, and
+      # module.manifest is the only place naming the search engine the module needs — the
+      # packages manifest is scraped from the PR body and is empty on a dispatch. The test
+      # workflow maps ids to engines; this step only reports what is declared.
+      - name: Read module dependencies
+        id: module_dependencies
+        shell: pwsh
+        run: |
+          $ids = @(Get-ChildItem -Path . -Filter module.manifest -Recurse -File |
+                   ForEach-Object { ([xml](Get-Content -Raw $_.FullName)).module.dependencies.dependency.id } |
+                   Where-Object { $_ } | Sort-Object -Unique)
+          Write-Host "Module dependencies: $(if ($ids) { $ids -join ', ' } else { 'none' })"
+          Add-Content -Path $env:GITHUB_OUTPUT -Value "ids=$($ids | ConvertTo-Json -Compress -AsArray)"
 
       - name: Check if .deployment folder exists
         id: check_deployment_folder
@@ -375,6 +390,7 @@ jobs:
       customModuleId:  ${{ needs.ci.outputs.moduleId }}
       customModuleUrl:  ${{ needs.ci.outputs.artifactUrl }}
       requiredModulesListUrl: ${{ needs.ci.outputs.requiredModulesListUrl }}
+      moduleDependencies: ${{ needs.ci.outputs.moduleDependencies }}
       vctestingRepoBranch: 'dev'
       frontendZipUrl: 'latest'
       testSuites: 'graphql,restapi,e2e'
