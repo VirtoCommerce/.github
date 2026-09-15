@@ -149,19 +149,34 @@ jobs:
         uses: VirtoCommerce/vc-github-actions/get-image-version@master
         id: artifact_ver
 
-      # Read here rather than in the test workflow: this job already has the checkout, and
-      # module.manifest is the only place naming the search engine the module needs — the
-      # packages manifest is scraped from the PR body and is empty on a dispatch. The test
-      # workflow maps ids to engines; this step only reports what is declared.
+      # Read here because this job already has the checkout: module.manifest is the only place
+      # naming the engine the module needs (the packages manifest comes from the PR body and is
+      # empty on a dispatch). Ids only — the test workflow owns the id -> engine mapping.
       - name: Read module dependencies
         id: module_dependencies
         shell: pwsh
         run: |
-          $ids = @(Get-ChildItem -Path . -Filter module.manifest -Recurse -File |
-                   ForEach-Object { ([xml](Get-Content -Raw $_.FullName)).module.dependencies.dependency.id } |
-                   Where-Object { $_ } | Sort-Object -Unique)
+          # samples ship their own manifests and are not what is being tested
+          $manifests = @(Get-ChildItem -Path . -Filter module.manifest -Recurse -File |
+                         Where-Object { $_.FullName -notmatch '[\\/](samples|tests)[\\/]' })
+
+          $declared = @(foreach ($manifest in $manifests) {
+            try { $xml = [xml](Get-Content -Raw $manifest.FullName) }
+            catch {
+              Write-Host "::warning title=Module dependencies::$($manifest.FullName) is not valid XML; its dependencies are ignored."
+              continue
+            }
+            # Optional dependencies are not installed: an engine named by one would be picked
+            # for testing and then not be there.
+            $xml.module.dependencies.dependency |
+              Where-Object { $_.id -and $_.optional -ne 'true' } | ForEach-Object { $_.id }
+          })
+          $ids = @($declared | Sort-Object -Unique)
+
           Write-Host "Module dependencies: $(if ($ids) { $ids -join ', ' } else { 'none' })"
-          Add-Content -Path $env:GITHUB_OUTPUT -Value "ids=$($ids | ConvertTo-Json -Compress -AsArray)"
+          # ConvertTo-Json on an empty array yields nothing, and the consumer parses this
+          $json = if ($ids.Count -gt 0) { $ids | ConvertTo-Json -Compress -AsArray } else { '[]' }
+          Add-Content -Path $env:GITHUB_OUTPUT -Value "ids=$json"
 
       - name: Check if .deployment folder exists
         id: check_deployment_folder

@@ -136,14 +136,14 @@ on:
         required: false
 
 jobs:
-  # The matrix is databases x engines, and the engine list is only known once the caller's
-  # manifests have been read. Expressions cannot fetch or cross anything — hence this job.
+  # Databases x engines, and the engines are only known once the manifests are fetched —
+  # expressions can do neither.
   build-matrix:
     runs-on: ubuntu-22.04
     outputs:
       include: ${{ steps.build.outputs.include }}
     steps:
-      # Fetching can fail, the rules cannot: kept apart so a bad manifest is visible on its own.
+      # Split from the rules below so a bad manifest is visible on its own.
       - name: Read the modules the manifests install
         id: manifests
         shell: bash
@@ -155,10 +155,13 @@ jobs:
           ids='[]'
           for url in "$CUSTOM_PACKAGES_JSON_URL" "$REQUIRED_MODULES_LIST_URL"; do
             [[ -z "$url" ]] && continue
-          # If nothing read, the default engine applies
+            # A 2xx can still carry a sign-in page, so error() on an unknown shape tells
+            # "not a manifest" from "no modules in it". Nothing read -> the default engine.
             if body=$(curl -fsSL --retry 3 "$url") &&
-               found=$(jq -c '[((objects | .Sources[]?.Modules[]?), (arrays | .[]))
-                               | .Id? // empty | strings | ascii_downcase]' <<<"$body" 2>/dev/null) &&
+               found=$(jq -c 'if (type == "object" and has("Sources")) or type == "array" then
+                                [((objects | .Sources[]?.Modules[]?), (arrays | .[]))
+                                 | .Id? // empty | strings | ascii_downcase]
+                              else error("unknown manifest shape") end' <<<"$body" 2>/dev/null) &&
                [[ -n "$found" ]]; then # jq exits 0 on an empty body
               ids=$(jq -cn --argjson a "$ids" --argjson b "$found" '$a + $b | unique')
             else
@@ -190,10 +193,14 @@ jobs:
             exit 1
           }
 
+          # Checked, not coerced: an object would otherwise reach some later message as a
+          # stringified PSCustomObject. -NoEnumerate, or a one-item array arrives as a scalar.
           function Read-JsonArray($raw, $name) {
             if ([string]::IsNullOrWhiteSpace($raw)) { return @() }
-            try { return @($raw | ConvertFrom-Json) }
+            try { $parsed = ConvertFrom-Json -InputObject $raw -NoEnumerate }
             catch { Fail "$name must be a JSON array, got '$raw'." }
+            if ($parsed -isnot [array]) { Fail "$name must be a JSON array, got '$raw'." }
+            @($parsed)
           }
 
           # ES8 and ES9 ship different majors of one client assembly; only the newest loads
@@ -206,9 +213,9 @@ jobs:
             @($es | Select-Object -Last 1) + @($installed | Where-Object { $_ -eq 'opensearch' })
           }
 
-          # The manifests say what gets installed; the module under test says what it needs.
-          # Both are read, but only the manifests can fail the run below.
-          $manifestIds = Read-JsonArray $env:MODULE_IDS 'MODULE_IDS'
+          # Manifests say what is installed, the module under test says what it needs;
+          # only the manifests can fail the run below.
+          $manifestIds = Read-JsonArray $env:MODULE_IDS 'The module list read from the manifests'
           $dependencyIds = @(Read-JsonArray $env:DEPENDENCY_IDS 'moduleDependencies' |
                              ForEach-Object { "$_".ToLowerInvariant() })
           $installed = @($manifestIds + $dependencyIds | ForEach-Object { $engines[$_] } |
@@ -228,15 +235,19 @@ jobs:
             Fail "Unknown searchProviders entries: $($unknown -join ', '). Allowed values: $($engines.Values -join ', ')."
           }
 
-          # Explicit searchProviders wins over the manifests; a provider module under test is
-          # always covered, even when the manifests happen not to install it.
+          # Explicit searchProviders wins; a provider module under test is always covered.
           $wanted = if ($requested.Count -gt 0) { $requested } else { $usable }
           $wanted = @(@($ownEngine) + $wanted | Where-Object { $_ } | Select-Object -Unique)
           if ($wanted.Count -eq 0) { $wanted = @('elasticsearch8') }
 
-          # Every engine gets the full database matrix: the engine is not a variation of one
-          # job, it is what the whole suite runs against.
+          # Full database matrix per engine: the engine is what the whole suite runs against,
+          # not a variation of one job.
           $databases = Read-JsonArray $env:DATABASE_PROVIDERS 'databaseProviders'
+          if ($databases.Count -eq 0) {
+            # An empty include writes nothing, and fromJSON('') is a workflow-level parse error
+            Fail 'databaseProviders is empty, so the matrix would hold no jobs at all.'
+          }
+
           $include = @(foreach ($engine in $wanted) {
             foreach ($database in $databases) {
               [ordered]@{ databaseProvider = $database; searchProvider = $engine }
@@ -265,7 +276,7 @@ jobs:
       uses: VirtoCommerce/vc-github-actions/setup-vcbuild@master
 
     - name: Docker Env Full
-      uses: VirtoCommerce/vc-github-actions/docker-env-full@VCST-5146 #master
+      uses: VirtoCommerce/vc-github-actions/docker-env-full@master
       with:
         frontendZipUrl: ${{ inputs.frontendZipUrl }}
         installModules: ${{ inputs.installModules }}
@@ -283,7 +294,7 @@ jobs:
         appInsightsInstrumentationKey: ${{ secrets.appInsightsInstrumentationKey }}
 
     - name: Run Auto Tests
-      uses: VirtoCommerce/vc-github-actions/run-pytest-tests@VCST-5146 #master
+      uses: VirtoCommerce/vc-github-actions/run-pytest-tests@master
       with:
         adminPassword: ${{ inputs.adminPassword }}
         adminUsername: ${{ inputs.adminUsername }}
