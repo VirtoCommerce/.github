@@ -311,3 +311,20 @@ jobs:
         vctestingRepoBranch: ${{ inputs.vctestingRepoBranch }}
         artifactSuffix: -${{ matrix.databaseProvider }}-${{ matrix.searchProvider }}
         skipDocCountVerification: ${{ inputs.skipDocCountVerification }}
+
+  # Branch protection needs one check name, and the matrix job's own name carries the database
+  # and the engine, both of which now vary per caller. always() is required: without it a
+  # failed matrix skips this job, and a skipped job reports no status at all.
+  auto-tests-result:
+    if: always()
+    needs: [build-matrix, auto-autotests]
+    runs-on: ubuntu-22.04
+    steps:
+      - name: Check the matrix result
+        env:
+          # A matrix job's result is already an aggregate: success only if every job succeeded
+          MATRIX: ${{ needs.build-matrix.result }}
+          TESTS: ${{ needs.auto-autotests.result }}
+        run: |
+          echo "build-matrix=$MATRIX auto-autotests=$TESTS"
+          [[ "$MATRIX" == "success" && "$TESTS" == "success" ]] || exit 1
