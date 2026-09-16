@@ -149,6 +149,9 @@ function Invoke-PutProtection {
                     return [pscustomobject]@{ Status = 'OK'; Reason = "$Action (repo renamed -> $canonical)" }
                 }
             }
+            if ("$out" -match 'archived') {
+                return [pscustomobject]@{ Status = 'SKIP'; Reason = 'repo archived' }
+            }
             return [pscustomobject]@{ Status = 'ERROR'; Reason = "$out" }
         }
     }
