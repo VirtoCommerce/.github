@@ -45,9 +45,7 @@ param(
         'license/cla',
         'ci',
         'SonarCloud Code Analysis',
-        'auto-tests / auto-autotests (mysql)',
-        'auto-tests / auto-autotests (postgres)',
-        'auto-tests / auto-autotests (sqlserver)',
+        'auto-tests / auto-tests-result',
         'swagger-validation'
     ),
     [switch]$AddIfMissing,
