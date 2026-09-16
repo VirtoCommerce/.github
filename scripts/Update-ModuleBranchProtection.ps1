@@ -12,6 +12,11 @@
     .github/workflows/create-module-repository.yml (the "Protect branches"
     step), so a bare run converges every repo to that set.
 
+    The repos come from module-repos.json — the same list the
+    deploy-module-workflows workflow deploys the templates to. Repos outside it
+    never run those workflows, so the checks enforced here would never report
+    there and their pull requests would be blocked for good.
+
     Read-modify-write: fetches each branch's current protection, replaces only
     the status-check contexts list, and PUTs it back. All other settings
     (reviews, enforce_admins, restrictions, etc.) are preserved as-is.
@@ -37,6 +42,8 @@
 param(
     [string]$Org = 'VirtoCommerce',
     [string[]]$Repos,
+    # Same list the deploy-module-workflows workflow builds its matrix from.
+    [string]$RepoListPath = (Join-Path $PSScriptRoot '..' 'module-repos.json'),
     [string[]]$Branches = @('dev'),
     # The required checks to enforce, verbatim: any check not listed is removed
     # from each branch. Default mirrors the canonical policy in
@@ -66,14 +73,20 @@ function Test-GhReady {
     }
 }
 
+# The repos that actually receive module-ci.yml, not every vc-module-* in the org:
+# a repo without that workflow never reports the checks enforced here, so requiring
+# them there would block its pull requests for good.
 function Get-ModuleRepos {
-    param([string]$Org)
-    $json = gh repo list $Org --limit 1000 --no-archived --json name 2>&1
-    if ($LASTEXITCODE -ne 0) { throw "Failed to list repos for $Org`: $json" }
-    ($json | ConvertFrom-Json) |
-        Where-Object { $_.name -like 'vc-module-*' } |
-        ForEach-Object { "$Org/$($_.name)" } |
-        Sort-Object
+    param([string]$Org, [string]$Path)
+
+    if (-not (Test-Path -LiteralPath $Path)) {
+        throw "Repo list not found at $Path. Pass -Repos explicitly, or -RepoListPath."
+    }
+
+    $names = @(Get-Content -Raw -LiteralPath $Path | ConvertFrom-Json)
+    if ($names.Count -eq 0) { throw "$Path is empty." }
+
+    $names | Sort-Object -Unique | ForEach-Object { "$Org/$_" }
 }
 
 function Get-Enabled {
@@ -251,8 +264,8 @@ try {
     Test-GhReady
 
     if (-not $Repos -or $Repos.Count -eq 0) {
-        Write-Host "Discovering vc-module-* repos in $Org ..."
-        $Repos = Get-ModuleRepos -Org $Org
+        Write-Host "Reading the module repo list from $RepoListPath ..."
+        $Repos = @(Get-ModuleRepos -Org $Org -Path $RepoListPath)
         Write-Host "Found $($Repos.Count) module repos."
     }
     else {
