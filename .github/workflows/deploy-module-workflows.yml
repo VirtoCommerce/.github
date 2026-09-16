@@ -15,113 +15,38 @@ permissions:
 
 jobs:
 
+  # module-repos.json is the one list of repos that get these templates; scripts
+  # enforcing anything per-repo read the same file instead of globbing the org.
+  list-repos:
+    runs-on: ubuntu-latest
+    outputs:
+      repos: ${{ steps.read.outputs.repos }}
+    steps:
+      - name: Checkout .github
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          sparse-checkout: module-repos.json
+          sparse-checkout-cone-mode: false
+          persist-credentials: false
+
+      - name: Read the repo list
+        id: read
+        run: |
+          # Compact, and fail loudly on a malformed or empty list rather than
+          # producing an empty matrix that quietly deploys nothing.
+          repos=$(jq -c 'if type == "array" and length > 0 then . else error("module-repos.json must be a non-empty array") end' module-repos.json)
+          echo "Repos to deploy to: $(jq -r 'length' <<<"$repos")"
+          echo "repos=$repos" >> "$GITHUB_OUTPUT"
+
   deploy:
+    needs: list-repos
     runs-on: ubuntu-latest
     strategy:
       # Deploy each repo independently — one repo failing (e.g. archived) must
       # not cancel the others.
       fail-fast: false
       matrix:
-# Module workflows
-        repoName: [vc-module-algolia-search
-                  ,vc-module-app-insights
-                  ,vc-module-assets
-                  ,vc-module-authorize-net
-                  ,vc-module-avatax
-                  ,vc-module-azure-ad
-                  ,vc-module-azure-app-configuration
-                  ,vc-module-azure-search
-                  ,vc-module-azureblob-assets
-                  ,vc-module-back-in-stock
-                  ,vc-module-background-jobs
-                  ,vc-module-backup-restore
-                  ,vc-module-builder-io
-                  ,vc-module-bulk-actions
-                  ,vc-module-cart
-                  ,vc-module-catalog
-                  ,vc-module-catalog-csv-export-import
-                  ,vc-module-catalog-personalization
-                  ,vc-module-catalog-publishing
-                  ,vc-module-content
-                  ,vc-module-contentful
-                  ,vc-module-contract
-                  ,vc-module-core
-                  ,vc-module-customer
-                  ,vc-module-customer-export-import
-                  ,vc-module-customer-review
-                  ,vc-module-cyber-source
-                  ,vc-module-datatrans
-                  ,vc-module-dynamic-associations
-                  ,vc-module-elastic-app-search
-                  ,vc-module-elastic-search
-                  ,vc-module-elastic-search-8
-                  ,vc-module-elastic-search-9
-                  ,vc-module-environments-compare
-                  ,vc-module-event-bus
-                  ,vc-module-export
-                  ,vc-module-file-experience-api
-                  ,vc-module-filesystem-assets
-                  ,vc-module-gdpr
-                  ,vc-module-google-ecommerce-analytics
-                  ,vc-module-google-sso
-                  ,vc-module-hotjar
-                  ,vc-module-image-tools
-                  ,vc-module-import
-                  ,vc-module-inventory
-                  ,vc-module-loyalty
-                  ,vc-module-lucene-search
-                  ,vc-module-marketing
-                  ,vc-module-marketing-experience-api
-                  ,vc-module-native-payment-methods
-                  ,vc-module-news
-                  ,vc-module-notification
-                  ,vc-module-open-search
-                  ,vc-module-openid-connect
-                  ,vc-module-opentelemetry
-                  ,vc-module-order
-                  ,vc-module-order-management
-                  ,vc-module-otp
-                  ,vc-module-pages
-                  ,vc-module-payment
-                  ,vc-module-power-bi-reports
-                  ,vc-module-price-export-import
-                  ,vc-module-pricing
-                  ,vc-module-product-snapshot
-                  ,vc-module-profile-experience-api
-                  ,vc-module-punchout
-                  ,vc-module-push-messages
-                  ,vc-module-quote
-                  ,vc-module-return
-                  ,vc-module-sales-rep
-                  ,vc-module-sanity
-                  ,vc-module-search
-                  ,vc-module-seo
-                  ,vc-module-seq-log
-                  ,vc-module-shipping
-                  ,vc-module-shipstation
-                  ,vc-module-shopify-taxonomy
-                  ,vc-module-sitemaps
-                  ,vc-module-skyflow
-                  ,vc-module-solution-architecture-map
-                  ,vc-module-sql-queries
-                  ,vc-module-state-machine
-                  ,vc-module-store
-                  ,vc-module-subscription
-                  ,vc-module-system-operations
-                  ,vc-module-task-management
-                  ,vc-module-tax
-                  ,vc-module-ucp
-                  ,vc-module-webhooks
-                  ,vc-module-white-labeling
-                  ,vc-module-x-api
-                  ,vc-module-x-cart
-                  ,vc-module-x-catalog
-                  ,vc-module-x-cms
-                  ,vc-module-x-frontend
-                  ,vc-module-x-order
-                  ,vc-module-x-pickup
-                  ,vc-module-x-recommend
-                  ]
+        repoName: ${{ fromJSON(needs.list-repos.outputs.repos) }}
 
 # Module samples workflows
         # include:

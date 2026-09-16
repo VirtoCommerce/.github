@@ -575,54 +575,36 @@ jobs:
             --input -
           echo "Repository custom properties set."
 
-      - name: Register repository in deploy-module-workflows.yml
-        # Inserts the new repo into the sorted matrix list and commits back.
-        # Failure here does not fail the workflow — repo setup is already complete.
+      - name: Register repository in module-repos.json
+        # Adds the new repo to the list the templates are deployed to and the
+        # branch protection script converges. Failure here does not fail the
+        # workflow — repo setup is already complete.
         # Git user identity is already configured by the Setup Git credentials step.
         continue-on-error: true
         working-directory: dotgithub
         run: |
           NEW_REPO="$REPO_NAME"
-          FILE=".github/workflows/deploy-module-workflows.yml"
+          FILE="module-repos.json"
 
-          python3 - "$NEW_REPO" "$FILE" << 'PYEOF'
-          import sys, re
-          repo, path = sys.argv[1], sys.argv[2]
-          with open(path) as f:
-              content = f.read()
-          m = re.search(r'(        repoName: \[)([\s\S]*?)(\])', content)
-          if not m:
-              sys.exit('repoName list not found')
-          entries = [e.strip().lstrip(',') for e in m.group(2).splitlines() if e.strip()]
-          if repo in entries:
-              print(f'{repo} already in list — nothing to do')
-              sys.exit(0)
-          entries.append(repo)
-          entries.sort()
-          indent_match = re.search(r'\n( +),', m.group(2))
-          indent = indent_match.group(1) if indent_match else ' ' * (len(m.group(1)) - 1)
-          new_body = entries[0] + ''.join(f'\n{indent},{e}' for e in entries[1:])
-          new_content = content[:m.start()] + m.group(1) + new_body + '\n' + indent + m.group(3) + content[m.end():]
-          with open(path, 'w') as f:
-              f.write(new_content)
-          print(f'Added {repo}')
-          PYEOF
+          # Sorted and unique, matching how the file is kept by hand
+          jq --arg repo "$NEW_REPO" '. + [$repo] | unique' "$FILE" > "$FILE.tmp"
+          mv "$FILE.tmp" "$FILE"
 
           git add "$FILE"
           if git diff --cached --quiet; then
-            echo "$NEW_REPO was already in deploy-module-workflows.yml — no commit needed."
+            echo "$NEW_REPO was already in $FILE — no commit needed."
           else
-            git commit -m "ci: Add $NEW_REPO to deploy-module-workflows"
+            git commit -m "ci: Add $NEW_REPO to $FILE"
             # Pull and rebase to handle concurrent pushes, then retry once.
             if ! git push; then
               echo "Push failed — pulling and rebasing..."
               if git pull --rebase && git push; then
-                echo "$NEW_REPO registered in deploy-module-workflows.yml."
+                echo "$NEW_REPO registered in $FILE."
               else
-                echo "::warning::Could not register $NEW_REPO in deploy-module-workflows.yml after rebase — add it manually."
+                echo "::warning::Could not register $NEW_REPO in $FILE after rebase — add it manually."
               fi
             else
-              echo "$NEW_REPO registered in deploy-module-workflows.yml."
+              echo "$NEW_REPO registered in $FILE."
             fi
           fi
 
