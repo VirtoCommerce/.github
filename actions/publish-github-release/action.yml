@@ -1,0 +1,31 @@
+name: 'publish-github-release'
+description: 'Publish github release or prerelease dependant to github.ref'
+inputs:
+  changelog:
+    description: "Commit's messages since the latest release"
+    default: ""
+    required: false
+  prerelease:
+    description: ""
+    default: "false"
+    required: false
+  organization:
+    description: "Organization name"
+    default: "VirtoCommerce"
+    required: false
+  skipString:
+    description: "vc-build skip string"
+    default: "Clean+Restore+Compile+WebPackBuild+Test+BuildCustomApp"
+    required: false
+  makeLatest:
+    description: "make vc-build do NOT mark the release with Latest label"
+    default: "true"
+    required: false
+
+outputs:
+  downloadUrl:
+    description: "GitHub release download URL"
+
+runs:
+  using: 'node24'
+  main: 'dist/index.js'

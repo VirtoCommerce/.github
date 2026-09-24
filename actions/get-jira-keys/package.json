@@ -1,0 +1,21 @@
+{
+  "name": "@virtocommerce/get-jira-keys",
+  "version": "1.0.0",
+  "description": "Find issue keys inside event",
+  "main": "index.js",
+  "scripts": {
+    "build": "ncc build src/index.ts -o dist --source-map --license licenses.txt",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "Maksim Kopnov",
+  "license": "ISC",
+  "dependencies": {
+    "@actions/core": "^1.10.0",
+    "@actions/github": "^5.0.0"
+  },
+  "devDependencies": {
+    "@types/node": "^25.9.3",
+    "@vercel/ncc": "^0.38.0",
+    "typescript": "^5.8.3"
+  }
+}
