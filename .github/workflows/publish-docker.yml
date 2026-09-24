@@ -75,7 +75,7 @@ jobs:
 
     - name: Load Docker image 
       id: load-docker
-      uses: VirtoCommerce/vc-github-actions/docker-load-image@master
+      uses: VirtoCommerce/.github/actions/docker-load-image@VCST-5414
       with:
         dockerTar: ${{ env.DOCKER_TAR }}
 
@@ -87,7 +87,7 @@ jobs:
         password: ${{ env.GITHUB_TOKEN }}
 
     - name: Publish Docker Image
-      uses: VirtoCommerce/vc-github-actions/publish-docker-image@master
+      uses: VirtoCommerce/.github/actions/publish-docker-image@VCST-5414
       with:
           image: ${{ steps.load-docker.outputs.image }}
           tag: ${{ steps.load-docker.outputs.tag }}
