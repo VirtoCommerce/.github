@@ -30,7 +30,7 @@ jobs:
     steps: 
     
     - name: Start deployment
-      uses: VirtoCommerce/vc-github-actions/gh-deployments@master
+      uses: VirtoCommerce/.github/actions/gh-deployments@VCST-5414
       id: deployment
       with:
         step: start
@@ -56,7 +56,7 @@ jobs:
         GITHUB_EVENT_INPUTS_BASEIMAGENAME: ${{ github.event.inputs.baseImageName }}
         GITHUB_EVENT_INPUTS_ARTIFACTLINK: ${{ github.event.inputs.artifactLink }}
 
-    - uses: VirtoCommerce/vc-github-actions/setup-git-credentials-github@master
+    - uses: VirtoCommerce/.github/actions/setup-git-credentials-github@VCST-5414
       with:
         githubToken: ${{ secrets.REPO_TOKEN }}
 
@@ -98,7 +98,7 @@ jobs:
       run: echo "BUILD_STATE=failed"  >> $GITHUB_ENV
 
     - name: Update GitHub deployment status
-      uses: VirtoCommerce/vc-github-actions/gh-deployments@master
+      uses: VirtoCommerce/.github/actions/gh-deployments@VCST-5414
       if: always()
       with:
         step: finish

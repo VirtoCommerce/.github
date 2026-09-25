@@ -29,7 +29,7 @@ jobs:
         java-version: '17'
 
     - name: Install VirtoCommerce.GlobalTool
-      uses: VirtoCommerce/vc-github-actions/setup-vcbuild@master
+      uses: VirtoCommerce/.github/actions/setup-vcbuild@VCST-5414
     
     - name: Install dotnet-sonarscanner
       run: dotnet tool install --global dotnet-sonarscanner
@@ -40,7 +40,7 @@ jobs:
         persist-credentials: false
 
     - name: Get Artifact Version
-      uses: VirtoCommerce/vc-github-actions/get-image-version@master
+      uses: VirtoCommerce/.github/actions/get-image-version@VCST-5414
       id: artifactVer
 
     - name: Set VERSION_SUFFIX variables
@@ -51,13 +51,13 @@ jobs:
  
     - name: Add version suffix
       if: ${{ github.ref != 'refs/heads/master' || github.ref != 'refs/heads/main' }}
-      uses: VirtoCommerce/vc-github-actions/add-version-suffix@master
+      uses: VirtoCommerce/.github/actions/add-version-suffix@VCST-5414
       with:
         versionSuffix: ${{ env.VERSION_SUFFIX }}
 
 
     - name: SonarCloud Begin
-      uses: VirtoCommerce/vc-github-actions/sonar-scanner-begin@master
+      uses: VirtoCommerce/.github/actions/sonar-scanner-begin@VCST-5414
 
     - name: Build
       run: vc-build Compile
@@ -66,9 +66,9 @@ jobs:
       run: vc-build Test -skip
 
     - name: SonarCloud End
-      uses: VirtoCommerce/vc-github-actions/sonar-scanner-end@master
+      uses: VirtoCommerce/.github/actions/sonar-scanner-end@VCST-5414
 
     - name: Quality Gate
-      uses: VirtoCommerce/vc-github-actions/sonar-quality-gate@master
+      uses: VirtoCommerce/.github/actions/sonar-quality-gate@VCST-5414
       with:
         login: ${{ env.SONAR_TOKEN }}

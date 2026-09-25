@@ -85,7 +85,7 @@ jobs:
         java-version: '17'
 
     - name: Install VirtoCommerce.GlobalTool
-      uses: VirtoCommerce/vc-github-actions/setup-vcbuild@master
+      uses: VirtoCommerce/.github/actions/setup-vcbuild@VCST-5414
 
     - name: Set FETCH_DEPTH variables
       if: ${{ inputs.forceVersionSuffix == 'true' }}
@@ -103,7 +103,7 @@ jobs:
         vc-build IncrementPatch
 
     - name: Get Artifact Version
-      uses: VirtoCommerce/vc-github-actions/get-image-version@master
+      uses: VirtoCommerce/.github/actions/get-image-version@VCST-5414
       id: artifactVer
 
     - name: Set IMAGE_TAG variables
@@ -128,7 +128,7 @@ jobs:
 
     - name: Add version suffix
       if: ${{ github.ref != 'refs/heads/master' || github.ref != 'refs/heads/main' || inputs.forceVersionSuffix == 'true'}}
-      uses: VirtoCommerce/vc-github-actions/add-version-suffix@master
+      uses: VirtoCommerce/.github/actions/add-version-suffix@VCST-5414
       with:
         versionSuffix: ${{ env.VERSION_SUFFIX }}
 
@@ -136,7 +136,7 @@ jobs:
       run: vc-build Compress+Pack -skip Test
 
     - name: Get cache key
-      uses: VirtoCommerce/vc-github-actions/cache-get-key@master
+      uses: VirtoCommerce/.github/actions/cache-get-key@VCST-5414
       id: cache-key
       with:
         runnerOs: ${{ runner.os  }}
@@ -154,7 +154,7 @@ jobs:
     - name: Build Docker Image
       if: ${{ inputs.uploadDocker == 'true' }}
       id: dockerBuild
-      uses: VirtoCommerce/vc-github-actions/build-docker-image@master
+      uses: VirtoCommerce/.github/actions/build-docker-image@VCST-5414
       with:
         # outputs: type=tar,dest=${{ github.workspace }}/${{ env.DOCKER_TAR }}
         imageName: ${{ env.IMAGE_NAME }}

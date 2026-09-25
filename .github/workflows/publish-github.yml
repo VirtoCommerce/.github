@@ -58,7 +58,7 @@ jobs:
     steps: 
 
     - name: Install VirtoCommerce.GlobalTool
-      uses: VirtoCommerce/vc-github-actions/setup-vcbuild@master
+      uses: VirtoCommerce/.github/actions/setup-vcbuild@VCST-5414
 
     - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       with:
@@ -98,7 +98,7 @@ jobs:
         organization: ${{ github.repository_owner }}
         skipString: 'Clean+Restore+Compile+WebPackBuild+Test+Publish+Compress'
         makeLatest: ${{ inputs.makeLatest }}
-      uses: VirtoCommerce/vc-github-actions/publish-github-release@master
+      uses: VirtoCommerce/.github/actions/publish-github-release@VCST-5414
 
     # Pushes with the caller-supplied `nugetKey`. Do NOT add NuGet/login (OIDC) here to mint the
     # key: this is a cross-repo reusable, so the OIDC token's job_workflow_ref would be this file
@@ -107,14 +107,14 @@ jobs:
     # in their OWN job and pass it in via the `nugetKey` secret.
     - name: Publish Nuget
       if: ${{ inputs.forceNuget }}
-      uses: VirtoCommerce/vc-github-actions/publish-nuget@master
+      uses: VirtoCommerce/.github/actions/publish-nuget@VCST-5414
       with:
         skipString: 'Clean+Restore+Compile+Test+Pack'
 
     - name: Publish to Blob
       if:  ${{ inputs.forceBlob }}
       id: blobRelease
-      uses: VirtoCommerce/vc-github-actions/publish-blob-release@master
+      uses: VirtoCommerce/.github/actions/publish-blob-release@VCST-5414
       with:
         blobSAS: ${{ secrets.BLOB_TOKEN }}
         blobUrl: ${{ vars.BLOB_URL }}
@@ -122,7 +122,7 @@ jobs:
     - name: Get PR number
       id: getPrNumber
       if: ${{ inputs.forceBlob }}
-      uses: VirtoCommerce/vc-github-actions/get-pr-number@master
+      uses: VirtoCommerce/.github/actions/get-pr-number@VCST-5414
       with:
         repo: "${{ github.repository }}"
         branch: "${{ github.ref_name }}"

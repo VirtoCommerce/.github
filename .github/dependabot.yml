@@ -1,5 +1,7 @@
 version: 2
 updates:
+  # GitHub Actions referenced from workflows (.github/workflows) and from every
+  # composite action.yml under actions/.
   - package-ecosystem: github-actions
     directories: ["/**"]
     # deprecated/ holds retired reusable workflows — not maintained.
@@ -8,7 +10,38 @@ updates:
       interval: weekly
     groups:
       actions:
+        # group-by dependency-name collapses the same action bump across every
+        # directory it appears in into ONE pull request, instead of Dependabot's
+        # default of one grouped PR per directory (there is one per action).
+        group-by: dependency-name
         patterns:
           - "*"
+
+  # Bundled Node actions: every directory under actions/ with a package.json.
+  # group-by dependency-name consolidates a given package bump across all action
+  # folders into a single PR. Minor + patch are grouped; majors still arrive
+  # separately (one PR per package) so each can be canary-tested.
+  # dependabot-rebuild.yml rebuilds dist/ on these PRs so check-dist passes.
+  - package-ecosystem: npm
+    directories:
+      - "/actions/*"
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 10
+    groups:
+      minor-and-patch:
+        group-by: dependency-name
+        patterns:
+          - "*"
+        update-types:
+          - "minor"
+          - "patch"
+      major:
+        group-by: dependency-name
+        patterns:
+          - "*"
+        update-types:
+          - "major"
+
 # Workflow-templates/ is not scanned by Dependabot's github-actions ecosystem.
 # Those files are kept up-to-date by .github/workflows/auto-update-templates.yml.

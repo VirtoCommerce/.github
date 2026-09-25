@@ -1,0 +1,5 @@
+name: 'setup-vcbuild'
+description: 'Setups vc-build'
+runs:
+  using: 'node24'
+  main: 'index.js'
