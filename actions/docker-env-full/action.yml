@@ -107,7 +107,9 @@ runs:
       shell: pwsh
       env:
         SEARCH_PROVIDER_INPUT: ${{ inputs.searchProvider }}
-      run: |
+      # GITHUB_ENV is this action's interface to its later steps and callers; the
+      # values are taken from the allow-list below, never from the raw input.
+      run: | # zizmor: ignore[github-env]
         # Engine image tags, pinned here only; overlays read STACK_VERSION. Doubles as the allow-list.
         $engineVersions = @{
           elasticsearch8 = '8.18.0'
@@ -135,7 +137,10 @@ runs:
       env:
         APP_INSIGHTS_IKEY_INPUT: ${{ inputs.appInsightsInstrumentationKey }}
         DB_PROVIDER_INPUT: ${{ inputs.databaseProvider }}
-      run: |
+      # GITHUB_ENV is this action's interface to its later steps and callers
+      # (passwords, ROLE_NAME, instrumentation key); the values are generated here
+      # or come from the calling workflow, never from event data.
+      run: | # zizmor: ignore[github-env]
         function New-RandomPassword {
           # 'Vc!' + 32 alnum chars: complexity-compliant, delimiter-free.
           $alphabet = [char[]]'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789'
@@ -232,9 +237,11 @@ runs:
       if: ${{ inputs.customPackagesJsonUrl != '' }}
       working-directory: ${{ github.action_path }}
       shell: pwsh
+      env:
+        CUSTOM_PACKAGES_JSON_URL_INPUT: ${{ inputs.customPackagesJsonUrl }}
       run: |
-        Invoke-WebRequest -Uri ${{ inputs.customPackagesJsonUrl }} -OutFile packages.json
-        Write-Host "`e[32mDownloaded custom packages.json from ${{ inputs.customPackagesJsonUrl }}"
+        Invoke-WebRequest -Uri $env:CUSTOM_PACKAGES_JSON_URL_INPUT -OutFile packages.json
+        Write-Host "`e[32mDownloaded custom packages.json from $env:CUSTOM_PACKAGES_JSON_URL_INPUT"
 
     - name: Hash custom packages.json
       if: ${{ inputs.customPackagesJsonUrl != '' }}
@@ -323,8 +330,12 @@ runs:
       if: ${{ inputs.installCustomModule == 'true' }}
       working-directory: ${{ github.action_path }}
       shell: pwsh
+      env:
+        CUSTOM_MODULE_ID_INPUT: ${{ inputs.customModuleId }}
+        CUSTOM_MODULE_URL_INPUT: ${{ inputs.customModuleUrl }}
+        REQUIRED_MODULES_LIST_URL_INPUT: ${{ inputs.requiredModulesListUrl }}
       run: |
-        ../docker-env/scripts/common-packages-list.ps1 -customModuleId ${{ inputs.customModuleId }} -customModuleUrl ${{ inputs.customModuleUrl }} -requiredModulesListUrl "${{ inputs.requiredModulesListUrl }}" -SkipInstall
+        ../docker-env/scripts/common-packages-list.ps1 -customModuleId $env:CUSTOM_MODULE_ID_INPUT -customModuleUrl $env:CUSTOM_MODULE_URL_INPUT -requiredModulesListUrl "$env:REQUIRED_MODULES_LIST_URL_INPUT" -SkipInstall
 
     - name: Hash resolved package manifest
       if: ${{ inputs.installCustomModule == 'true' }}
@@ -384,8 +395,11 @@ runs:
       shell: pwsh
       env:
         GH_TOKEN: ${{ github.token }}
+        FRONTEND_ZIP_URL_INPUT: ${{ inputs.frontendZipUrl }}
+        FRONTEND_IMAGE_INPUT: ${{ inputs.frontendImage }}
+        FRONTEND_DOCKER_TAG_INPUT: ${{ inputs.frontendDockerTag }}
       run: |
-        if ( "${{ inputs.frontendZipUrl }}" -eq 'latest' ) {
+        if ( "$env:FRONTEND_ZIP_URL_INPUT" -eq 'latest' ) {
           $headers = @{
             Authorization          = "Bearer $env:GH_TOKEN"
             Accept                 = 'application/vnd.github+json'
@@ -396,7 +410,7 @@ runs:
           Write-Host "`e[32mDownload latest frontend zip and build image"
         }
         else {
-          $frontendZipUrl = "${{ inputs.frontendZipUrl }}"
+          $frontendZipUrl = "$env:FRONTEND_ZIP_URL_INPUT"
           Write-Host "`e[32mDownload frontend zip from $frontendZipUrl and build image"
         }
         try {
@@ -413,7 +427,7 @@ runs:
         unzip -o $fileName -d ./frontend
         Write-Host "::endgroup::"
         Write-Host "::group::Build frontend docker image"
-        docker build -f ./nginx/Dockerfile -t "${{ inputs.frontendImage }}:${{ inputs.frontendDockerTag }}" .
+        docker build -f ./nginx/Dockerfile -t "$($env:FRONTEND_IMAGE_INPUT):$($env:FRONTEND_DOCKER_TAG_INPUT)" .
         Write-Host "::endgroup::"
 
     - name: Start containers

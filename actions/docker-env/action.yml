@@ -77,9 +77,15 @@ runs:
       if: ${{ inputs.installCustomModule == 'true' }}
       working-directory: ${{ github.action_path }}
       shell: pwsh
+      env:
+        CUSTOM_MODULE_ID_INPUT: ${{ inputs.customModuleId }}
+        CUSTOM_MODULE_URL_INPUT: ${{ inputs.customModuleUrl }}
+        REQUIRED_MODULES_LIST_URL_INPUT: ${{ inputs.requiredModulesListUrl }}
+        PLATFORM_IMAGE_INPUT: ${{ inputs.platformImage }}
+        PLATFORM_DOCKER_TAG_INPUT: ${{ inputs.platformDockerTag }}
       run: |
         Write-Host "::group::Start Custom Module step started."
-        ./scripts/common-packages-list.ps1 -customModuleId ${{ inputs.customModuleId }} -customModuleUrl ${{ inputs.customModuleUrl }} -requiredModulesListUrl "${{ inputs.requiredModulesListUrl }}"
+        ./scripts/common-packages-list.ps1 -customModuleId $env:CUSTOM_MODULE_ID_INPUT -customModuleUrl $env:CUSTOM_MODULE_URL_INPUT -requiredModulesListUrl "$env:REQUIRED_MODULES_LIST_URL_INPUT"
         Write-Host "::endgroup::"
         $dockerFiles = "https://raw.githubusercontent.com/VirtoCommerce/vc-docker/feat/net10/linux/platform/Dockerfile;https://raw.githubusercontent.com/VirtoCommerce/vc-docker/master/linux/platform/wait-for-it.sh"
         Write-Host "`e[32mDownload Dockerfile and build image"
@@ -96,7 +102,7 @@ runs:
             }
         }
         Write-Host "::group::Build platform docker image"
-        docker build ./ --build-arg SOURCE=. --tag "${{ inputs.platformImage }}:${{ inputs.platformDockerTag }}"
+        docker build ./ --build-arg SOURCE=. --tag "$($env:PLATFORM_IMAGE_INPUT):$($env:PLATFORM_DOCKER_TAG_INPUT)"
         Write-Host "::endgroup::"
 
     - name: .env files
@@ -106,16 +112,18 @@ runs:
       working-directory: ${{ github.action_path }}
       run: |
         echo -e '\033[33m.env files started.'
-        mkdir -p ${{ inputs.envDir }}/.docker
-        touch ${{ inputs.envDir }}/.docker/platform.env
+        mkdir -p "$ENV_DIR/.docker"
+        touch "$ENV_DIR/.docker/platform.env"
         echo -e 'Platform environment variables:'
-        cat ${{ inputs.envDir }}/.docker/platform.env
+        cat "$ENV_DIR/.docker/platform.env"
 
     - name: Generate Application Insights configuration
       shell: pwsh
       env:
         APP_INSIGHTS_IKEY_INPUT: ${{ inputs.appInsightsInstrumentationKey }}
-      run: |
+      # GITHUB_ENV is how ROLE_NAME and the key reach downstream actions (see below);
+      # the values come from the run context and the calling workflow.
+      run: | # zizmor: ignore[github-env]
         # ROLE_NAME identifies this platform container in Application Insights:
         # <repo>-<run>-<attempt>-<job>. Exported via $GITHUB_ENV for downstream actions.
         $repoName = "$env:GITHUB_REPOSITORY".Split('/')[-1]
@@ -135,6 +143,8 @@ runs:
         PLATFORM_IMAGE: ${{ inputs.platformImage }}
         PLATFORM_DOCKER_TAG: ${{ inputs.platformDockerTag }}
         ENV_DIR: ${{ inputs.envDir }}
+        INSTALL_MODULES_INPUT: ${{ inputs.installModules }}
+        VALIDATE_SWAGGER_INPUT: ${{ inputs.validateSwagger }}
       shell: pwsh
       working-directory: ${{ github.action_path }}
       run: |
@@ -143,13 +153,13 @@ runs:
         . ./scripts/inspect-docker-status.ps1 -ContainerId $platformContainer
         # Mount installed modules via a static overlay file (no PSGallery powershell-yaml).
         $composeFiles = @('-f', 'docker-compose.yml')
-        echo "inputs.installModules is ${{ inputs.installModules }}"
-        if ( '${{ inputs.installModules }}' -eq 'true' ){
+        echo "inputs.installModules is $env:INSTALL_MODULES_INPUT"
+        if ( $env:INSTALL_MODULES_INPUT -eq 'true' ){
           Write-Host "Mount installed modules via docker-compose.modules.yml overlay"
           $composeFiles += @('-f', 'docker-compose.modules.yml')
         }
         # Start the validator now so it warms up during platform boot (no sleep later).
-        if ( '${{ inputs.validateSwagger }}' -eq 'true' ){
+        if ( $env:VALIDATE_SWAGGER_INPUT -eq 'true' ){
           Write-Host "::group::Start swagger validator"
           docker run -d -p 85:8080 swaggerapi/swagger-validator-v2
           Write-Host "::endgroup::"

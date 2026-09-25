@@ -19,6 +19,9 @@ runs:
     - name: Get PR number for branch
       id: get-pr
       shell: pwsh
+      env:
+        REPO_INPUT: ${{ inputs.repo }}
+        BRANCH_INPUT: ${{ inputs.branch }}
       run: |
         # Get PR number from GH context
         $prNumber = ${{ github.event.pull_request.number }}
@@ -28,10 +31,10 @@ runs:
             exit 0
         }
         # Find PR for the current branch
-        $openPrsJson = gh pr list --repo ${{ inputs.repo }} --head ${{ inputs.branch }} --state open --json "number,headRefName,baseRefName"
+        $openPrsJson = gh pr list --repo $env:REPO_INPUT --head $env:BRANCH_INPUT --state open --json "number,headRefName,baseRefName"
         $openPrs = $openPrsJson | ConvertFrom-Json
         if (!$openPrs -or $openPrs.Count -eq 0) {
-            Write-Host "No open PR for branch ${{ inputs.branch }}"
+            Write-Host "No open PR for branch $env:BRANCH_INPUT"
             echo "prNumber=" >> $env:GITHUB_OUTPUT
             exit 0
         }

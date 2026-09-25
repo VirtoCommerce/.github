@@ -27,5 +27,14 @@ runs:
     - name: Install Commerce Bundle Modules
       working-directory: ${{ github.action_path }}
       shell: pwsh
+      env:
+        TEAMS_WEBHOOK_URL_INPUT: ${{ inputs.teamsWebhookUrl }}
+        MENTIONS_INPUT: ${{ inputs.mentions }}
+        TITLE_INPUT: ${{ inputs.title }}
+        WORKFLOW_NAME_INPUT: ${{ inputs.workflowName }}
+        BUILD_ID_INPUT: ${{ inputs.buildId }}
+        GITHUB_REPO_INPUT: ${{ inputs.githubRepo }}
       run: |
-        ./scripts/post-teams-notification.ps1 -teamsWebhookUrl "${{ inputs.teamsWebhookUrl }}" -mentions ${{ inputs.mentions }} -title "${{ inputs.title }}" -workflowName "${{ inputs.workflowName }}" -buildId "${{ inputs.buildId }}" -githubRepo "${{ inputs.githubRepo }}"
+        # mentions is a PowerShell hashtable[] literal, e.g. '@(@{id = "..."; name = "..." })',
+        # evaluated exactly as when it was inlined into this script.
+        ./scripts/post-teams-notification.ps1 -teamsWebhookUrl "$env:TEAMS_WEBHOOK_URL_INPUT" -mentions (Invoke-Expression $env:MENTIONS_INPUT) -title "$env:TITLE_INPUT" -workflowName "$env:WORKFLOW_NAME_INPUT" -buildId "$env:BUILD_ID_INPUT" -githubRepo "$env:GITHUB_REPO_INPUT"

@@ -45,10 +45,14 @@ runs:
     - name: Docker
       shell: pwsh
       working-directory: ${{ github.workspace }}
+      env:
+        DOCKER_USR_INPUT: ${{ inputs.dockerUsr }}
+        DOCKER_PWD_INPUT: ${{ inputs.dockerPwd }}
+        DOCKER_REGISTRY_INPUT: ${{ inputs.dockerRegistry }}
       run: |
         dotnet tool install --global VirtoCommerce.GlobalTool
         Copy-Item -Path ${{ github.action_path }}/docker/* -Destination ./ -Recurse -Force
-        vc-build BuildAndPush -DockerUsername ${{ inputs.dockerUsr }} -DockerPassword ${{ inputs.dockerPwd }} -DockerfilePath ./Dockerfile -DockerImageName ${{ inputs.dockerRegistry }}/vcpt/docs -DockerImageTag $env:GITHUB_RUN_NUMBER -DockerRegistryUrl ${{ inputs.dockerRegistry }}
+        vc-build BuildAndPush -DockerUsername $env:DOCKER_USR_INPUT -DockerPassword $env:DOCKER_PWD_INPUT -DockerfilePath ./Dockerfile -DockerImageName "$($env:DOCKER_REGISTRY_INPUT)/vcpt/docs" -DockerImageTag $env:GITHUB_RUN_NUMBER -DockerRegistryUrl $env:DOCKER_REGISTRY_INPUT
         
 #     - name: Upload docs
 #       shell: pwsh

@@ -46,23 +46,28 @@ runs:
       env:
         JIRA_USER: ${{ inputs.client-id }}
         JIRA_TOKEN: ${{ inputs.client-secret }}
+        GH_REPOSITORY_INPUT: ${{ inputs.ghRepository }}
+        GH_RELEASE_TAG_INPUT: ${{ inputs.ghReleaseTag }}
+        JIRA_BASE_URL_INPUT: ${{ inputs.jiraBaseUrl }}
+        JIRA_CUSTOM_FIELD_ID_INPUT: ${{ inputs.jiraCustomFieldId }}
+        JIRA_CUSTOM_FIELD_VALUE_INPUT: ${{ inputs.jiraCustomFieldValue }}
       run: |
         $ErrorActionPreference = "Stop"
         $jiraKeys = @()
-        $owner, $repo = "${{ inputs.ghRepository }}" -split "/"
+        $owner, $repo = "$env:GH_REPOSITORY_INPUT" -split "/"
 
         $releases = gh api "/repos/$owner/$repo/releases" | ConvertFrom-Json
         $releaseCounter = 0
         $currentReleaseNumber = -1
         while ($releaseCounter -lt $releases.Count) { # Find the release matching the specified GitHub release tag
-          if ($releases[$releaseCounter].tag_name -eq "${{ inputs.ghReleaseTag }}") {
+          if ($releases[$releaseCounter].tag_name -eq "$env:GH_RELEASE_TAG_INPUT") {
             $currentReleaseNumber = $releaseCounter
             break
           }
           $releaseCounter++
         }
         if ($currentReleaseNumber -eq -1) { # If the current release tag is not found, terminate the script
-            Write-Warning "Release tag '${{ inputs.ghReleaseTag }}' not found. Terminating..."
+            Write-Warning "Release tag '$env:GH_RELEASE_TAG_INPUT' not found. Terminating..."
           exit 1
         }
         if ($releases.Count -lt 2) { # If there are less than 2 releases, use the last 100 commits
@@ -107,14 +112,14 @@ runs:
         }
         $updateBody = @{
             fields = @{
-                "${{ inputs.jiraCustomFieldId }}" = "${{ inputs.jiraCustomFieldValue }}"
+                "$env:JIRA_CUSTOM_FIELD_ID_INPUT" = "$env:JIRA_CUSTOM_FIELD_VALUE_INPUT"
             }
         } | ConvertTo-Json -Depth 5
 
         Write-Host "🔄 Updating tasks ..."
         foreach ($jiraKey in $uniqueJiraKeys) {
             try {
-              $response = Invoke-RestMethod -Uri "${{ inputs.jiraBaseUrl }}/rest/api/3/issue/$jiraKey" -Headers $headers -Method Put -Body $updateBody
+              $response = Invoke-RestMethod -Uri "$env:JIRA_BASE_URL_INPUT/rest/api/3/issue/$jiraKey" -Headers $headers -Method Put -Body $updateBody
               Write-Host "✅ Updated task $jiraKey"
             }
             catch {

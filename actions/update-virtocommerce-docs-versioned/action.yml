@@ -66,21 +66,25 @@ runs:
     - name: Build and deploy versioned documentation
       shell: bash
       working-directory: ${{ github.workspace }}/vc-docs
+      env:
+        REF_INPUT: ${{ inputs.ref }}
+        SET_AS_LATEST_INPUT: ${{ inputs.setAsLatest }}
+        SET_AS_DEFAULT_INPUT: ${{ inputs.setAsDefault }}
       run: |
         VERSION=$(tr -d '[:space:]' < VERSION)
         if [ -z "$VERSION" ]; then
           echo "❌ VERSION file is empty or missing at vc-docs root"
           exit 1
         fi
-        echo "Deploying version $VERSION from ref ${{ inputs.ref }}"
-        echo "Set as latest: ${{ inputs.setAsLatest }}"
-        echo "Set as default: ${{ inputs.setAsDefault }}"
+        echo "Deploying version $VERSION from ref $REF_INPUT"
+        echo "Set as latest: $SET_AS_LATEST_INPUT"
+        echo "Set as default: $SET_AS_DEFAULT_INPUT"
 
         ARGS=(--version "$VERSION")
-        if [ "${{ inputs.setAsLatest }}" = "true" ]; then
+        if [ "$SET_AS_LATEST_INPUT" = "true" ]; then
           ARGS+=(--set-as-latest)
         fi
-        if [ "${{ inputs.setAsDefault }}" = "true" ]; then
+        if [ "$SET_AS_DEFAULT_INPUT" = "true" ]; then
           ARGS+=(--set-as-default)
         fi
 

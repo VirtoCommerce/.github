@@ -75,6 +75,8 @@ runs:
         repository: ${{ inputs.vctestingRepo }}
         ref: ${{ inputs.vctestingRepoBranch }}
         path: ${{ inputs.vctestingPath }}
+        # No later step runs git against the test repo.
+        persist-credentials: false
 
     - name: Prepare .env file
       shell: bash
@@ -86,7 +88,8 @@ runs:
         ADMIN_USERNAME: ${{ inputs.adminUsername }}
         ADMIN_PASSWORD_INPUT: ${{ inputs.adminPassword }}
         API_KEY: ${{ inputs.apiKey }}
-      run: |
+      # ADMIN_PASSWORD goes to GITHUB_ENV (masked) for the later seed/test steps.
+      run: | # zizmor: ignore[github-env]
         echo "$SECRET_ENV_FILE" > .env
         chmod 600 .env
         set_env_var() {
@@ -132,7 +135,10 @@ runs:
       working-directory: ${{ inputs.vctestingPath }}
       env:
         CACHE_HIT: ${{ steps.venv-cache.outputs.cache-hit }}
-      run: |
+        # Unquoted below, as before, so a space-separated list installs several browsers.
+        TEST_BROWSER_INPUT: ${{ inputs.browser }}
+      # GITHUB_PATH gets this action's own .venv/bin, for the later test steps.
+      run: | # zizmor: ignore[github-env]
         echo "::group::Install Python dependencies"
         reuse_cache=false
         # Probe via .venv/bin/pip directly — activating first could poison PATH with a
@@ -154,7 +160,7 @@ runs:
           pip install -e .
         fi
         # Cheap no-op if already installed; ensures OS deps on fresh runners.
-        playwright install --with-deps ${{ inputs.browser }}
+        playwright install --with-deps $TEST_BROWSER_INPUT
         echo "::endgroup::"
         echo "$PWD/.venv/bin" >> "$GITHUB_PATH"
         mkdir -p report
@@ -163,6 +169,10 @@ runs:
       id: seed
       shell: pwsh
       working-directory: ${{ inputs.vctestingPath }}
+      env:
+        BACK_URL_INPUT: ${{ inputs.backUrl }}
+        ADMIN_USERNAME_INPUT: ${{ inputs.adminUsername }}
+        SKIP_DOC_COUNT_VERIFICATION_INPUT: ${{ inputs.skipDocCountVerification }}
       run: |
         Write-Host "::group::Seed dataset"
         python -m dataset.dataset_manager --seed --mode ci
@@ -172,11 +182,11 @@ runs:
         }
         Write-Host "::endgroup::"
         $startArgs = @{
-          platformUrl   = '${{ inputs.backUrl }}'
-          adminUsername = '${{ inputs.adminUsername }}'
+          platformUrl   = $env:BACK_URL_INPUT
+          adminUsername = $env:ADMIN_USERNAME_INPUT
           adminPassword = $env:ADMIN_PASSWORD
         }
-        $skipRaw = '${{ inputs.skipDocCountVerification }}'
+        $skipRaw = $env:SKIP_DOC_COUNT_VERIFICATION_INPUT
         if ($skipRaw) {
           $startArgs.skipDocCountVerification = $skipRaw -split ',' | ForEach-Object { $_.Trim() } | Where-Object { $_ }
         }
