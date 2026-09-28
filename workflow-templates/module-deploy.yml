@@ -1,5 +1,5 @@
-# v3.800.43
-# https://virtocommerce.atlassian.net/browse/VCST-5146
+# v3.1000.1
+# https://virtocommerce.atlassian.net/browse/VCST-5414
 name: Module deployment
 on:
   workflow_dispatch:
@@ -36,7 +36,7 @@ jobs:
     steps: 
     
     - name: Start deployment
-      uses: VirtoCommerce/.github/actions/gh-deployments@VCST-5414
+      uses: VirtoCommerce/.github/actions/gh-deployments@v3.1000.1
       id: deployment
       with:
         step: start
@@ -106,7 +106,7 @@ jobs:
       run: echo "BUILD_STATE=failed"  >> $GITHUB_ENV
 
     - name: Update GitHub deployment status
-      uses: VirtoCommerce/.github/actions/gh-deployments@VCST-5414
+      uses: VirtoCommerce/.github/actions/gh-deployments@v3.1000.1
       if: always()
       with:
         step: finish
