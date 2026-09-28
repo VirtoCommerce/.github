@@ -1,0 +1,63 @@
+# Copyright (C) 2018-2020 Virto Solutions. All Rights Reserved.
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+services:
+
+  vc-db:
+    image: mcr.microsoft.com/mssql/server:latest
+    ports:
+      - "${DOCKER_SQL_PORT:-1433}:1433"
+    expose:  
+      - 1433  
+    environment: 
+      - ACCEPT_EULA=Y
+      - MSSQL_PID=Express
+      - SA_PASSWORD=v!rto_Labs!
+    networks:
+      - virto
+
+  vc-platform-web:
+    image: ${PLATFORM_IMAGE:-virtocommerce/platform}:${PLATFORM_DOCKER_TAG:-latest}
+    ports:
+      - "${DOCKER_PLATFORM_PORT:-8090}:80"
+    env_file:
+      - ${ENV_DIR:-.}/.docker/platform.env
+    environment:
+      - ApplicationInsights:InstrumentationKey=${APPLICATIONINSIGHTS_INSTRUMENTATIONKEY}
+      - ASPNETCORE_URLS=http://+
+      - VirtoCommerce:AllowInsecureHttp=true
+      - VirtoCommerce:Hangfire:JobStorageType=Memory
+      - VirtoCommerce:ApplicationInsights:RoleName=${ROLE_NAME}
+      - ConnectionStrings:VirtoCommerce=Data Source=vc-db;Initial Catalog=VirtoCommerce3docker;Persist Security Info=True;User ID=sa;Password=v!rto_Labs!;MultipleActiveResultSets=False;Connect Timeout=360;TrustServerCertificate=True;
+      - Assets:FileSystem:PublicUrl=http://localhost:${DOCKER_PLATFORM_PORT:-8090}/assets/
+      - Content:FileSystem:PublicUrl=http://localhost:${DOCKER_PLATFORM_PORT:-8090}/cms-content/
+      - Search:Provider=Lucene
+    depends_on:
+      - vc-db
+    entrypoint: ["/wait-for-it.sh", "vc-db:1433", "-t", "120", "--", "dotnet", "VirtoCommerce.Platform.Web.dll"]
+    volumes:
+      - cms-content-volume:/opt/virtocommerce/platform/wwwroot/cms-content
+    networks:
+      - virto
+    restart: unless-stopped
+
+volumes:
+  cms-content-volume:
+    name: cms-content-data
+  modules-volume:
+    name: modules-data
+
+networks:
+  virto:

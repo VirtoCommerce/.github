@@ -1,0 +1,48 @@
+name: 'Get Image Version'
+description: 'This action grabs Version and Version suffix from module.manifest, package.json or Directory.Build.props file. If Version suffix not present calculate it as a branch commits count'
+inputs:
+  path:
+    description: 'Path to directory that contains module.manifest, package.json or Directory.Build.props'
+    default: '.'
+    required: false
+  releaseBranch: 
+    description: 'Branch support preparation of a new production release'
+    required: false
+    default: 'master'
+  projectType:
+    description: 'Type of project. Allowed values "module", "theme", "platform", "storefront". If value, not specified project type will be determined automatically.'
+    required: false
+    default: 'auto'
+
+outputs:
+  branchName:
+    description: 'Triggered branch name'
+  prefix:
+    description: 'Version prefix value'
+  suffix:
+    description: 'Version suffix value'
+  fullSuffix:
+    description: 'Version suffix value formatted as suffix-branch-name'
+  moduleId:
+    description: 'Module Id value'
+  sha:
+    description: 'Version SHA value'
+  shortVersion:
+    description: 'Version value formatted as prefix-suffix'
+  tag:
+    description: 'Version value formatted as prefix-branchName-sha'
+  fullVersion:
+    description: 'Version value formatted as prefix-fullSuffix'
+  taggedVersion:
+    description: 'Version value formatted as prefix-fullSuffix-sha'
+  moduleDescription:
+    description: 'Module description from module.manifest'
+  projectUrl:
+    description: 'Module repo url'
+  iconUrl:
+    description: 'Url to a module icon'
+
+
+runs:
+  using: 'node24'
+  main: 'dist/index.js'

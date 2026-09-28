@@ -1,0 +1,98 @@
+# Copyright (C) 2018-2020 Virto Solutions. All Rights Reserved.
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+# Base file. Always combine with both overlays — docker-compose.<db>.yml (vc-db + connection
+# string) and docker-compose.search.<engine>.yml (search image + Search:* keys):
+#   docker compose -f docker-compose.yml -f docker-compose.sqlserver.yml \
+#                  -f docker-compose.search.elasticsearch8.yml up -d
+# searchdata stays here because every search overlay mounts it.
+
+services:
+
+  # Engine-agnostic plumbing only; image, environment and data volume come from the overlays.
+  vc-db:
+    networks:
+      - virto
+
+  search:
+    # SEARCH_PORT remaps the host side only; in-container it is always 9200, which is what the
+    # healthcheck and the overlays' Search:<Provider>:Server both talk to.
+    ports:
+      - ${SEARCH_PORT:-9200}:9200
+    networks:
+      - virto
+    mem_limit: ${MEM_LIMIT:-1g}
+    ulimits:
+      memlock:
+        soft: -1
+        hard: -1
+    # 18 x 10s = the 180s the action's `up --wait --wait-timeout 180` allows; a larger count
+    # here would just be cut short by that.
+    healthcheck:
+      test: [ "CMD-SHELL", "curl -s http://localhost:9200" ]
+      interval: 10s
+      timeout: 10s
+      retries: 18
+
+  nginx_frontend:
+    depends_on:
+      - vc-platform-web
+    image: nginx_frontend:local-latest
+    ports:
+      - "${DOCKER_FRONTEND_PORT:-80}:80"
+    networks:
+      - virto
+
+  vc-platform-web:
+    image: platform:local-latest
+    ports:
+      - "${DOCKER_PLATFORM_PORT:-8090}:80"
+    environment:
+      - ApplicationInsights:InstrumentationKey=${APPLICATIONINSIGHTS_INSTRUMENTATIONKEY}
+      - ASPNETCORE_URLS=http://+
+      - VirtoCommerce:AllowInsecureHttp=true
+      - VirtoCommerce:Hangfire:JobStorageType=Memory
+      - VirtoCommerce:ApplicationInsights:RoleName=${ROLE_NAME}
+      - Assets:FileSystem:PublicUrl=http://localhost:${DOCKER_PLATFORM_PORT:-8090}/assets/
+      - Content:FileSystem:PublicUrl=http://localhost:${DOCKER_PLATFORM_PORT:-8090}/cms-content/
+      - Search:PickupLocationFullTextSearchEnabled=true
+      - IdentityOptions:User:MaxPasswordAge=0
+      - Notifications:DefaultSender=virto.start@virtoway.com
+      - Notifications:Gateway=SendGrid
+      - Notifications:SendGrid:ApiKey=${SENDGRID_API_KEY}
+    # service_healthy, not service_started: no container until both backends actually answer.
+    # Replaces the wait-for-it entrypoint, which gave up after 120s and started anyway.
+    depends_on:
+      vc-db:
+        condition: service_healthy
+      search:
+        condition: service_healthy
+    volumes:
+      - cms-content-volume:/opt/virtocommerce/platform/wwwroot/cms-content
+      - modules-volume:/opt/virtocommerce/platform/modules
+    networks:
+      - virto
+    restart: unless-stopped
+
+volumes:
+  cms-content-volume:
+    name: cms-content-data
+  modules-volume:
+    name: modules-data
+  searchdata:
+    driver: local
+
+networks:
+  virto:

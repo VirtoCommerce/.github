@@ -1,0 +1,177 @@
+name: check-dist
+
+# Verifies that each Node action's committed dist/ matches what ncc would
+# emit from its current src/ + package-lock.json. Fails the PR if the bundle
+# is stale, so contributors cannot ship a src/ change without rebuilding.
+# The actions live under actions/ (moved from vc-github-actions, VCST-5414).
+
+on:
+  pull_request:
+    paths:
+      # ** not *: GitHub path globs don't match across "/", so "*/package.json"
+      # is blind to a nested a/b/package.json.
+      - "actions/**/src/**"
+      - "actions/**/index.js"       # actions like changelog-generator that bundle a root index.js
+      - "actions/**/index.ts"
+      - "actions/**/package.json"
+      - "actions/**/package-lock.json"
+      - "actions/**/tsconfig.json"
+      - "actions/**/smoke.env"       # per-action fixture for the smoke-load classifier
+      - ".github/workflows/check-dist.yml"
+      - ".github/scripts/smoke-load.cjs"
+      - "actions/.nvmrc"
+      # dist/ is an output, not an input.
+      - "!actions/**/dist/**"
+      - "!actions/**/node_modules/**"
+
+permissions:
+  contents: read
+
+jobs:
+  detect:
+    runs-on: ubuntu-latest
+    outputs:
+      actions: ${{ steps.changed.outputs.actions }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - id: changed
+        name: List action directories with relevant changes
+        # Route GHA-context values through env: so they cannot be expanded
+        # into shell as code (defense-in-depth; see GitHub Actions
+        # hardening guide on script-injection risks).
+        env:
+          BASE_REF: ${{ github.base_ref }}
+        run: |
+          changed=$(git diff --name-only "origin/${BASE_REF}...HEAD")
+
+          # A guard or Node change affects every action, and resolving it
+          # normally yields an empty matrix -- it would ship untested.
+          if echo "$changed" | grep -qE '^(\.github/workflows/check-dist\.yml|\.github/scripts/smoke-load\.cjs|actions/\.nvmrc)$'; then
+            echo "::notice::Guard or Node version changed; checking every action."
+            candidates=$(git ls-files 'actions/*/package.json' \
+              | grep -Ev '(^|/)node_modules/' \
+              | xargs -n1 dirname)
+          else
+            # Resolve each file to its action by walking up to the nearest
+            # package.json. The old `awk '{print $1}'` mapped a/b/package.json
+            # to "a", which then hit the gate below and was silently skipped.
+            candidates=$(echo "$changed" \
+              | grep -E '^actions/' \
+              | grep -Ev '(^|/)(node_modules|dist)/' \
+              | grep -E '(\.(js|ts|json)|/smoke\.env)$' \
+              | while IFS= read -r file; do
+                  dir=$(dirname "$file")
+                  while [ "$dir" != "actions" ] && [ ! -f "$dir/package.json" ]; do
+                    dir=$(dirname "$dir")
+                  done
+                  # if/fi, not a && tail: the loop exits with its last body
+                  # command, so a false test on the final file (the shared
+                  # actions/package.json resolves to "actions") fails the step
+                  # under set -e.
+                  if [ "$dir" != "actions" ]; then echo "$dir"; fi
+                done)
+          fi
+
+          dirs=$(echo "$candidates" | grep -v '^$' | sort -u | jq -R . | jq -sc .)
+          echo "actions=$dirs" >> "$GITHUB_OUTPUT"
+          echo "Detected: $dirs"
+
+  build-and-diff:
+    needs: detect
+    if: needs.detect.outputs.actions != '[]'
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        action: ${{ fromJson(needs.detect.outputs.actions) }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      # Gate runs before setup-node so legacy / partial actions (no
+      # package.json, no lockfile, or no build script) short-circuit
+      # cleanly. setup-node with cache-dependency-path pointing at a
+      # missing lockfile would fail before the gate could fire.
+      - name: Skip actions that aren't bundled with npm
+        id: gate
+        working-directory: ${{ matrix.action }}
+        env:
+          ACTION: ${{ matrix.action }}
+        run: |
+          if [ ! -f package.json ]; then
+            echo "::notice::$ACTION has no package.json; skipping."
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          if [ ! -f package-lock.json ]; then
+            echo "::notice::$ACTION has no package-lock.json; skipping."
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          if ! jq -e '.scripts.build' package.json >/dev/null; then
+            echo "::notice::$ACTION has no build script; skipping."
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        if: steps.gate.outputs.skip != 'true'
+        with:
+          # actions/.nvmrc is the single source of truth: a Node mismatch surfaces
+          # as a spurious dist/ parity failure that looks like real staleness.
+          node-version-file: actions/.nvmrc
+          cache: npm
+          cache-dependency-path: ${{ matrix.action }}/package-lock.json
+
+      - name: Install dependencies
+        if: steps.gate.outputs.skip != 'true'
+        working-directory: ${{ matrix.action }}
+        run: npm ci --no-audit --no-fund
+
+      - name: Rebuild dist/
+        if: steps.gate.outputs.skip != 'true'
+        working-directory: ${{ matrix.action }}
+        run: npm run build
+
+      - name: Smoke-load the bundle
+        if: steps.gate.outputs.skip != 'true'
+        working-directory: ${{ matrix.action }}
+        timeout-minutes: 3
+        run: |
+          # node --check only parses. The classifier loads the bundle and judges
+          # what it prints -- see smoke-load.cjs for why catching won't work.
+          node --check dist/index.js
+          node "$GITHUB_WORKSPACE/.github/scripts/smoke-load.cjs" dist/index.js
+
+      - name: Verify committed dist/ matches rebuild
+        if: steps.gate.outputs.skip != 'true'
+        working-directory: ${{ matrix.action }}
+        env:
+          ACTION: ${{ matrix.action }}
+        run: |
+          # Only the runtime bundle (dist/index.js) and the licenses file
+          # are gated — those must be reproducible across platforms. The
+          # sourcemap (dist/index.js.map) and the sourcemap-register shim
+          # are intentionally excluded: ncc inlines upstream source files
+          # whose CRLF/LF endings differ between Windows-committed and
+          # Linux-CI-rebuilt copies, producing a benign byte diff that
+          # doesn't affect runtime behaviour.
+          #
+          # Stage with `git add` before diffing --cached so a brand-new
+          # untracked dist/index.js (e.g. a PR adding an action without
+          # committing the bundle) is caught -- plain `git diff` is blind
+          # to untracked files. Same pattern as dependabot-rebuild.yml.
+          paths=(dist/index.js)
+          [ -f dist/licenses.txt ] && paths+=(dist/licenses.txt)
+          [ -f dist/LICENSES ]     && paths+=(dist/LICENSES)
+          git add -- "${paths[@]}"
+          if ! git diff --cached --quiet -- "${paths[@]}"; then
+            echo "::error::dist/ in $ACTION is missing or stale. Run 'npm ci && npm run build' inside that directory and commit the result."
+            git --no-pager diff --cached --stat -- "${paths[@]}"
+            exit 1
+          fi
