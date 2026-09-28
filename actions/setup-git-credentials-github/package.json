@@ -16,7 +16,7 @@
     "@actions/github": "^4.0.0"
   },
   "devDependencies": {
-    "@vercel/ncc": "^0.38.0",
+    "@vercel/ncc": "^0.45.0",
     "typescript": "^6.0.3"
   }
 }
