@@ -3,6 +3,11 @@
   "version": "1.3.2-rc.0",
   "description": "",
   "main": "index.js",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/VirtoCommerce/.github.git",
+    "directory": "actions/vc-actions-lib"
+  },
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
   },
