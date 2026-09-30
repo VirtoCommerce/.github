@@ -159,6 +159,7 @@ runs:
         BACK_URL_INPUT: ${{ inputs.backUrl }}
         ADMIN_USERNAME_INPUT: ${{ inputs.adminUsername }}
         SKIP_DOC_COUNT_VERIFICATION_INPUT: ${{ inputs.skipDocCountVerification }}
+        FORCE_COLOR: '1'
       run: |
         Write-Host "::group::Seed dataset"
         # Own --output: every playwright run empties its output dir first (see Run tests).
