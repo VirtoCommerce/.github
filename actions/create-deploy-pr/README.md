@@ -71,7 +71,7 @@ Create deployment PR
 ```yaml
 - name: Create deploy step
   if: ${{ github.event_name == 'pull_request' }}
-  uses: VirtoCommerce/vc-github-actions/create-deploy-pr@master
+  uses: VirtoCommerce/.github/actions/create-deploy-pr@v3.1000.1
   with:
     deployRepo: "vc-webstore-deploy"
     deployBranch: "demo"

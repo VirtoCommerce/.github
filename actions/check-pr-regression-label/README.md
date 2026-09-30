@@ -39,7 +39,7 @@ Checks PR contain label for regression
 ```yaml
 - name: Check regression label
   id: regressLabel
-  uses: VirtoCommerce/vc-github-actions/check-pr-regression-label@master
+  uses: VirtoCommerce/.github/actions/check-pr-regression-label@v3.1000.1
   with:
     label: regression
     commitMessage: ${{ github.event.head_commit.message }}

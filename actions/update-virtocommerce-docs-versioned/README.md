@@ -52,7 +52,7 @@ Makes and updates versioned documentation for docs.virtocommerce.org using Mike
 
 ```yaml
 - name: Deploy Versioned Docs
-  uses: VirtoCommerce/vc-github-actions/update-virtocommerce-docs-versioned@master
+  uses: VirtoCommerce/.github/actions/update-virtocommerce-docs-versioned@v3.1000.1
   with:
     githubToken: ${{ secrets.REPO_TOKEN }}
     ref: 'main'

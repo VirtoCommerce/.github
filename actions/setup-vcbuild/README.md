@@ -6,7 +6,7 @@ Setups vc-build
 
 ```yaml
 - name: Setup vc-build
-  uses: VirtoCommerce/vc-github-actions/setup-vcbuild@master
+  uses: VirtoCommerce/.github/actions/setup-vcbuild@v3.1000.1
 ```
 
 ## Compile action

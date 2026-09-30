@@ -41,7 +41,7 @@ Get link to the artifact from PR body
 - name: Gets artifact link
   if: ${{ github.event_name == 'pull_request' }}
   id: artifactLink
-  uses: VirtoCommerce/vc-github-actions/get-artifact-link@master
+  uses: VirtoCommerce/.github/actions/get-artifact-link@v3.1000.1
 ```
 
 ## Compile action

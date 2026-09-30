@@ -80,7 +80,7 @@ This action grabs Version and Version suffix from module.manifest, package.json 
 
 ```yaml
 - name: Get Image version
-  uses: VirtoCommerce/vc-github-actions/get-image-version@master
+  uses: VirtoCommerce/.github/actions/get-image-version@v3.1000.1
   id: image
 ```
 

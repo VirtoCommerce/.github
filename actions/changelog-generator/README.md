@@ -13,7 +13,7 @@ Generates changelog
 ```yaml
 - name: Get changelog
   id: changelog
-  uses: VirtoCommerce/vc-github-actions/changelog-generator@master
+  uses: VirtoCommerce/.github/actions/changelog-generator@v3.1000.1
 ```
 
 ## Compile action

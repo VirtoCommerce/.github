@@ -31,7 +31,7 @@ Publishes release to Azure Blob
 - name: Publish to Blob
   if: ${{ github.ref == 'refs/heads/dev' }}
   id: blobRelease
-  uses: VirtoCommerce/vc-github-actions/publish-blob-release@master
+  uses: VirtoCommerce/.github/actions/publish-blob-release@v3.1000.1
   with:
     blobSAS: ${{ secrets.BLOB_TOKEN }}
 ```

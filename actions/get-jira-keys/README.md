@@ -26,7 +26,7 @@ Find issue keys inside event commits
 
 ```yaml
 - name: Parse Jira Keys from All Commits
-  uses: VirtoCommerce/vc-github-actions/get-jira-keys@master
+  uses: VirtoCommerce/.github/actions/get-jira-keys@v3.1000.1
   if: always()
   id: jira_keys
   env:

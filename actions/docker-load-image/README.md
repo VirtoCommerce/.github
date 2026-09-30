@@ -24,7 +24,7 @@ Load docker image from input tar. Set output full docker imageName:tag
 
 ```yaml
 - name: Load Docker image
-  uses: VirtoCommerce/vc-github-actions/docker-load-image@master
+  uses: VirtoCommerce/.github/actions/docker-load-image@v3.1000.1
   with:
     dockerTar: ${{ env.DOCKER_TAR }}
 ```

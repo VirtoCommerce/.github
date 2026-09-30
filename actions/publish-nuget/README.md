@@ -15,7 +15,7 @@ Publish nugets
 ```yaml
 - name: Publish Nuget
   if: ${{ github.ref == 'refs/heads/dev' || github.ref == 'refs/heads/master'}}
-  uses: VirtoCommerce/vc-github-actions/publish-nuget@master
+  uses: VirtoCommerce/.github/actions/publish-nuget@v3.1000.1
   with:
     skipString: 'Clean+Restore+Compile+Pack+Test'
 ```

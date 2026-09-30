@@ -88,7 +88,7 @@ Runs Docker Environment
 
 ```yaml
 - name: Run Docker Environment
-  uses: VirtoCommerce/vc-github-actions/docker-env@master
+  uses: VirtoCommerce/.github/actions/docker-env@v3.1000.1
   with:
     githubUser: ${{ github.actor }}
     githubToken: ${{ secrets.GITHUB_TOKEN }}

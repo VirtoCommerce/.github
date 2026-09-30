@@ -20,7 +20,7 @@ Prepares parameters for vc-build SonarQubeStart
 
 ```yaml
 - name: SonarCloud Begin
-  uses: VirtoCommerce/vc-github-actions/sonar-scanner-begin@master
+  uses: VirtoCommerce/.github/actions/sonar-scanner-begin@v3.1000.1
   with:
     sonarOrg: 'virto-commerce'
 ```

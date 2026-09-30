@@ -20,7 +20,7 @@ Read more about Microsoft Teams message card [format](https://docs.microsoft.com
 
 ```yaml
 - name: Send a message to Microsoft Teams
-  uses: VirtoCommerce/vc-github-actions/msteams-send-message@master
+  uses: VirtoCommerce/.github/actions/msteams-send-message@v3.1000.1
   with:
     body: '{
     "@type": "MessageCard",

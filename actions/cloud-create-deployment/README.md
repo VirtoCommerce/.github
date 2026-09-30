@@ -100,7 +100,7 @@ Create deployment commit or PR
 
 ```yaml
 - name: Create deployment
-  uses: VirtoCommerce/vc-github-actions/cloud-create-deployment@master
+  uses: VirtoCommerce/.github/actions/cloud-create-deployment@v3.1000.1
   with:
     githubToken: ${{ secrets.GITHUB_TOKEN }}
     deployRepo: "vc-deploy-dev"

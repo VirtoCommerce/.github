@@ -141,7 +141,7 @@ Runs Docker Environment
 
 ```yaml
 - name: Run Docker Environment
-  uses: VirtoCommerce/vc-github-actions/docker-env-full@master
+  uses: VirtoCommerce/.github/actions/docker-env-full@v3.1000.1
   with:
     installModules: 'true'
     installSampleData: 'true'

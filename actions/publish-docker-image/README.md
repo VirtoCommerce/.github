@@ -53,7 +53,7 @@ Publish docker image
 ```yaml
 - name: Publish Docker Image
   if: ${{ github.ref == 'refs/heads/master' || github.ref == 'refs/heads/dev' }}
-  uses: VirtoCommerce/vc-github-actions/publish-docker-image@master
+  uses: VirtoCommerce/.github/actions/publish-docker-image@v3.1000.1
   with:
     image: ${{ steps.dockerBuild.outputs.imageName }}
     tag: ${{ steps.image.outputs.taggedVersion }}

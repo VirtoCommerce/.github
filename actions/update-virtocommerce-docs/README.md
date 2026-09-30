@@ -53,7 +53,7 @@ Makes and updates documentation for docs.virtocommerce.org
 
 ```yaml
 - name: Update docs.virtocommerce.org
-  uses: VirtoCommerce/vc-github-actions/update-virtocommerce-docs@master
+  uses: VirtoCommerce/.github/actions/update-virtocommerce-docs@v3.1000.1
   with:
     azureSubscriptionId: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
     azureResourceGroupName: ${{ secrets.AZURE_RESOURCE_GROUP }}

@@ -14,7 +14,7 @@ Adds version suffix in Directory.Build.props and [module.manifest] for prereleas
 
 ```yaml
 - name: Add version suffix
-  uses: VirtoCommerce/vc-github-actions/add-version-suffix@master
+  uses: VirtoCommerce/.github/actions/add-version-suffix@v3.1000.1
   with:
     versionSuffix: '<value>'
 ```

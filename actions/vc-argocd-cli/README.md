@@ -28,7 +28,7 @@ ArgoCD command line action
 
 ```yaml
 - name: ArgoCD CLI
-  uses: VirtoCommerce/vc-github-actions/vc-argocd-cli@master
+  uses: VirtoCommerce/.github/actions/vc-argocd-cli@v3.1000.1
   with:
     server: ${{ secrets.ARGOCD_SERVER }}
     username: ${{ secrets.ARGOCD_USERNAME }}

@@ -31,7 +31,7 @@ Check SonarQube quality gate status after project scan
 
 ```yaml
 - name: Quality Gate
-  uses: VirtoCommerce/vc-github-actions/sonar-quality-gate@master
+  uses: VirtoCommerce/.github/actions/sonar-quality-gate@v3.1000.1
   with:
     login: ${{ secrets.SONAR_TOKEN }}
 ```
