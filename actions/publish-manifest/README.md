@@ -45,7 +45,7 @@ Publishes modules.json
 ```yaml
 - name: Publish Manifest
   if: ${{ github.ref == 'refs/heads/dev' || github.ref == 'refs/heads/master'}}
-  uses: VirtoCommerce/vc-github-actions/publish-manifest@master
+  uses: VirtoCommerce/.github/actions/publish-manifest@v3.1000.1
   with:
     packageUrl: ${{ steps.blobRelease.outputs.packageUrl }}
 ```

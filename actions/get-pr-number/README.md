@@ -25,7 +25,7 @@ Get the PR number associated with a branch
 ```yaml
 - name: Get PR number
   id: pr
-  uses: VirtoCommerce/vc-github-actions/get-pr-number@master
+  uses: VirtoCommerce/.github/actions/get-pr-number@v3.1000.1
   with:
     repo: ${{ github.repository }}
     branch: ${{ github.ref_name }}

@@ -26,7 +26,7 @@ Setups credentials for git
 ```yaml
 - name: Setup Git Credentials
   if: ${{ github.ref == 'refs/heads/dev' || github.ref == 'refs/heads/master'}}
-  uses: VirtoCommerce/vc-github-actions/setup-git-credentials-github@master
+  uses: VirtoCommerce/.github/actions/setup-git-credentials-github@v3.1000.1
   with:
     githubToken: ${{ secrets.REPO_TOKEN }}
 ```

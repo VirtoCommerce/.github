@@ -44,7 +44,7 @@ Publish github release or prerelease dependant to github.ref
 
 ```yaml
 - name: Publish Github Release
-  uses: VirtoCommerce/vc-github-actions/publish-github-release@master
+  uses: VirtoCommerce/.github/actions/publish-github-release@v3.1000.1
   with:
     changelog: ${{ steps.changelog.outputs.changelog }}
 ```

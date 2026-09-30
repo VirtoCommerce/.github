@@ -12,6 +12,12 @@ permissions:
 jobs:
     publish:
         runs-on: ubuntu-latest
+        # Trusted publishing: npm swaps the GitHub OIDC token for a short-lived publish
+        # credential (and adds provenance). The trusted publisher on npmjs.com is tied to
+        # this repo and this file name, so renaming the file breaks publishing.
+        permissions:
+            contents: read
+            id-token: write
 
         steps:
         - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -23,15 +29,20 @@ jobs:
             # Was Node 12 (EOL, npm 6). No lifecycle scripts run and npm never
             # packs package-lock.json, so the payload is identical -- verified
             # against the 1.2.16 tarball.
+            # No registry-url: it writes an .npmrc with a token placeholder, and trusted
+            # publishing needs no token. npmjs.org is the default registry.
             node-version-file: actions/.nvmrc
-            registry-url: 'https://registry.npmjs.org'
 
         - name: Publish vc-actions-lib
           working-directory: ./actions/vc-actions-lib
-          # NPM_TOKEN until a trusted publisher for this repo is set up on npmjs.com.
-          env:
-            NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
-          run: | # zizmor: ignore[use-trusted-publishing]
+          run: |
+            # Trusted publishing needs npm 11.5.1 or later.
+            npm_version=$(npm --version)
+            if [ "$(printf '%s\n' 11.5.1 "$npm_version" | sort -V | head -n1)" != 11.5.1 ]; then
+              echo "::error::npm $npm_version is too old for trusted publishing (needs 11.5.1+)."
+              exit 1
+            fi
+
             name=$(node -p "require('./package.json').name")
             version=$(node -p "require('./package.json').version")
 
@@ -49,9 +60,14 @@ jobs:
               npm publish --access public --tag "$tag"
             elif [ "$tag" = latest ]; then
               # Pre-released from a branch dispatch. npm refuses to republish an
-              # existing version, so promote the tag instead of failing.
-              echo "::notice::$name@$version already published; promoting to latest."
-              npm dist-tag add "$name@$version" latest
+              # existing version, and trusted publishing covers `npm publish` only,
+              # so the promotion to latest is a manual step for a maintainer.
+              current=$(npm view "$name" dist-tags.latest)
+              if [ "$current" = "$version" ]; then
+                echo "::notice::$name@$version is already latest; nothing to do."
+              else
+                echo "::warning::$name@$version is published but not latest (latest is $current). Promote it by hand: npm dist-tag add $name@$version latest"
+              fi
             else
               echo "::notice::$name@$version already published under '$tag'; nothing to do."
             fi

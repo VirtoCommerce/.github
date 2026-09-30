@@ -46,7 +46,7 @@ Calculate unique key for artifact caching
 
 ```yaml
 - name: Calculate cache key
-  uses: VirtoCommerce/vc-github-actions/cache-get-key@master
+  uses: VirtoCommerce/.github/actions/cache-get-key@v3.1000.1
   id: cache-key
   with:
     runnerOs: ${{ runner.os }}

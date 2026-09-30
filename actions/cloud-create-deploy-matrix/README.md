@@ -24,7 +24,7 @@ Create a matrix of deployment environments
 
 ```yaml
 - name: Create deployment matrix
-  uses: VirtoCommerce/vc-github-actions/cloud-create-deploy-matrix@master
+  uses: VirtoCommerce/.github/actions/cloud-create-deploy-matrix@v3.1000.1
   id: deployMatrix
 ```
 

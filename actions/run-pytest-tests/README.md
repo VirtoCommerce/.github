@@ -82,7 +82,7 @@ Runs Auto Tests
 
 ```yaml
 - name: Run Auto Tests
-  uses: VirtoCommerce/vc-github-actions/run-pytest-tests@master
+  uses: VirtoCommerce/.github/actions/run-pytest-tests@v3.1000.1
   with:
     adminPassword: ${{ secrets.ADMIN_PASSWORD }}
     adminUsername: admin

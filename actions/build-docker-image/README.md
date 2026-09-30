@@ -30,7 +30,7 @@ Build docker image
 ```yaml
 - name: Build Docker Image
   id: dockerBuild
-  uses: VirtoCommerce/vc-github-actions/build-docker-image@master
+  uses: VirtoCommerce/.github/actions/build-docker-image@v3.1000.1
   with:
     imageName: "platform"
     tag: ${{ steps.image.outputs.taggedVersion }}

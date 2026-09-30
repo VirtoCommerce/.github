@@ -31,7 +31,7 @@ Publishes artifact link to PR comment
 ```yaml
 - name: Add link to PR
   if: ${{ github.event_name == 'pull_request' }}
-  uses: VirtoCommerce/vc-github-actions/publish-artifact-link@master
+  uses: VirtoCommerce/.github/actions/publish-artifact-link@v3.1000.1
   with:
     artifactUrl: ${{ steps.publish.outputs.blobUrl }}
 ```

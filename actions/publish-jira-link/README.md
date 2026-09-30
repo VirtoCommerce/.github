@@ -37,7 +37,7 @@ Publish links on the Jira tasks in PR description
 ```yaml
 - name: Publish Jira link
   if: github.event_name == 'pull_request'
-  uses: VirtoCommerce/vc-github-actions/publish-jira-link@master
+  uses: VirtoCommerce/.github/actions/publish-jira-link@v3.1000.1
   with:
     branchName: ${{ steps.extract_branch.outputs.branch }}
   env:

@@ -67,7 +67,7 @@ Get deployment parameters for ArgoCD deployments
 
 ```yaml
 - name: Read deployment config
-  uses: VirtoCommerce/vc-github-actions/get-deploy-param@master
+  uses: VirtoCommerce/.github/actions/get-deploy-param@v3.1000.1
   id: deployConfig
 ```
 

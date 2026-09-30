@@ -38,7 +38,7 @@ Publish Teams Webhook Notification
 
 ```yaml
 - name: Publish Teams Webhook Notification
-  uses: VirtoCommerce/vc-github-actions/publish-teams-webhook-notification@master
+  uses: VirtoCommerce/.github/actions/publish-teams-webhook-notification@v3.1000.1
   with:
     teamsWebhookUrl: ${{ secrets.TEAMS_WEBHOOK_URL }}
     mentions: '<mentions>'

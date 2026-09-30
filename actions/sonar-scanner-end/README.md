@@ -6,7 +6,7 @@ Runs vc-build SonarQubeEnd
 
 ```yaml
 - name: SonarCloud End
-  uses: VirtoCommerce/vc-github-actions/sonar-scanner-end@master
+  uses: VirtoCommerce/.github/actions/sonar-scanner-end@v3.1000.1
 ```
 
 ## Compile action

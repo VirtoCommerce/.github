@@ -44,7 +44,7 @@ Update Jira tasks with release number
 
 ```yaml
 - name: Update Jira tasks with release number
-  uses: VirtoCommerce/vc-github-actions/update-jira-tasks-with-release-number@master
+  uses: VirtoCommerce/.github/actions/update-jira-tasks-with-release-number@v3.1000.1
   with:
     client-id: ${{ secrets.JIRA_CLIENT_ID }}
     client-secret: ${{ secrets.JIRA_CLIENT_SECRET }}

@@ -80,7 +80,7 @@ GitHub action for working painlessly with deployment statuses.
 
 ```yaml
 - name: Start deployment
-  uses: VirtoCommerce/vc-github-actions/gh-deployments@master
+  uses: VirtoCommerce/.github/actions/gh-deployments@v3.1000.1
   with:
     token: ${{ secrets.GITHUB_TOKEN }}
     step: start
