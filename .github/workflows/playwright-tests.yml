@@ -301,7 +301,7 @@ jobs:
         appInsightsInstrumentationKey: ${{ secrets.appInsightsInstrumentationKey }}
 
     - name: Run Playwright Auto Tests
-      uses: VirtoCommerce/.github/actions/run-playwright-tests@v3.1000.1
+      uses: VirtoCommerce/.github/actions/run-playwright-tests@vcst-6033-playwright-workflow
       with:
         adminPassword: ${{ inputs.adminPassword }}
         adminUsername: ${{ inputs.adminUsername }}
