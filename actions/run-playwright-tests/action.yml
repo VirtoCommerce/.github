@@ -159,7 +159,7 @@ runs:
         BACK_URL_INPUT: ${{ inputs.backUrl }}
         ADMIN_USERNAME_INPUT: ${{ inputs.adminUsername }}
         SKIP_DOC_COUNT_VERIFICATION_INPUT: ${{ inputs.skipDocCountVerification }}
-        FORCE_COLOR: '1'
+        FORCE_COLOR: "1"
       run: |
         Write-Host "::group::Seed dataset"
         # Own --output: every playwright run empties its output dir first (see Run tests).
@@ -220,7 +220,7 @@ runs:
           if ! PLAYWRIGHT_JUNIT_OUTPUT_FILE="report/$suite-junit.xml" \
                PLAYWRIGHT_JSON_OUTPUT_FILE="report/$suite-results.json" \
                FORCE_COLOR=1 \
-               npx playwright test --project="$suite" --output "test-results/$suite" "${EXTRA_ARGS[@]}" \
+               npx playwright test --workers=3 --project="$suite" --output "test-results/$suite" "${EXTRA_ARGS[@]}" \
                  --reporter=list,junit,json,allure-playwright; then
             failed+=("$suite")
           fi
