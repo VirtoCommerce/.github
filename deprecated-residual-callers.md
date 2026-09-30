@@ -74,8 +74,7 @@ Active (non-commented) references across all 211 non-deploy-list org repos + int
 
 | Workflow | Caller repo | Caller workflow | Ref | Class |
 |---|---|---|---|---|
-| `e2e-autotests.yml` | vc-testing-module | e2e-tests-docker.yml | `@v3.800.23` | LIVE-pinned |
-| `e2e.yml` | vc-ci-test | module-ci-common.yml | `@v3.800.24` | LIVE-pinned |
+| `e2e-autotests.yml` | — | — | — | no callers |
 | `e2e.yml` | vc-dev-training | module-ci.yml | `@v3.800.22` | LIVE-pinned |
 | `e2e.yml` | vc-github-actions | Katalon_new.yml | `@v3.800.37` | self-deprecated |
 | `e2e.yml` | vc-module-Authorize.Net | module-ci.yml | `@v3.200.20` | archived |
@@ -93,7 +92,6 @@ Active (non-commented) references across all 211 non-deploy-list org repos + int
 | `e2e.yml` | vc-module-ui-migration | module-ci.yml | `@v3.800.16` | LIVE-pinned |
 | `get-metadata.yml` | — | — | — | no callers |
 | `increment-version.yml` | — | — | — | no callers |
-| `ui-autotests.yml` | vc-ci-test | module-ci-common.yml | `@v3.800.24` | LIVE-pinned |
 | `ui-autotests.yml` | vc-dev-training | module-ci.yml | `@v3.800.22` | LIVE-pinned |
 | `ui-autotests.yml` | vc-module-environments-compare | module-ci.yml | `@v3.800.17` | LIVE-pinned |
 | `ui-autotests.yml` | vc-module-marketing-campaigns | module-ci.yml | `@v3.800.25` | LIVE-pinned |
@@ -101,4 +99,3 @@ Active (non-commented) references across all 211 non-deploy-list org repos + int
 | `ui-autotests.yml` | vc-module-one-shell-app | module-ci.yml | `@v3.800.24` | LIVE-pinned |
 | `ui-autotests.yml` | vc-module-test-module | module-ci.yml | `@v3.800.26` | LIVE-pinned |
 | `ui-autotests.yml` | vc-module-ui-migration | module-ci.yml | `@v3.800.16` | LIVE-pinned |
-| `ui-autotests.yml` | vc-testing-module | graphql-tests-docker.yml | `@v3.800.23` | LIVE-pinned |
