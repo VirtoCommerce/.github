@@ -220,7 +220,7 @@ runs:
           if ! PLAYWRIGHT_JUNIT_OUTPUT_FILE="report/$suite-junit.xml" \
                PLAYWRIGHT_JSON_OUTPUT_FILE="report/$suite-results.json" \
                FORCE_COLOR=1 \
-               npx playwright test --workers=4 --project="$suite" --output "test-results/$suite" "${EXTRA_ARGS[@]}" \
+               npx playwright test --project="$suite" --output "test-results/$suite" "${EXTRA_ARGS[@]}" \
                  --reporter=list,junit,json,allure-playwright; then
             failed+=("$suite")
           fi
