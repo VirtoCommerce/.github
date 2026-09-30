@@ -149,6 +149,28 @@ jobs:
     outputs:
       include: ${{ steps.build.outputs.include }}
     steps:
+      # A secret the caller never defined still arrives, as an empty string, and required: true
+      # does not catch it. Without this the run only fails minutes later, in every matrix job, at
+      # docker-env-full's admin password reset or at the test repo's env validation.
+      - name: Check testSecretEnvFile
+        shell: bash
+        env:
+          TEST_SECRET_ENV_FILE: ${{ secrets.testSecretEnvFile }}
+        run: |
+          if [[ -z "${TEST_SECRET_ENV_FILE//[[:space:]]/}" ]]; then
+            echo "::error title=testSecretEnvFile::testSecretEnvFile is empty. Check that the secret the caller passes exists and is visible to its repository."
+            exit 1
+          fi
+          # Required by the test repo's core/env.ts, and nothing in this workflow sets them
+          missing=()
+          for key in STORE_ID USERS_PASSWORD; do
+            grep -qE "^${key}=.+" <<<"$TEST_SECRET_ENV_FILE" || missing+=("$key")
+          done
+          if [[ ${#missing[@]} -gt 0 ]]; then
+            echo "::error title=testSecretEnvFile::testSecretEnvFile has no value for: ${missing[*]}."
+            exit 1
+          fi
+
       # Split from the rules below so a bad manifest is visible on its own.
       - name: Read the modules the manifests install
         id: manifests

@@ -161,7 +161,8 @@ runs:
         SKIP_DOC_COUNT_VERIFICATION_INPUT: ${{ inputs.skipDocCountVerification }}
       run: |
         Write-Host "::group::Seed dataset"
-        npx playwright test --project=seed --reporter=list
+        # Own --output: every playwright run empties its output dir first (see Run tests).
+        npx playwright test --project=seed --output test-results/seed --reporter=list
         if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
         Write-Host "::endgroup::"
         $startArgs = @{
@@ -200,14 +201,25 @@ runs:
             *) projects+=("$suite") ;;
           esac
         done
+        # Once each, first position wins: 'e2e,e2e-frontend' would otherwise run e2e-frontend
+        # twice, and the second run would overwrite the first one's reports and output dir.
+        declare -A seen=()
+        unique=()
         for suite in "${projects[@]}"; do
+          [ -n "${seen[$suite]:-}" ] && continue
+          seen[$suite]=1
+          unique+=("$suite")
+        done
+        for suite in "${unique[@]}"; do
           echo "::group::$suite tests"
-          echo "+ npx playwright test --project=$suite ${EXTRA_ARGS[*]}"
+          echo "+ npx playwright test --project=$suite --output test-results/$suite ${EXTRA_ARGS[*]}"
+          # A run empties its output dir before it starts, and all projects share test-results/,
+          # so without a subfolder each suite would delete the traces of the ones before it.
           # --reporter replaces the config's reporters, so allure-playwright is listed again.
           if ! PLAYWRIGHT_JUNIT_OUTPUT_FILE="report/$suite-junit.xml" \
                PLAYWRIGHT_JSON_OUTPUT_FILE="report/$suite-results.json" \
                FORCE_COLOR=1 \
-               npx playwright test --project="$suite" "${EXTRA_ARGS[@]}" \
+               npx playwright test --project="$suite" --output "test-results/$suite" "${EXTRA_ARGS[@]}" \
                  --reporter=list,junit,json,allure-playwright; then
             failed+=("$suite")
           fi

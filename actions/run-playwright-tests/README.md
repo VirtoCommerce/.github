@@ -12,7 +12,7 @@ Artifact `playwright-test-results-<run>-<attempt><artifactSuffix>` (zip):
 
 * `report/allure-report/`: the Allure report
 * `report/<project>-junit.xml` and `report/<project>-results.json`: per-project JUnit and Playwright JSON reports
-* `test-results/`: traces and screenshots of failed tests
+* `test-results/<project>/`: traces and screenshots of failed tests, one folder per project (`seed` included)
 
 The report must be served over HTTP: unzip the artifact and run `npx allure open report/allure-report`.
 
