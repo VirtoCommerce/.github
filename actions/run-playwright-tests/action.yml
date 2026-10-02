@@ -1,0 +1,330 @@
+name: "Playwright Auto Tests"
+description: "Runs Node/TypeScript Playwright Auto Tests"
+inputs:
+  adminPassword:
+    description: "Admin Password"
+    required: true
+    type: string
+  adminUsername:
+    description: "Admin Username"
+    required: true
+    type: string
+  backUrl:
+    description: "Back URL"
+    required: true
+    type: string
+  baseUrl:
+    description: "Base URL"
+    required: true
+    type: string
+  browser:
+    description: "Space-separated Playwright browser(s) to install. Which browser a test runs in is set by the test repo's playwright.config.ts."
+    required: false
+    default: "chromium"
+    type: string
+  grep:
+    description: "Optional Playwright --grep pattern (e.g. a tag like '@smoke'). Applied to every suite. Leave empty to run everything. @destructive tests stay excluded unless RUN_DESTRUCTIVE_TESTS=true is in testSecretEnvFile."
+    required: false
+    default: ""
+    type: string
+  nodeVersion:
+    description: "Node.js version"
+    required: false
+    default: "22"
+    type: string
+  skipDocCountVerification:
+    description: "Comma-separated document types whose post-reindex count check should be skipped (reindex still runs). Use when the seed dataset has 0 records for a type. Example: 'PickupLocation' or 'PickupLocation,ContentFile'."
+    required: false
+    default: ""
+    type: string
+  testSecretEnvFile:
+    description: "Test secret environment file content"
+    required: true
+    type: string
+  testSuites:
+    description: "Comma-separated list of suites to run, in order. Any subset of: graphql, restapi, e2e (= e2e-frontend + e2e-backend), e2e-frontend, e2e-backend"
+    required: false
+    default: "graphql,restapi,e2e"
+    type: string
+  vctestingPath:
+    description: "UI tests path"
+    required: true
+    type: string
+  vctestingRepo:
+    description: "UI tests repository"
+    required: true
+    type: string
+  vctestingRepoBranch:
+    description: "UI tests repository branch"
+    required: true
+    type: string
+  workers:
+    description: "Optional Playwright --workers value (number or percentage, e.g. '4' or '50%'). Leave empty for the test repo's default."
+    required: false
+    default: ""
+    type: string
+  artifactSuffix:
+    description: "Suffix appended to the uploaded artifact name (e.g., a matrix dimension)"
+    required: false
+    default: ""
+    type: string
+runs:
+  using: "composite"
+  steps:
+    - name: Getting tests
+      uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      with:
+        repository: ${{ inputs.vctestingRepo }}
+        ref: ${{ inputs.vctestingRepoBranch }}
+        path: ${{ inputs.vctestingPath }}
+        # No later step runs git against the test repo.
+        persist-credentials: false
+
+    # After checkout: the npm cache is keyed on the test repo's package-lock.json.
+    - name: Set up Node.js
+      uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+      with:
+        node-version: ${{ inputs.nodeVersion }}
+        cache: npm
+        cache-dependency-path: ${{ inputs.vctestingPath }}/package-lock.json
+
+    - name: Prepare .env file
+      shell: bash
+      working-directory: ${{ inputs.vctestingPath }}
+      env:
+        SECRET_ENV_FILE: ${{ inputs.testSecretEnvFile }}
+        BACKEND_BASE_URL: ${{ inputs.backUrl }}
+        FRONTEND_BASE_URL: ${{ inputs.baseUrl }}
+        ADMIN_USERNAME: ${{ inputs.adminUsername }}
+        ADMIN_PASSWORD_INPUT: ${{ inputs.adminPassword }}
+      # ADMIN_PASSWORD goes to GITHUB_ENV (masked) for the later seed/test steps.
+      run: | # zizmor: ignore[github-env]
+        echo "$SECRET_ENV_FILE" > .env
+        chmod 600 .env
+        set_env_var() {
+          local key="$1"
+          local val="$2"
+          local esc
+          esc=$(printf '%s' "$val" | sed -e 's/[\/&|]/\\&/g')
+          if grep -qE "^${key}=" .env; then
+            sed -i "s|^${key}=.*|${key}=${esc}|" .env
+          else
+            printf '%s=%s\n' "$key" "$val" >> .env
+          fi
+        }
+        set_env_var BACKEND_BASE_URL "$BACKEND_BASE_URL"
+        set_env_var FRONTEND_BASE_URL "$FRONTEND_BASE_URL"
+        set_env_var ADMIN_USERNAME "$ADMIN_USERNAME"
+        # Resolve ADMIN_PASSWORD precedence: input > value in .env (from SECRET_ENV_FILE) > default
+        pw="$ADMIN_PASSWORD_INPUT"
+        [ -n "$pw" ] || pw=$(grep -E '^ADMIN_PASSWORD=' .env | head -n1 | cut -d= -f2- | tr -d '\r')
+        # Strip matching surrounding quotes (e.g. ADMIN_PASSWORD="foo" in .env)
+        case "$pw" in
+          \"*\") pw="${pw#\"}"; pw="${pw%\"}" ;;
+          \'*\') pw="${pw#\'}"; pw="${pw%\'}" ;;
+        esac
+        [ -n "$pw" ] || pw=store
+        set_env_var ADMIN_PASSWORD "$pw"
+        echo "::add-mask::$pw"
+        echo "ADMIN_PASSWORD=$pw" >> "$GITHUB_ENV"
+
+    # The lockfile pins @playwright/test, which pins the browser builds.
+    - name: Cache Playwright browsers
+      uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+      with:
+        path: ~/.cache/ms-playwright
+        key: playwright-browsers-${{ runner.os }}-${{ inputs.browser }}-${{ hashFiles(format('{0}/package-lock.json', inputs.vctestingPath)) }}
+
+    - name: Install dependencies
+      shell: bash
+      working-directory: ${{ inputs.vctestingPath }}
+      env:
+        # Unquoted below so a space-separated list installs several browsers.
+        TEST_BROWSER_INPUT: ${{ inputs.browser }}
+      run: |
+        echo "::group::Install Node dependencies"
+        npm ci
+        echo "::endgroup::"
+        echo "::group::Install Playwright browsers"
+        # Cheap no-op for cached browsers; still installs OS deps on fresh runners.
+        npx playwright install --with-deps $TEST_BROWSER_INPUT
+        echo "::endgroup::"
+        mkdir -p report
+
+    - name: Seed test data
+      id: seed
+      shell: pwsh
+      working-directory: ${{ inputs.vctestingPath }}
+      env:
+        BACK_URL_INPUT: ${{ inputs.backUrl }}
+        ADMIN_USERNAME_INPUT: ${{ inputs.adminUsername }}
+        SKIP_DOC_COUNT_VERIFICATION_INPUT: ${{ inputs.skipDocCountVerification }}
+        FORCE_COLOR: "1"
+      run: |
+        Write-Host "::group::Seed dataset"
+        # Own --output: every playwright run empties its output dir first (see Run tests).
+        npx playwright test --project=seed --output test-results/seed --reporter=list
+        if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+        Write-Host "::endgroup::"
+        $startArgs = @{
+          platformUrl   = $env:BACK_URL_INPUT
+          adminUsername = $env:ADMIN_USERNAME_INPUT
+          adminPassword = $env:ADMIN_PASSWORD
+        }
+        $skipRaw = $env:SKIP_DOC_COUNT_VERIFICATION_INPUT
+        if ($skipRaw) {
+          $startArgs.skipDocCountVerification = $skipRaw -split ',' | ForEach-Object { $_.Trim() } | Where-Object { $_ }
+        }
+        & "${{ github.action_path }}/../docker-env-full/scripts/start-indexing.ps1" @startArgs
+
+    - name: Run tests
+      shell: bash
+      working-directory: ${{ inputs.vctestingPath }}
+      env:
+        TEST_SUITES: ${{ inputs.testSuites }}
+        PW_GREP: ${{ inputs.grep }}
+        PW_WORKERS: ${{ inputs.workers }}
+      run: |
+        # One Playwright run per project, in the given order, so a failing suite doesn't stop
+        # the next one and each gets its own JUnit/JSON report. The step fails at the end.
+        # No --grep-invert: it would replace the config's own, which keeps @destructive tests out.
+        EXTRA_ARGS=()
+        [ -n "$PW_GREP" ] && EXTRA_ARGS+=(--grep "$PW_GREP")
+        [ -n "$PW_WORKERS" ] && EXTRA_ARGS+=(--workers "$PW_WORKERS")
+        failed=()
+        IFS=',' read -ra suites <<< "${TEST_SUITES//[[:space:]]/}"
+        # 'e2e' matches the run-pytest-tests suite name; the TS repo splits it into two projects.
+        projects=()
+        for suite in "${suites[@]}"; do
+          case "$suite" in
+            "") ;;
+            e2e) projects+=(e2e-frontend e2e-backend) ;;
+            *) projects+=("$suite") ;;
+          esac
+        done
+        # Once each, first position wins: 'e2e,e2e-frontend' would otherwise run e2e-frontend
+        # twice, and the second run would overwrite the first one's reports and output dir.
+        declare -A seen=()
+        unique=()
+        for suite in "${projects[@]}"; do
+          [ -n "${seen[$suite]:-}" ] && continue
+          seen[$suite]=1
+          unique+=("$suite")
+        done
+        for suite in "${unique[@]}"; do
+          echo "::group::$suite tests"
+          echo "+ npx playwright test --project=$suite --output test-results/$suite ${EXTRA_ARGS[*]}"
+          # A run empties its output dir before it starts, and all projects share test-results/,
+          # so without a subfolder each suite would delete the traces of the ones before it.
+          # --reporter replaces the config's reporters, so allure-playwright is listed again.
+          if ! PLAYWRIGHT_JUNIT_OUTPUT_FILE="report/$suite-junit.xml" \
+               PLAYWRIGHT_JSON_OUTPUT_FILE="report/$suite-results.json" \
+               FORCE_COLOR=1 \
+               npx playwright test --workers=3 --project="$suite" --output "test-results/$suite" "${EXTRA_ARGS[@]}" \
+                 --reporter=list,junit,json,allure-playwright; then
+            failed+=("$suite")
+          fi
+          echo "::endgroup::"
+        done
+        if [ ${#failed[@]} -gt 0 ]; then
+          echo "::error title=Playwright tests::Failed suites: ${failed[*]}"
+          exit 1
+        fi
+
+    # Allure 3 is a Node package — uses the test repo's own `allure` devDependency, no Java needed.
+    # A multi-file report (loads its data over HTTP): download the artifact and serve it locally.
+    - name: Generate Allure report
+      shell: bash
+      if: always()
+      working-directory: ${{ inputs.vctestingPath }}
+      run: |
+        if [ ! -d allure-results ] || [ -z "$(ls -A allure-results 2>/dev/null)" ]; then
+          echo "::warning::allure-results is empty — skipping Allure report"
+        elif [ ! -x node_modules/.bin/allure ]; then
+          echo "::warning::The test repo has no 'allure' devDependency — skipping Allure report"
+        else
+          npx --no-install allure generate allure-results --output report/allure-report > "$RUNNER_TEMP/allure-gen.log" 2>&1             || { cat "$RUNNER_TEMP/allure-gen.log"; exit 1; }
+          ls -la report/allure-report
+        fi
+
+    - name: Publish failed tests summary
+      if: failure()
+      shell: bash
+      working-directory: ${{ inputs.vctestingPath }}
+      run: |
+        node - <<'JSEOF'
+        const fs = require('node:fs');
+        const path = require('node:path');
+
+        const failed = [];
+        let executed = 0;
+        const walk = (suite) => {
+          for (const spec of suite.specs ?? []) {
+            for (const test of spec.tests ?? []) {
+              if (test.status === 'skipped') continue;
+              executed++;
+              // 'flaky' passed on retry; only 'unexpected' is a real failure.
+              if (test.status === 'unexpected') {
+                failed.push(`[${test.projectName}] ${spec.file}:${spec.line} › ${spec.title}`);
+              }
+            }
+          }
+          (suite.suites ?? []).forEach(walk);
+        };
+
+        const reportDir = 'report';
+        const files = fs.existsSync(reportDir)
+          ? fs.readdirSync(reportDir).filter((f) => f.endsWith('-results.json')).sort()
+          : [];
+        for (const file of files) {
+          try {
+            JSON.parse(fs.readFileSync(path.join(reportDir, file), 'utf8')).suites?.forEach(walk);
+          } catch {
+            // A suite that crashed before writing a report — nothing to list for it.
+          }
+        }
+
+        if (failed.length === 0 || !process.env.GITHUB_STEP_SUMMARY) process.exit(0);
+        const lines = [`## Failed tests (${failed.length} of ${executed} executed)`, ''];
+        lines.push(...failed.map((t) => `- \`${t}\``));
+        fs.appendFileSync(process.env.GITHUB_STEP_SUMMARY, lines.join('\n') + '\n');
+        JSEOF
+
+    - name: Upload consolidated test results
+      if: always()
+      uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+      with:
+        name: playwright-test-results-${{ github.run_number }}-${{ github.run_attempt }}${{ inputs.artifactSuffix }}
+        # test-results/ holds the traces and screenshots of failed tests.
+        path: |
+          ${{ inputs.vctestingPath }}/report/
+          ${{ inputs.vctestingPath }}/test-results/
+        if-no-files-found: warn
+        retention-days: 30
+
+    - name: Print container logs on failure
+      shell: bash
+      if: failure()
+      run: |
+        echo "::group::Platform logs"
+        docker logs virtocommerce-vc-platform-web-1 --tail 100
+        echo "::endgroup::"
+        echo "::group::Database logs"
+        docker logs virtocommerce-vc-db-1 --tail 100
+        echo "::endgroup::"
+        echo "::group::Search engine logs"
+        docker logs virtocommerce-search-1 --tail 50
+        echo "::endgroup::"
+
+    - name: Log Application Insights role name
+      if: always()
+      shell: bash
+      run: |
+        # ROLE_NAME comes from docker-env-full's 'Generate container secrets' step (same
+        # value sent to the container as VirtoCommerce:ApplicationInsights:RoleName) —
+        # read from $GITHUB_ENV rather than recomputed, to avoid drift.
+        if [ -n "$ROLE_NAME" ]; then
+          echo "::notice title=Application Insights role name::${ROLE_NAME}"
+        else
+          echo "::warning title=Application Insights role name::ROLE_NAME is unset — docker-env-full did not run in this job, or did not export ROLE_NAME"
+        fi
