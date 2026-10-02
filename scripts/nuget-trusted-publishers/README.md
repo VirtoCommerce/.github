@@ -81,6 +81,8 @@ so re-running is safe. If the cookie has expired it will tell you to grab a fres
 | `--owner`         | `VirtoCommerce`| nuget.org package owner that will own the policies.  |
 | `--github-owner`  | `VirtoCommerce`| GitHub org used as the policy's `RepositoryOwner`.   |
 | `--workflows a,b` | the 3 above    | Override the workflow file list.                     |
+| `--scopes a,b`    | `package:push` | Policy scopes (`package:push`, `package:pushversion`, `package:unlist`). |
+| `--subjects a,b`  | `*`            | Package ID globs the scopes apply to.                |
 | `--curl <file>`   | *(prompt)*     | Read the cookie from a saved "Copy as cURL" file.    |
 | `--dry-run`       | off            | Show what would be done; do not POST.                |
 | `--activate`      | off            | Refresh the 7-day timer on all non-permanent policies (ignores `--repos`). |

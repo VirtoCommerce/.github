@@ -39,6 +39,8 @@
  *   --owner <name>    NuGet.org package owner that will own the policies.  Default: VirtoCommerce
  *   --github-owner    GitHub org used as the policy's RepositoryOwner.      Default: VirtoCommerce
  *   --workflows a,b   Override the workflow file list (comma-separated).
+ *   --scopes a,b      Policy scopes: package:push, package:pushversion, package:unlist. Default: package:push
+ *   --subjects a,b    Package ID globs the scopes apply to.                              Default: *
  *   --curl <file>     Read the cookie from a saved "Copy as cURL" file instead of prompting.
  *   --dry-run         Show what would be done; do not POST.
  *   --activate        Re-enable every NON-permanent policy (restarts its 7-day window). Does NOT
@@ -56,6 +58,9 @@ const NUGET_ORIGIN = 'https://www.nuget.org';
 const TP_URL = `${NUGET_ORIGIN}/account/trustedpublishing`;
 const GITHUB_ACTIONS_PUBLISHER = 'GitHubActions';
 const DEFAULT_WORKFLOWS = ['module-ci.yml', 'publish-nugets.yml', 'module-release-hotfix.yml'];
+// "Push new packages and package versions" on every package of the owner — the workflows only push.
+const DEFAULT_SCOPES = ['package:push'];
+const DEFAULT_SUBJECTS = ['*'];
 const USER_AGENT =
   'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0 Safari/537.36';
 
@@ -68,6 +73,8 @@ function parseArgs(argv) {
     owner: 'VirtoCommerce',
     githubOwner: 'VirtoCommerce',
     workflows: DEFAULT_WORKFLOWS,
+    scopes: DEFAULT_SCOPES,
+    subjects: DEFAULT_SUBJECTS,
     curl: '',
     dryRun: false,
     activate: false,
@@ -81,6 +88,8 @@ function parseArgs(argv) {
       case '--owner': args.owner = next(); break;
       case '--github-owner': args.githubOwner = next(); break;
       case '--workflows': args.workflows = splitList(next()); break;
+      case '--scopes': args.scopes = splitList(next()); break;
+      case '--subjects': args.subjects = splitList(next()); break;
       case '--curl': args.curl = next(); break;
       case '--dry-run': args.dryRun = true; break;
       case '--activate': args.activate = true; break;
@@ -277,7 +286,7 @@ function policyExists(policies, { owner, githubOwner, repo, workflow }) {
   });
 }
 
-async function createPolicy(jar, { generateUrl, token, policyName, owner, criteria }) {
+async function createPolicy(jar, { generateUrl, token, policyName, owner, criteria, scopes, subjects }) {
   const res = await fetch(generateUrl, {
     method: 'POST',
     headers: {
@@ -287,12 +296,18 @@ async function createPolicy(jar, { generateUrl, token, policyName, owner, criter
       'X-Requested-With': 'XMLHttpRequest',
       Referer: TP_URL,
     },
-    body: new URLSearchParams({
-      policyName,
-      owner,
-      criteria: JSON.stringify(criteria),
-      __RequestVerificationToken: token,
-    }),
+    body: new URLSearchParams([
+      ['policyName', policyName],
+      ['owner', owner],
+      ['criteria', JSON.stringify(criteria)],
+      // Required since NuGetGallery added GitLab publishers: a missing value throws server-side (HTTP 500).
+      ['publisherType', GITHUB_ACTIONS_PUBLISHER],
+      // New policies must carry at least one scope and one package glob, or the server answers 400.
+      // Repeated keys bind to the action's string[] parameters.
+      ...scopes.map((s) => ['policyScopes', s]),
+      ...subjects.map((s) => ['policySubjects', s]),
+      ['__RequestVerificationToken', token],
+    ]),
     redirect: 'manual',
   });
   applySetCookies(jar, res.headers.getSetCookie?.());
@@ -398,6 +413,7 @@ async function main() {
   console.log(`Owner (nuget):   ${args.owner}`);
   console.log(`RepositoryOwner: ${args.githubOwner}`);
   console.log(`Workflows:       ${args.workflows.join(', ')}`);
+  console.log(`Scopes:          ${args.scopes.join(', ')} on ${args.subjects.join(', ')}`);
   console.log(`Repos (${repos.length}):       ${repos.join(', ')}`);
   if (args.dryRun) console.log('Mode:            DRY RUN (no changes will be made)');
   console.log('');
@@ -439,6 +455,8 @@ async function main() {
         policyName,
         owner: args.owner,
         criteria,
+        scopes: args.scopes,
+        subjects: args.subjects,
       });
       if (r.ok) {
         results.push({ label, status: 'OK' });
