@@ -2,6 +2,7 @@
 
 [![Home](https://img.shields.io/badge/Website-virtocommerce.com-FF6B35?style=flat-square&logo=googlechrome&logoColor=white)](https://virtocommerce.com/)
 [![Interactive Demo](https://img.shields.io/badge/Live%20Demo-Try%20it%20now-22C55E?style=flat-square&logo=rocket&logoColor=white)](https://virtocommerce.com/interactive-demo)
+[![Release Decks](https://img.shields.io/badge/Releases-Interactive%20Presentations-0078D4?style=flat&logo=files&logoColor=white)](https://virtocommerce.github.io/vc-release-notes/)
 [![Documentation](https://img.shields.io/badge/Docs-docs.virtocommerce.org-0078D4?style=flat-square&logo=readthedocs&logoColor=white)](https://docs.virtocommerce.org/)
 [![Community](https://img.shields.io/badge/Community-virtocommerce.org-7B68EE?style=flat-square&logo=discourse&logoColor=white)](https://www.virtocommerce.org/)
 [![YouTube](https://img.shields.io/badge/YouTube-virtocommerce-FF0000?style=flat&logo=youtube&logoColor=white)](https://www.youtube.com/c/virtocommerce)
@@ -21,6 +22,18 @@
 
 ## WHO WE ARE
 As a Microsoft Gold Partner, Virto serves over 100 companies worldwide and has offices in five countries, including the Americas and Europe. Leveraging our open-source ecommerce platform, hosted solution and full-service offering, our clients strategically use ecommerce to build stronger customer relationships and rapidly increase global online sales. Virto Commerce’s flagship product, the ecommerce cloud-based, open-source, [.NET platform](https://virtocommerce.com/open-source-net-ecommerce-platform), is the only [B2B-first headless digital commerce solution](https://virtocommerce.com/b2b-headless-ecommerce-solution) that is specifically designed to adapt to ever-changing complex scenarios common in the B2B market. 
+
+## INTRODUCTION
+These docs will help you learn and use Virto Commerce:
+
+* [Release Strategy for Business Users](https://virtocommerce.github.io/vc-release-notes/presentations/release-strategy-for-business-users.html) - How Virto Commerce ships — modules, bundles, cadence, and what it means for your roadmap.
+* [Integration Capabilities of Virto Commerce](https://virtocommerce.github.io/vc-release-notes/presentations/integration-capabilities.html) - An integration path for every audience - buyers, your eCommerce team, and your suppliers - and how to choose between them.
+* [Atomic Architecture Map](https://virtocommerce.github.io/vc-release-notes/presentations/atomic-architecture-map/) - One-screen interactive map of the platform's building blocks - atoms, molecules, modules and the business capabilities they compose. Answers what exists, which one to reach for, and where it sits in the stack.
+* [Virto Cloud - Enterprise Commerce, Fully Managed](https://virtocommerce.github.io/vc-release-notes/presentations/virto-cloud.html) - Deliver faster, grow faster: Virto builds, runs, and operates the infrastructure with a 99.9% uptime SLA - budget goes to features, not servers.
+
+## WHAT'S NEW
+
+Every monthly release is rendered as an [interactive Virto Commerce slide deck](https://virtocommerce.github.io/vc-release-notes/). Product, engineering, and business stakeholders review what shipped, mark features for their own backlog, then export a ready-to-paste Markdown table for Jira, Linear, or GitHub Issues.
 
 ## WHAT AND HOW WE DO IT
 At Virto Commerce, we pride ourselves on being proactive technology innovators deeply dedicated to creating flexible, agile commerce software solutions that improve business and accelerate digital adoption. All this requires a special mindset and a lot of collaborative effort to make complex things simple. We believe in the uniting power of technology, teamwork and spirit, and we take personal responsibility for every project we undertake.
@@ -61,27 +74,6 @@ The Extensibility Framework lets you add entities, override services, extend API
 👨‍💻 [Virto Commerce Dev Training Program](https://www.virtocommerce.org/t/virto-commerce-dev-training-program/786/1)
 
 👨‍💻 [How to Run a Real Root Cause Analysis on a Virto Commerce Project](https://www.virtocommerce.org/t/how-to-run-a-real-root-cause-analysis-on-a-virto-commerce-project-and-solve-problems-faster-together/855)
-
-## Virto Commerce Release Strategy
-Virto Commerce ships as **modules** — independently versioned, independently deployable units. Modules combine into bundles you can pick from based on how you want to balance stability and speed.
-
-| Release Strategy | What it is | Use it for |
-|---|---|---|
-| **Stable** | Quarterly release; passed full regression, E2E, and load testing | Production, new solution development (default in vc-build) |
-| **Hotfix** | Bug fixes for the two most recent stable releases | Maintenance updates between stable cuts |
-| **Edge** | Latest features as they land — minimal risk, maximum freshness | Early access to new capabilities, prototyping |
-
-## Release Notes
-> [!TIP]
-> Open any deck via the links above, or clone the repo and open the `index.html` files directly in your browser. Add a feature to your backlog, then navigate to the Backlog screen and click **Copy as Markdown**. 
-
-| Month | Live deck | Source notes |
-| --- | --- | --- |
-| **July 2026** | [📊 View deck](https://virtocommerce.github.io/vc-release-notes/2026-07/) | [Notes](https://www.virtocommerce.org/t/virto-s-release-notes-july-2026/857) |
-| **June 2026** | [📊 View deck](https://virtocommerce.github.io/vc-release-notes/2026-06/) | [Notes](https://www.virtocommerce.org/t/virto-s-release-notes-june-2026/854) |
-| **May 2026** | [📊 View deck](https://virtocommerce.github.io/vc-release-notes/2026-05/) | [Notes](https://www.virtocommerce.org/t/virto-s-release-notes-may-2026-comics-edition/849/) |
-
-[Previuos Releases](https://virtocommerce.github.io/vc-release-notes/) 
 
 ## 🤝 Contributing
 
