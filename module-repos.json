@@ -48,6 +48,7 @@
   "vc-module-lucene-search",
   "vc-module-marketing",
   "vc-module-marketing-experience-api",
+  "vc-module-mfa",
   "vc-module-native-payment-methods",
   "vc-module-news",
   "vc-module-notification",
