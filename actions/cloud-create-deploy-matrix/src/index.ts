@@ -23,11 +23,8 @@ async function run(): Promise<void> {
     // Create a deployment matrix for dev only
 
     if (github.context.ref.indexOf(releaseBranch) > -1) {
-        // Create a deployment matrix for qa and prod (demo)
+        // Create a deployment matrix for prod (demo) only; QA is not deployed on release (VCST-6206)
         let environment = {envName: "prod", confPath: confPath, forceCommit: "true", releaseType: githubReleases};
-        environments.push(environment);
-        // For QA create PR instead of deployment commit 
-        environment = {envName: "qa", confPath: confPath, forceCommit: "false", releaseType: azureBlobReleases};
         environments.push(environment);
 
     } else {
