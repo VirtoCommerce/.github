@@ -288,7 +288,7 @@ jobs:
           Add-Content -Path $env:GITHUB_OUTPUT -Value "include=$($include | ConvertTo-Json -Depth 5 -Compress -AsArray)"
           $include | ConvertTo-Json -Depth 5
 
-  auto-autotests:
+  tests:
     needs: build-matrix
     runs-on: ubuntu-22.04
 
