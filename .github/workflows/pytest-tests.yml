@@ -1,5 +1,5 @@
-# v3.1000.1
-# https://virtocommerce.atlassian.net/browse/VCST-5414
+# v3.1000.2
+# https://virtocommerce.atlassian.net/browse/VCST-6033
 name: Auto tests
 
 on:
@@ -274,10 +274,10 @@ jobs:
 
     steps:
     - name: Install VirtoCommerce.GlobalTool
-      uses: VirtoCommerce/.github/actions/setup-vcbuild@v3.1000.1
+      uses: VirtoCommerce/.github/actions/setup-vcbuild@v3.1000.2
 
     - name: Docker Env Full
-      uses: VirtoCommerce/.github/actions/docker-env-full@v3.1000.1
+      uses: VirtoCommerce/.github/actions/docker-env-full@v3.1000.2
       with:
         frontendZipUrl: ${{ inputs.frontendZipUrl }}
         installModules: ${{ inputs.installModules }}
@@ -295,7 +295,7 @@ jobs:
         appInsightsInstrumentationKey: ${{ secrets.appInsightsInstrumentationKey }}
 
     - name: Run Auto Tests
-      uses: VirtoCommerce/.github/actions/run-pytest-tests@v3.1000.1
+      uses: VirtoCommerce/.github/actions/run-pytest-tests@v3.1000.2
       with:
         adminPassword: ${{ inputs.adminPassword }}
         adminUsername: ${{ inputs.adminUsername }}

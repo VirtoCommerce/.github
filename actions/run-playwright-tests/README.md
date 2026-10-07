@@ -104,7 +104,7 @@ The report must be served over HTTP: unzip the artifact and run `npx allure open
 
 ```yaml
 - name: Run Playwright Auto Tests
-  uses: VirtoCommerce/.github/actions/run-playwright-tests@v3.1000.1
+  uses: VirtoCommerce/.github/actions/run-playwright-tests@v3.1000.2
   with:
     adminPassword: ${{ secrets.ADMIN_PASSWORD }}
     adminUsername: admin
