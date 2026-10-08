@@ -37,7 +37,7 @@ Leave these alone — they are not release refs:
 
 Verify before committing:
 
-- `git grep -nE 'VirtoCommerce/\.github/.+@' -- .github/workflows workflow-templates actions | grep -v '@<new>'` prints nothing.
+- `git grep -nE 'uses: *VirtoCommerce/\.github/[^@ ]+@' -- .github/workflows workflow-templates actions ':!**/node_modules/**' | grep -v '@<new>'` prints nothing. Anchored on `uses:`, so prose like `actions/<action>@<tag>` in `actions/README.md` doesn't match.
 - `git grep -n '<previous tag>' -- .github/workflows workflow-templates actions deprecated ':!**/node_modules/**'` prints nothing.
 
 ## 2. Tag the merge commit

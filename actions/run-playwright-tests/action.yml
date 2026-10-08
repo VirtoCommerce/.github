@@ -19,7 +19,7 @@ inputs:
     required: false
     default: "chromium"
   grep:
-    description: "Optional Playwright --grep pattern (e.g. a tag like '@smoke'). Applied to every suite. Leave empty to run everything. @destructive tests stay excluded unless RUN_DESTRUCTIVE_TESTS=true is in testSecretEnvFile."
+    description: "Optional Playwright --grep pattern (e.g. a tag like '@smoke'). Applied to every suite; a suite with no matching test passes. Leave empty to run everything. @destructive tests stay excluded unless RUN_DESTRUCTIVE_TESTS=true is in testSecretEnvFile."
     required: false
     default: ""
   nodeVersion:
@@ -112,7 +112,9 @@ runs:
         esac
         [ -n "$pw" ] || pw=store
         set_env_var ADMIN_PASSWORD "$pw"
-        echo "::add-mask::$pw"
+        # The public default needs no mask, and masking it would hide every "store" in the log
+        # (STORE_ID, Restore, ...).
+        [ "$pw" = store ] || echo "::add-mask::$pw"
         echo "ADMIN_PASSWORD=$pw" >> "$GITHUB_ENV"
 
     # The lockfile pins @playwright/test, which pins the browser builds.
@@ -177,7 +179,8 @@ runs:
         # the next one and each gets its own JUnit/JSON report. The step fails at the end.
         # No --grep-invert: it would replace the config's own, which keeps @destructive tests out.
         EXTRA_ARGS=()
-        [ -n "$PW_GREP" ] && EXTRA_ARGS+=(--grep "$PW_GREP")
+        # --pass-with-no-tests: the pattern applies to every suite, and one with no match is not a failure.
+        [ -n "$PW_GREP" ] && EXTRA_ARGS+=(--grep "$PW_GREP" --pass-with-no-tests)
         [ -n "$PW_WORKERS" ] && EXTRA_ARGS+=(--workers "$PW_WORKERS")
         failed=()
         IFS=',' read -ra suites <<< "${TEST_SUITES//[[:space:]]/}"

@@ -105,7 +105,9 @@ runs:
         esac
         [ -n "$pw" ] || pw=store
         set_env_var ADMIN_PASSWORD "$pw"
-        echo "::add-mask::$pw"
+        # The public default needs no mask, and masking it would hide every "store" in the log
+        # (STORE_ID, Restore, ...).
+        [ "$pw" = store ] || echo "::add-mask::$pw"
         echo "ADMIN_PASSWORD=$pw" >> "$GITHUB_ENV"
 
     # Key covers OS, Python, browser, test repo/branch, and dependency-manifest hash.

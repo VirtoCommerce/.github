@@ -47,7 +47,7 @@ The report must be served over HTTP: unzip the artifact and run `npx allure open
 
 ### grep:
 
-    description: 'Optional Playwright --grep pattern (e.g. a tag like ''@smoke''). Applied to every suite. Leave empty to run everything. @destructive tests stay excluded unless RUN_DESTRUCTIVE_TESTS=true is in testSecretEnvFile.'
+    description: 'Optional Playwright --grep pattern (e.g. a tag like ''@smoke''). Applied to every suite; a suite with no matching test passes. Leave empty to run everything. @destructive tests stay excluded unless RUN_DESTRUCTIVE_TESTS=true is in testSecretEnvFile.'
     required: false
     default: ''
 

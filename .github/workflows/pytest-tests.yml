@@ -291,7 +291,7 @@ jobs:
       uses: VirtoCommerce/.github/actions/run-pytest-tests@v3.1000.2
       with:
         # docker-env-full sets the admin password from testSecretEnvFile only, and the action
-        # reads it from there too, so neither is an input here.
+        # reads it from there too, so the password is not an input of this workflow.
         adminUsername: admin
         apiKey: ${{ inputs.apiKey }}
         backUrl: ${{ inputs.backUrl }}
