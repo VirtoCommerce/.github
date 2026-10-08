@@ -7,7 +7,6 @@ inputs:
   mentions:
     description: 'Mentions'
     required: true
-    type: object
   title:
     description: 'Message Title'
     required: true

@@ -22,8 +22,9 @@ param(
         PickupLocation = 34
     },
     # Document types whose count gate should be skipped (reindex still runs).
-    # Use when the dataset legitimately has 0 source records for a type — e.g.
-    #   -skipDocCountVerification PickupLocation,ContentFile
+    # Use when the dataset legitimately has 0 source records for a type. Only keys of
+    # -minDocCounts are accepted — e.g.
+    #   -skipDocCountVerification PickupLocation,CustomerOrder
     [string[]]$skipDocCountVerification = @()
 )
 

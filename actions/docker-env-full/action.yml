@@ -51,7 +51,6 @@ inputs:
   testSecretEnvFile:
     description: 'Test secret environment file content'
     required: true
-    type: string
   platformBaseImage:
     description: |
       Pre-baked base image (see docker-env-full/base-image/) with wait-for-it.sh and
@@ -205,7 +204,7 @@ runs:
 
     - name: Download prebuilt platform image artifact
       if: ${{ inputs.prebuiltImageArtifact != '' }}
-      uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8
+      uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
       with:
         name: ${{ inputs.prebuiltImageArtifact }}
         path: ${{ runner.temp }}/prebuilt-image
@@ -527,8 +526,15 @@ runs:
       env:
         SECRET_ENV_FILE: ${{ inputs.testSecretEnvFile }}
       run: |
-        if ( $env:SECRET_ENV_FILE -match 'ADMIN_PASSWORD=\S+' ) {
-          $testAdminPassword = $matches[0].split('=')[1]
+        # Read as run-pytest-tests / run-playwright-tests read it, so the tests sign in with the same
+        # password: the first line starting ADMIN_PASSWORD= (case-sensitive, as grep is), everything
+        # after the first '=', every CR removed, quotes stripped
+        $line = $env:SECRET_ENV_FILE -split "`n" | Where-Object { $_ -clike 'ADMIN_PASSWORD=*' } | Select-Object -First 1
+        $testAdminPassword = if ($line) { $line.Substring('ADMIN_PASSWORD='.Length) -replace "`r", '' } else { '' }
+        if ($testAdminPassword -match '^"(.*)"$' -or $testAdminPassword -match "^'(.*)'$") {
+          $testAdminPassword = $matches[1]
+        }
+        if ($testAdminPassword) {
           Write-Host "`e[32mSet password for admin user from env variable"
         }
         else {

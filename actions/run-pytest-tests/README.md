@@ -6,8 +6,9 @@ Runs Auto Tests
 
 ### adminPassword:
 
-    description: 'Admin Password'
-    required: true
+    description: 'Admin Password. Empty takes ADMIN_PASSWORD from testSecretEnvFile, else ''store'', which is what docker-env-full sets on the platform'
+    required: false
+    default: ''
 
 ### adminUsername:
 
@@ -42,7 +43,7 @@ Runs Auto Tests
 
 ### skipDocCountVerification:
 
-    description: 'Comma-separated document types whose post-reindex count check should be skipped (reindex still runs). Use when the seed dataset has 0 records for a type. Example: ''PickupLocation'' or ''PickupLocation,ContentFile''.'
+    description: 'Comma-separated document types whose post-reindex count check should be skipped (reindex still runs). Use when the seed dataset has 0 records for a type. Any of: Member, Product, Category, CustomerOrder, PickupLocation. Example: ''PickupLocation''.'
     required: false
     default: ''
 
@@ -84,7 +85,6 @@ Runs Auto Tests
 - name: Run Auto Tests
   uses: VirtoCommerce/.github/actions/run-pytest-tests@v3.1000.1
   with:
-    adminPassword: ${{ secrets.ADMIN_PASSWORD }}
     adminUsername: admin
     apiKey: ${{ secrets.API_KEY }}
     backUrl: http://localhost:8090

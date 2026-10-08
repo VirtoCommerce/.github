@@ -1,15 +1,10 @@
 # v3.1000.2
 # https://virtocommerce.atlassian.net/browse/VCST-6033
-name: Auto tests
+name: Playwright auto tests
 
 on:
   workflow_call:
     inputs:
-      apiKey:
-        description: 'API Key'
-        required: false
-        type: string
-        default: ''
       backUrl:
         description: 'Back URL'
         required: false
@@ -21,6 +16,7 @@ on:
         type: string
         default: 'http://localhost'
       browser:
+        description: 'Space-separated Playwright browser(s) to install. Which browser a test runs in is set by the test repo''s playwright.config.ts.'
         required: false
         type: string
         default: 'chromium'
@@ -48,6 +44,11 @@ on:
         required: false
         type: string
         default: 'latest'
+      grep:
+        description: 'Optional Playwright --grep pattern (e.g. a tag like ''@smoke''). Applied to every suite; a suite with no matching test passes. Leave empty to run everything. @destructive tests stay excluded unless RUN_DESTRUCTIVE_TESTS=true is in testSecretEnvFile.'
+        required: false
+        type: string
+        default: ''
       installCustomModule:
         description: 'Enable or disable "Install Custom Modules" step'
         required: false
@@ -63,6 +64,11 @@ on:
         required: false
         type: string
         default: '[]'
+      nodeVersion:
+        description: 'Node.js version'
+        required: false
+        type: string
+        default: '22'
       platformDockerTag:
         description: 'Platform docker tag'
         required: false
@@ -73,11 +79,6 @@ on:
         required: false
         type: string
         default: ''
-      pytestMarkers:
-        description: 'Additional pytest -m marker expression, AND-combined with each suite''s default markers. Leave empty to use defaults only.'
-        required: false
-        default: ''
-        type: string
       requiredModulesListUrl:
         description: 'The URL of the JSON file with the required modules list'
         required: false
@@ -94,7 +95,7 @@ on:
         default: ''
         type: string
       testSuites:
-        description: 'Comma-separated list of suites to run. Any subset of: graphql, restapi, e2e'
+        description: 'Comma-separated list of suites to run, in order. Any subset of: graphql, restapi, e2e (= e2e-frontend + e2e-backend), e2e-frontend, e2e-backend'
         required: false
         default: 'graphql,restapi,e2e'
         type: string
@@ -113,6 +114,11 @@ on:
         required: false
         type: string
         default: 'dev'
+      workers:
+        description: 'Optional Playwright --workers value (number or percentage, e.g. ''4'' or ''50%''). Leave empty for the test repo''s default.'
+        required: false
+        type: string
+        default: ''
 
     secrets:
       envPAT:
@@ -133,6 +139,30 @@ jobs:
     outputs:
       include: ${{ steps.build.outputs.include }}
     steps:
+      # A secret the caller never defined still arrives, as an empty string, and required: true
+      # does not catch it. Without this the run only fails minutes later, in every matrix job, at
+      # docker-env-full's admin password reset or at the test repo's env validation.
+      - name: Check testSecretEnvFile
+        shell: bash
+        env:
+          TEST_SECRET_ENV_FILE: ${{ secrets.testSecretEnvFile }}
+        run: |
+          if [[ -z "${TEST_SECRET_ENV_FILE//[[:space:]]/}" ]]; then
+            echo "::error title=testSecretEnvFile::testSecretEnvFile is empty. Check that the secret the caller passes exists and is visible to its repository."
+            exit 1
+          fi
+          # Required by the test repo's core/env.ts, and nothing in this workflow sets them
+          missing=()
+          # A value: quoted with something inside, or unquoted and not starting with a space.
+          # CR stripped first, so a secret pasted with CRLF line ends doesn't pass an empty value.
+          for key in STORE_ID USERS_PASSWORD; do
+            grep -qE "^${key}=(\"[^\"]+\"|'[^']+'|[^\"'[:space:]])" <<<"${TEST_SECRET_ENV_FILE//$'\r'/}" || missing+=("$key")
+          done
+          if [[ ${#missing[@]} -gt 0 ]]; then
+            echo "::error title=testSecretEnvFile::testSecretEnvFile has no value for: ${missing[*]}."
+            exit 1
+          fi
+
       # Split from the rules below so a bad manifest is visible on its own.
       - name: Read the modules the manifests install
         id: manifests
@@ -251,7 +281,7 @@ jobs:
           Add-Content -Path $env:GITHUB_OUTPUT -Value "include=$($include | ConvertTo-Json -Depth 5 -Compress -AsArray)"
           $include | ConvertTo-Json -Depth 5
 
-  auto-autotests:
+  tests:
     needs: build-matrix
     runs-on: ubuntu-22.04
 
@@ -260,7 +290,7 @@ jobs:
       matrix:
         include: ${{ fromJSON(needs.build-matrix.outputs.include) }}
 
-    # The PAT goes to the vc-build steps only, not to the test repo's pip dependencies and tests.
+    # The PAT goes to the vc-build steps only, not to the test repo's npm dependencies and tests.
     steps:
     - name: Install VirtoCommerce.GlobalTool
       uses: VirtoCommerce/.github/actions/setup-vcbuild@v3.1000.2
@@ -287,22 +317,23 @@ jobs:
         prebuiltImageArtifact: ${{ inputs.prebuiltImageArtifact }}
         appInsightsInstrumentationKey: ${{ secrets.appInsightsInstrumentationKey }}
 
-    - name: Run Auto Tests
-      uses: VirtoCommerce/.github/actions/run-pytest-tests@v3.1000.2
+    - name: Run Playwright Auto Tests
+      uses: VirtoCommerce/.github/actions/run-playwright-tests@v3.1000.2
       with:
         # docker-env-full sets the admin password from testSecretEnvFile only, and the action
         # reads it from there too, so the password is not an input of this workflow.
         adminUsername: admin
-        apiKey: ${{ inputs.apiKey }}
         backUrl: ${{ inputs.backUrl }}
         baseUrl: ${{ inputs.baseUrl }}
         browser: ${{ inputs.browser }}
-        pytestMarkers: ${{ inputs.pytestMarkers }}
+        grep: ${{ inputs.grep }}
+        nodeVersion: ${{ inputs.nodeVersion }}
         testSecretEnvFile: ${{ secrets.testSecretEnvFile }}
         testSuites: ${{ inputs.testSuites }}
         vctestingPath: ${{ inputs.vctestingPath }}
         vctestingRepo: ${{ inputs.vctestingRepo }}
         vctestingRepoBranch: ${{ inputs.vctestingRepoBranch }}
+        workers: ${{ inputs.workers }}
         artifactSuffix: -${{ matrix.databaseProvider }}-${{ matrix.searchProvider }}
         skipDocCountVerification: ${{ inputs.skipDocCountVerification }}
 
@@ -311,14 +342,14 @@ jobs:
   # failed matrix skips this job, and a skipped job reports no status at all.
   auto-tests-result:
     if: always()
-    needs: [build-matrix, auto-autotests]
+    needs: [build-matrix, tests]
     runs-on: ubuntu-22.04
     steps:
       - name: Check the matrix result
         env:
           # A matrix job's result is already an aggregate: success only if every job succeeded
           MATRIX: ${{ needs.build-matrix.result }}
-          TESTS: ${{ needs.auto-autotests.result }}
+          TESTS: ${{ needs.tests.result }}
         run: |
-          echo "build-matrix=$MATRIX auto-autotests=$TESTS"
+          echo "build-matrix=$MATRIX tests=$TESTS"
           [[ "$MATRIX" == "success" && "$TESTS" == "success" ]] || exit 1

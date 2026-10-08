@@ -1,5 +1,5 @@
-# v3.1000.1
-# https://virtocommerce.atlassian.net/browse/VCST-5414
+# v3.1000.2
+# https://virtocommerce.atlassian.net/browse/VCST-6033
 name: VC unit test and sonar scan
 
 on:
@@ -29,7 +29,7 @@ jobs:
         java-version: '17'
 
     - name: Install VirtoCommerce.GlobalTool
-      uses: VirtoCommerce/.github/actions/setup-vcbuild@v3.1000.1
+      uses: VirtoCommerce/.github/actions/setup-vcbuild@v3.1000.2
     
     - name: Install dotnet-sonarscanner
       run: dotnet tool install --global dotnet-sonarscanner
@@ -40,7 +40,7 @@ jobs:
         persist-credentials: false
 
     - name: Get Artifact Version
-      uses: VirtoCommerce/.github/actions/get-image-version@v3.1000.1
+      uses: VirtoCommerce/.github/actions/get-image-version@v3.1000.2
       id: artifactVer
 
     - name: Set VERSION_SUFFIX variables
@@ -51,13 +51,13 @@ jobs:
  
     - name: Add version suffix
       if: ${{ github.ref != 'refs/heads/master' || github.ref != 'refs/heads/main' }}
-      uses: VirtoCommerce/.github/actions/add-version-suffix@v3.1000.1
+      uses: VirtoCommerce/.github/actions/add-version-suffix@v3.1000.2
       with:
         versionSuffix: ${{ env.VERSION_SUFFIX }}
 
 
     - name: SonarCloud Begin
-      uses: VirtoCommerce/.github/actions/sonar-scanner-begin@v3.1000.1
+      uses: VirtoCommerce/.github/actions/sonar-scanner-begin@v3.1000.2
 
     - name: Build
       run: vc-build Compile
@@ -66,9 +66,9 @@ jobs:
       run: vc-build Test -skip
 
     - name: SonarCloud End
-      uses: VirtoCommerce/.github/actions/sonar-scanner-end@v3.1000.1
+      uses: VirtoCommerce/.github/actions/sonar-scanner-end@v3.1000.2
 
     - name: Quality Gate
-      uses: VirtoCommerce/.github/actions/sonar-quality-gate@v3.1000.1
+      uses: VirtoCommerce/.github/actions/sonar-quality-gate@v3.1000.2
       with:
         login: ${{ env.SONAR_TOKEN }}

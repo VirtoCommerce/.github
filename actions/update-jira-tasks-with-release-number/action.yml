@@ -11,32 +11,25 @@ inputs:
   client-id:
     description: 'Client ID'
     required: true
-    type: string
   client-secret:
     description: 'Client secret'
     required: true
-    type: string
   ghRepository:
     description: 'GitHub repository in format org/repo'
     required: true
-    type: string
   ghReleaseTag:
     description: 'GitHub release tag'
     required: true
-    type: string
   jiraBaseUrl:
     description: 'Jira base URL'
     default: 'https://virtocommerce.atlassian.net'
     required: true
-    type: string
   jiraCustomFieldId:
     description: 'Jira custom field ID to update'
     required: true
-    type: string
   jiraCustomFieldValue:
     description: 'Jira custom field value to set'
     required: true
-    type: string
   
 runs:
   using: "composite"
