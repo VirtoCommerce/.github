@@ -5,16 +5,6 @@ name: Playwright auto tests
 on:
   workflow_call:
     inputs:
-      adminPassword:
-        description: 'Admin Password'
-        required: false
-        type: string
-        default: ''
-      adminUsername:
-        description: 'Admin Username'
-        required: false
-        type: string
-        default: 'admin'
       backUrl:
         description: 'Back URL'
         required: false
@@ -100,7 +90,7 @@ on:
         type: string
         default: '[]'
       skipDocCountVerification:
-        description: 'Comma-separated document types whose post-reindex count check should be skipped (reindex still runs). Use when the seed dataset has 0 records for a type. Example: ''PickupLocation'' or ''PickupLocation,ContentFile''.'
+        description: 'Comma-separated document types whose post-reindex count check should be skipped (reindex still runs). Use when the seed dataset has 0 records for a type. Any of: Member, Product, Category, CustomerOrder, PickupLocation. Example: ''PickupLocation''.'
         required: false
         default: ''
         type: string
@@ -163,8 +153,10 @@ jobs:
           fi
           # Required by the test repo's core/env.ts, and nothing in this workflow sets them
           missing=()
+          # A value: quoted with something inside, or unquoted and not starting with a space.
+          # CR stripped first, so a secret pasted with CRLF line ends doesn't pass an empty value.
           for key in STORE_ID USERS_PASSWORD; do
-            grep -qE "^${key}=.+" <<<"$TEST_SECRET_ENV_FILE" || missing+=("$key")
+            grep -qE "^${key}=(\"[^\"]+\"|'[^']+'|[^\"'[:space:]])" <<<"${TEST_SECRET_ENV_FILE//$'\r'/}" || missing+=("$key")
           done
           if [[ ${#missing[@]} -gt 0 ]]; then
             echo "::error title=testSecretEnvFile::testSecretEnvFile has no value for: ${missing[*]}."
@@ -251,17 +243,18 @@ jobs:
                          Where-Object { $_ } | Sort-Object -Unique)
           $usable = Select-Usable $installed
 
-          # Module under test names its engine; else the manifests, else default
-          $ownEngine = $engines["$env:CUSTOM_MODULE_ID".ToLowerInvariant()]
-          if (-not $ownEngine -and $installed.Count -eq 0 -and $manifestIds.Count -gt 0) {
-            # Fail now, not minutes into every database job
-            Fail 'The manifests install no search provider this workflow can run.'
-          }
-
           $requested = @(Read-JsonArray $env:SEARCH_PROVIDERS 'searchProviders')
           $unknown = @($requested | Where-Object { $_ -notin $engines.Values })
           if ($unknown.Count -gt 0) {
             Fail "Unknown searchProviders entries: $($unknown -join ', '). Allowed values: $($engines.Values -join ', ')."
+          }
+
+          # Module under test names its engine; else the manifests, else default.
+          # An explicit searchProviders needs no engine from the manifests.
+          $ownEngine = $engines["$env:CUSTOM_MODULE_ID".ToLowerInvariant()]
+          if (-not $ownEngine -and $requested.Count -eq 0 -and $installed.Count -eq 0 -and $manifestIds.Count -gt 0) {
+            # Fail now, not minutes into every database job
+            Fail 'The manifests install no search provider this workflow can run.'
           }
 
           # Explicit searchProviders wins; a provider module under test is always covered.
@@ -297,15 +290,17 @@ jobs:
       matrix:
         include: ${{ fromJSON(needs.build-matrix.outputs.include) }}
 
-    env:
-      GITHUB_TOKEN: ${{ secrets.envPAT }}
-
+    # The PAT goes to the vc-build steps only, not to the test repo's npm dependencies and tests.
     steps:
     - name: Install VirtoCommerce.GlobalTool
       uses: VirtoCommerce/.github/actions/setup-vcbuild@v3.1000.2
+      env:
+        GITHUB_TOKEN: ${{ secrets.envPAT }}
 
     - name: Docker Env Full
       uses: VirtoCommerce/.github/actions/docker-env-full@v3.1000.2
+      env:
+        GITHUB_TOKEN: ${{ secrets.envPAT }}
       with:
         frontendZipUrl: ${{ inputs.frontendZipUrl }}
         installModules: ${{ inputs.installModules }}
@@ -325,8 +320,9 @@ jobs:
     - name: Run Playwright Auto Tests
       uses: VirtoCommerce/.github/actions/run-playwright-tests@v3.1000.2
       with:
-        adminPassword: ${{ inputs.adminPassword }}
-        adminUsername: ${{ inputs.adminUsername }}
+        # docker-env-full sets the admin password from testSecretEnvFile only, and the action
+        # reads it from there too, so neither is an input here.
+        adminUsername: admin
         backUrl: ${{ inputs.backUrl }}
         baseUrl: ${{ inputs.baseUrl }}
         browser: ${{ inputs.browser }}

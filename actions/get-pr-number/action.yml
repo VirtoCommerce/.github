@@ -4,11 +4,9 @@ inputs:
   repo:
     description: 'Repository for PR lookup'
     required: true
-    type: string
   branch:
     description: 'Branch for PR lookup'
     required: true
-    type: string
 outputs:
   prNumber:
     description: 'The PR number associated with the branch'

@@ -51,7 +51,6 @@ inputs:
   testSecretEnvFile:
     description: 'Test secret environment file content'
     required: true
-    type: string
   platformBaseImage:
     description: |
       Pre-baked base image (see docker-env-full/base-image/) with wait-for-it.sh and
@@ -527,8 +526,14 @@ runs:
       env:
         SECRET_ENV_FILE: ${{ inputs.testSecretEnvFile }}
       run: |
-        if ( $env:SECRET_ENV_FILE -match 'ADMIN_PASSWORD=\S+' ) {
-          $testAdminPassword = $matches[0].split('=')[1]
+        # Read as run-pytest-tests / run-playwright-tests read it, so the tests sign in with the same
+        # password: the first line starting ADMIN_PASSWORD=, everything after the first '=', quotes stripped
+        $line = $env:SECRET_ENV_FILE -split "`r?`n" | Where-Object { $_ -like 'ADMIN_PASSWORD=*' } | Select-Object -First 1
+        $testAdminPassword = if ($line) { $line.Substring('ADMIN_PASSWORD='.Length) } else { '' }
+        if ($testAdminPassword -match '^"(.*)"$' -or $testAdminPassword -match "^'(.*)'$") {
+          $testAdminPassword = $matches[1]
+        }
+        if ($testAdminPassword) {
           Write-Host "`e[32mSet password for admin user from env variable"
         }
         else {

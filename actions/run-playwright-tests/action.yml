@@ -2,72 +2,58 @@ name: "Playwright Auto Tests"
 description: "Runs Node/TypeScript Playwright Auto Tests"
 inputs:
   adminPassword:
-    description: "Admin Password"
-    required: true
-    type: string
+    description: "Admin Password. Empty takes ADMIN_PASSWORD from testSecretEnvFile, else 'store', which is what docker-env-full sets on the platform"
+    required: false
+    default: ""
   adminUsername:
     description: "Admin Username"
     required: true
-    type: string
   backUrl:
     description: "Back URL"
     required: true
-    type: string
   baseUrl:
     description: "Base URL"
     required: true
-    type: string
   browser:
     description: "Space-separated Playwright browser(s) to install. Which browser a test runs in is set by the test repo's playwright.config.ts."
     required: false
     default: "chromium"
-    type: string
   grep:
     description: "Optional Playwright --grep pattern (e.g. a tag like '@smoke'). Applied to every suite. Leave empty to run everything. @destructive tests stay excluded unless RUN_DESTRUCTIVE_TESTS=true is in testSecretEnvFile."
     required: false
     default: ""
-    type: string
   nodeVersion:
     description: "Node.js version"
     required: false
     default: "22"
-    type: string
   skipDocCountVerification:
-    description: "Comma-separated document types whose post-reindex count check should be skipped (reindex still runs). Use when the seed dataset has 0 records for a type. Example: 'PickupLocation' or 'PickupLocation,ContentFile'."
+    description: "Comma-separated document types whose post-reindex count check should be skipped (reindex still runs). Use when the seed dataset has 0 records for a type. Any of: Member, Product, Category, CustomerOrder, PickupLocation. Example: 'PickupLocation'."
     required: false
     default: ""
-    type: string
   testSecretEnvFile:
     description: "Test secret environment file content"
     required: true
-    type: string
   testSuites:
     description: "Comma-separated list of suites to run, in order. Any subset of: graphql, restapi, e2e (= e2e-frontend + e2e-backend), e2e-frontend, e2e-backend"
     required: false
     default: "graphql,restapi,e2e"
-    type: string
   vctestingPath:
     description: "UI tests path"
     required: true
-    type: string
   vctestingRepo:
     description: "UI tests repository"
     required: true
-    type: string
   vctestingRepoBranch:
     description: "UI tests repository branch"
     required: true
-    type: string
   workers:
     description: "Optional Playwright --workers value (number or percentage, e.g. '4' or '50%'). Leave empty for the test repo's default."
     required: false
     default: ""
-    type: string
   artifactSuffix:
     description: "Suffix appended to the uploaded artifact name (e.g., a matrix dimension)"
     required: false
     default: ""
-    type: string
 runs:
   using: "composite"
   steps:
@@ -117,7 +103,8 @@ runs:
         set_env_var ADMIN_USERNAME "$ADMIN_USERNAME"
         # Resolve ADMIN_PASSWORD precedence: input > value in .env (from SECRET_ENV_FILE) > default
         pw="$ADMIN_PASSWORD_INPUT"
-        [ -n "$pw" ] || pw=$(grep -E '^ADMIN_PASSWORD=' .env | head -n1 | cut -d= -f2- | tr -d '\r')
+        # || true: under pipefail a grep with no match would fail the step before the default below
+        [ -n "$pw" ] || pw=$({ grep -E '^ADMIN_PASSWORD=' .env || true; } | head -n1 | cut -d= -f2- | tr -d '\r')
         # Strip matching surrounding quotes (e.g. ADMIN_PASSWORD="foo" in .env)
         case "$pw" in
           \"*\") pw="${pw#\"}"; pw="${pw%\"}" ;;
@@ -164,8 +151,9 @@ runs:
         Write-Host "::group::Seed dataset"
         # Own --output: every playwright run empties its output dir first (see Run tests).
         npx playwright test --project=seed --output test-results/seed --reporter=list
-        if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+        $seedExitCode = $LASTEXITCODE
         Write-Host "::endgroup::"
+        if ($seedExitCode -ne 0) { exit $seedExitCode }
         $startArgs = @{
           platformUrl   = $env:BACK_URL_INPUT
           adminUsername = $env:ADMIN_USERNAME_INPUT
@@ -211,6 +199,11 @@ runs:
           seen[$suite]=1
           unique+=("$suite")
         done
+        # Otherwise no suite runs and the step still passes
+        if [ ${#unique[@]} -eq 0 ]; then
+          echo "::error title=Playwright tests::testSuites names no suite: '$TEST_SUITES'"
+          exit 1
+        fi
         for suite in "${unique[@]}"; do
           echo "::group::$suite tests"
           echo "+ npx playwright test --project=$suite --output test-results/$suite ${EXTRA_ARGS[*]}"
@@ -243,8 +236,13 @@ runs:
         elif [ ! -x node_modules/.bin/allure ]; then
           echo "::warning::The test repo has no 'allure' devDependency — skipping Allure report"
         else
-          npx --no-install allure generate allure-results --output report/allure-report > "$RUNNER_TEMP/allure-gen.log" 2>&1             || { cat "$RUNNER_TEMP/allure-gen.log"; exit 1; }
-          ls -la report/allure-report
+          # A report tool error must not turn a green test run red
+          if npx --no-install allure generate allure-results --output report/allure-report > "$RUNNER_TEMP/allure-gen.log" 2>&1; then
+            ls -la report/allure-report
+          else
+            cat "$RUNNER_TEMP/allure-gen.log"
+            echo "::warning::allure generate failed — no Allure report in the artifact"
+          fi
         fi
 
     - name: Publish failed tests summary
@@ -295,10 +293,11 @@ runs:
       uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
       with:
         name: playwright-test-results-${{ github.run_number }}-${{ github.run_attempt }}${{ inputs.artifactSuffix }}
-        # test-results/ holds the traces and screenshots of failed tests.
+        # allure-playwright already copies the traces and screenshots of failed tests into the
+        # Allure report's attachments. The seed runs without it, so its own output goes as is.
         path: |
           ${{ inputs.vctestingPath }}/report/
-          ${{ inputs.vctestingPath }}/test-results/
+          ${{ inputs.vctestingPath }}/test-results/seed/
         if-no-files-found: warn
         retention-days: 30
 

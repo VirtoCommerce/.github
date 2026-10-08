@@ -10,9 +10,9 @@ Tests tagged `@destructive` (platform restart, index drop, ...) are excluded by 
 
 Artifact `playwright-test-results-<run>-<attempt><artifactSuffix>` (zip):
 
-* `report/allure-report/`: the Allure report
+* `report/allure-report/`: the Allure report, with the traces and screenshots of failed tests as attachments
 * `report/<project>-junit.xml` and `report/<project>-results.json`: per-project JUnit and Playwright JSON reports
-* `test-results/<project>/`: traces and screenshots of failed tests, one folder per project (`seed` included)
+* `test-results/seed/`: the trace and screenshots of a failed seed, which runs without Allure
 
 The report must be served over HTTP: unzip the artifact and run `npx allure open report/allure-report`.
 
@@ -20,8 +20,9 @@ The report must be served over HTTP: unzip the artifact and run `npx allure open
 
 ### adminPassword:
 
-    description: 'Admin Password'
-    required: true
+    description: 'Admin Password. Empty takes ADMIN_PASSWORD from testSecretEnvFile, else ''store'', which is what docker-env-full sets on the platform'
+    required: false
+    default: ''
 
 ### adminUsername:
 
@@ -58,7 +59,7 @@ The report must be served over HTTP: unzip the artifact and run `npx allure open
 
 ### skipDocCountVerification:
 
-    description: 'Comma-separated document types whose post-reindex count check should be skipped (reindex still runs). Use when the seed dataset has 0 records for a type. Example: ''PickupLocation'' or ''PickupLocation,ContentFile''.'
+    description: 'Comma-separated document types whose post-reindex count check should be skipped (reindex still runs). Use when the seed dataset has 0 records for a type. Any of: Member, Product, Category, CustomerOrder, PickupLocation. Example: ''PickupLocation''.'
     required: false
     default: ''
 
@@ -106,7 +107,6 @@ The report must be served over HTTP: unzip the artifact and run `npx allure open
 - name: Run Playwright Auto Tests
   uses: VirtoCommerce/.github/actions/run-playwright-tests@v3.1000.2
   with:
-    adminPassword: ${{ secrets.ADMIN_PASSWORD }}
     adminUsername: admin
     backUrl: http://localhost:8090
     baseUrl: http://localhost

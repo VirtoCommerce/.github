@@ -2,65 +2,52 @@ name: "Auto Tests"
 description: "Runs Auto Tests"
 inputs:
   adminPassword:
-    description: "Admin Password"
-    required: true
-    type: string
+    description: "Admin Password. Empty takes ADMIN_PASSWORD from testSecretEnvFile, else 'store', which is what docker-env-full sets on the platform"
+    required: false
+    default: ""
   adminUsername:
     description: "Admin Username"
     required: true
-    type: string
   apiKey:
     description: "API Key"
     required: true
-    type: string
   backUrl:
     description: "Back URL"
     required: true
-    type: string
   baseUrl:
     description: "Base URL"
     required: true
-    type: string
   browser:
     description: "Browser"
     required: true
-    type: string
   pytestMarkers:
     description: "Additional pytest -m marker expression, AND-combined with each suite's default markers. Leave empty to use defaults only."
     required: false
     default: ""
-    type: string
   skipDocCountVerification:
-    description: "Comma-separated document types whose post-reindex count check should be skipped (reindex still runs). Use when the seed dataset has 0 records for a type. Example: 'PickupLocation' or 'PickupLocation,ContentFile'."
+    description: "Comma-separated document types whose post-reindex count check should be skipped (reindex still runs). Use when the seed dataset has 0 records for a type. Any of: Member, Product, Category, CustomerOrder, PickupLocation. Example: 'PickupLocation'."
     required: false
     default: ""
-    type: string
   testSecretEnvFile:
     description: "Test secret environment file content"
     required: true
-    type: string
   testSuites:
     description: "Comma-separated list of suites to run. Any subset of: graphql, restapi, e2e"
     required: false
     default: "graphql,restapi,e2e"
-    type: string
   vctestingPath:
     description: "UI tests path"
     required: true
-    type: string
   vctestingRepo:
     description: "UI tests repository"
     required: true
-    type: string
   vctestingRepoBranch:
     description: "UI tests repository branch"
     required: true
-    type: string
   artifactSuffix:
     description: "Suffix appended to the uploaded artifact name (e.g., a matrix dimension)"
     required: false
     default: ""
-    type: string
 runs:
   using: "composite"
   steps:
@@ -109,7 +96,8 @@ runs:
         set_env_var API_KEY "$API_KEY"
         # Resolve ADMIN_PASSWORD precedence: input > value in .env (from SECRET_ENV_FILE) > default
         pw="$ADMIN_PASSWORD_INPUT"
-        [ -n "$pw" ] || pw=$(grep -E '^ADMIN_PASSWORD=' .env | head -n1 | cut -d= -f2- | tr -d '\r')
+        # || true: under pipefail a grep with no match would fail the step before the default below
+        [ -n "$pw" ] || pw=$({ grep -E '^ADMIN_PASSWORD=' .env || true; } | head -n1 | cut -d= -f2- | tr -d '\r')
         # Strip matching surrounding quotes (e.g. ADMIN_PASSWORD="foo" in .env)
         case "$pw" in
           \"*\") pw="${pw#\"}"; pw="${pw%\"}" ;;
@@ -175,12 +163,20 @@ runs:
         SKIP_DOC_COUNT_VERIFICATION_INPUT: ${{ inputs.skipDocCountVerification }}
       run: |
         Write-Host "::group::Seed dataset"
+        # $ErrorActionPreference does not cover native exit codes: without these checks a failed
+        # seed runs on into the reindex, and a later successful python call resets $LASTEXITCODE.
         python -m dataset.dataset_manager --seed --mode ci
-        if (Test-Path dataset/scripts/set_builder_page_status.py) {
+        $seedExitCode = $LASTEXITCODE
+        if ($seedExitCode -eq 0 -and (Test-Path dataset/scripts/set_builder_page_status.py)) {
           python -m dataset.scripts.set_builder_page_status --page-id acme-store-grouped-page-about-store --status Published --mode ci
-          python -m dataset.scripts.set_builder_page_status --page-id acme-store-grouped-page-legacy-catalog --status Archived --mode ci
+          $seedExitCode = $LASTEXITCODE
+          if ($seedExitCode -eq 0) {
+            python -m dataset.scripts.set_builder_page_status --page-id acme-store-grouped-page-legacy-catalog --status Archived --mode ci
+            $seedExitCode = $LASTEXITCODE
+          }
         }
         Write-Host "::endgroup::"
+        if ($seedExitCode -ne 0) { exit $seedExitCode }
         $startArgs = @{
           platformUrl   = $env:BACK_URL_INPUT
           adminUsername = $env:ADMIN_USERNAME_INPUT
@@ -310,11 +306,16 @@ runs:
       working-directory: ${{ inputs.vctestingPath }}
       run: |
         if [ -d allure-results ] && [ -n "$(ls -A allure-results 2>/dev/null)" ]; then
-          allure generate allure-results --clean -o report/allure-report > /tmp/allure-gen.log 2>&1 \
-            || { cat /tmp/allure-gen.log; exit 1; }
-          { pip install allure-combine && allure-combine report/allure-report; } > /tmp/allure-combine.log 2>&1 \
-            || { cat /tmp/allure-combine.log; exit 1; }
-          ls -la report/allure-report/complete.html
+          # A report tool error must not turn a green test run red
+          if ! allure generate allure-results --clean -o report/allure-report > /tmp/allure-gen.log 2>&1; then
+            cat /tmp/allure-gen.log
+            echo "::warning::allure generate failed — no Allure report in the artifact"
+          elif ! { pip install allure-combine && allure-combine report/allure-report; } > /tmp/allure-combine.log 2>&1; then
+            cat /tmp/allure-combine.log
+            echo "::warning::allure-combine failed — the artifact has the multi-file report only, no complete.html"
+          else
+            ls -la report/allure-report/complete.html
+          fi
         else
           echo "::warning::allure-results is empty — skipping Allure report"
         fi
