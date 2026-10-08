@@ -3,7 +3,7 @@
     "version": "1.0.0",
     "devDependencies": {
         "@types/node": "^26.6.4",
-        "@vercel/ncc": "^0.38.0",
+        "@vercel/ncc": "^0.45.0",
         "typescript": "^5.8.3"
     },
     "dependencies": {
