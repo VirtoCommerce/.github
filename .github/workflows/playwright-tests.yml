@@ -293,12 +293,12 @@ jobs:
     # The PAT goes to the vc-build steps only, not to the test repo's npm dependencies and tests.
     steps:
     - name: Install VirtoCommerce.GlobalTool
-      uses: VirtoCommerce/.github/actions/setup-vcbuild@v3.1000.2
+      uses: VirtoCommerce/.github/actions/setup-vcbuild@vcst-6033-playwright-workflow
       env:
         GITHUB_TOKEN: ${{ secrets.envPAT }}
 
     - name: Docker Env Full
-      uses: VirtoCommerce/.github/actions/docker-env-full@v3.1000.2
+      uses: VirtoCommerce/.github/actions/docker-env-full@vcst-6033-playwright-workflow
       env:
         GITHUB_TOKEN: ${{ secrets.envPAT }}
       with:
@@ -318,7 +318,7 @@ jobs:
         appInsightsInstrumentationKey: ${{ secrets.appInsightsInstrumentationKey }}
 
     - name: Run Playwright Auto Tests
-      uses: VirtoCommerce/.github/actions/run-playwright-tests@v3.1000.2
+      uses: VirtoCommerce/.github/actions/run-playwright-tests@vcst-6033-playwright-workflow
       with:
         # docker-env-full sets the admin password from testSecretEnvFile only, and the action
         # reads it from there too, so the password is not an input of this workflow.
