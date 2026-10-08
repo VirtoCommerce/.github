@@ -1,5 +1,5 @@
-# v3.1000.2
-# https://virtocommerce.atlassian.net/browse/VCST-6033
+# v3.1000.3
+# https://virtocommerce.atlassian.net/browse/VCST-6206
 name: Auto tests
 
 on:
@@ -263,12 +263,12 @@ jobs:
     # The PAT goes to the vc-build steps only, not to the test repo's pip dependencies and tests.
     steps:
     - name: Install VirtoCommerce.GlobalTool
-      uses: VirtoCommerce/.github/actions/setup-vcbuild@v3.1000.2
+      uses: VirtoCommerce/.github/actions/setup-vcbuild@v3.1000.3
       env:
         GITHUB_TOKEN: ${{ secrets.envPAT }}
 
     - name: Docker Env Full
-      uses: VirtoCommerce/.github/actions/docker-env-full@v3.1000.2
+      uses: VirtoCommerce/.github/actions/docker-env-full@v3.1000.3
       env:
         GITHUB_TOKEN: ${{ secrets.envPAT }}
       with:
@@ -288,7 +288,7 @@ jobs:
         appInsightsInstrumentationKey: ${{ secrets.appInsightsInstrumentationKey }}
 
     - name: Run Auto Tests
-      uses: VirtoCommerce/.github/actions/run-pytest-tests@v3.1000.2
+      uses: VirtoCommerce/.github/actions/run-pytest-tests@v3.1000.3
       with:
         # docker-env-full sets the admin password from testSecretEnvFile only, and the action
         # reads it from there too, so the password is not an input of this workflow.
