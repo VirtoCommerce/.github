@@ -69,20 +69,39 @@ if [ "$MODE" != ping ]; then
   echo "Card for $key sent (status $status, create $create)"
 fi
 
-# Re-review: a reviewer who has already reviewed this PR was requested again. The card only changes their row to 🔁,
-# and Teams does not notify about mentions added by a card update, so they get a separate message.
+# Separate messages, posted by the flow as a reply under the PR card. Teams does not notify about mentions added by
+# a card update, so whoever has to act gets one:
+# - re-review: a reviewer who has already reviewed this PR was requested again, mention the reviewer;
+# - comments: a reviewer requested changes or left a comment, mention the PR author (the author's own replies are skipped).
 event_action=$(jq -r '.action // empty' "$GITHUB_EVENT_PATH")
-requested=$(jq -r '.requested_reviewer.login // empty' "$GITHUB_EVENT_PATH")
-if [ "$MODE" != card ] && [ "$GITHUB_EVENT_NAME" = pull_request ] && [ "$event_action" = review_requested ] && [ -n "$requested" ] && [ "$status" = Open ] \
-  && [ "$(jq -r --arg l "$requested" 'map(select(.login == $l)) | first.state // empty' <<<"$rows")" = rereview ]; then
-  jq -n --arg key "$key" --arg login "$requested" --argjson pr "$pr" --argjson users "$users" "$mention_defs"'
+login=""
+if [ "$MODE" != card ] && [ "$status" = Open ]; then
+  if [ "$GITHUB_EVENT_NAME" = pull_request ] && [ "$event_action" = review_requested ]; then
+    requested=$(jq -r '.requested_reviewer.login // empty' "$GITHUB_EVENT_PATH")
+    if [ -n "$requested" ] && [ "$(jq -r --arg l "$requested" 'map(select(.login == $l)) | first.state // empty' <<<"$rows")" = rereview ]; then
+      login="$requested"; text="🔁 MENTION, your re-review is requested"; button="Open PR"; url=$(jq -r .html_url <<<"$pr")
+    fi
+  elif [ "$GITHUB_EVENT_NAME" = pull_request_review ] && [ "$event_action" = submitted ]; then
+    reviewer=$(jq -r '.review.user.login' "$GITHUB_EVENT_PATH")
+    case "$(jq -r '.review.state' "$GITHUB_EVENT_PATH")" in
+      changes_requested|commented)
+        if [ "$reviewer" != "$(jq -r .user.login <<<"$pr")" ]; then
+          login=$(jq -r .user.login <<<"$pr"); text="💬 MENTION, $reviewer left comments"; button="Open review"
+          url=$(jq -r '.review.html_url' "$GITHUB_EVENT_PATH")
+        fi ;;
+    esac
+  fi
+fi
+if [ -n "$login" ]; then
+  jq -n --arg key "$key" --arg login "$login" --arg text "$text" --arg button "$button" --arg url "$url" \
+    --argjson pr "$pr" --argjson users "$users" "$mention_defs"'
     {key: $key, kind: "ping", create: true, card: {
       type: "AdaptiveCard", version: "1.4",
       "$schema": "http://adaptivecards.io/schemas/adaptive-card.json",
       body: [
-        {type: "TextBlock", text: "🔁 \(mention($login)), your re-review is requested", wrap: true},
+        {type: "TextBlock", text: ($text | sub("MENTION"; mention($login))), wrap: true},
         {type: "TextBlock", text: $pr.title, isSubtle: true, wrap: true, spacing: "Small"}],
-      actions: [{type: "Action.OpenUrl", title: "Open PR", url: $pr.html_url}],
+      actions: [{type: "Action.OpenUrl", title: $button, url: $url}],
       msteams: {entities: entities([$login])}}}' | post
-  echo "Re-review message for $requested sent"
+  echo "Message for $login sent: $text"
 fi

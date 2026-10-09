@@ -10,7 +10,7 @@ inputs:
     required: false
     default: '{}'
   mode:
-    description: 'card: only post or update the PR card; ping: only the re-review message; all: both. Split them into two jobs so a queued card run never cancels a message'
+    description: 'card: only post or update the PR card; ping: only the re-review / review comments message; all: both. Split them into two jobs so a queued card run never cancels a message'
     required: false
     default: 'all'
   github-token:

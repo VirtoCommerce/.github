@@ -10,9 +10,10 @@ The action rebuilds an Adaptive Card from the current PR state on every event an
 Who gets a Teams notification:
 
 - everyone requested when the card is created (the PR is opened as Open, or a draft is marked Ready for review): the new card mentions them;
-- a reviewer whose review is requested again (Re-request review): a separate 🔁 message, because Teams does not notify about mentions added by a card update.
+- a reviewer whose review is requested again (Re-request review): a 🔁 message that mentions the reviewer;
+- the PR author, when a reviewer requests changes or leaves a comment: a 💬 message that mentions the author (the reviewer stays plain text, the author's own replies are skipped).
 
-Every other change (reviews, new commits, title, labels, reviewers added later, merge, close) only updates the card.
+The messages are separate because Teams does not notify about mentions added by a card update; the flow posts them as replies under the PR card. Every other change (approvals, new commits, title, labels, reviewers added later, merge, close) only updates the card.
 
 A draft PR gets no card until it is marked Ready for review.
 
@@ -32,7 +33,7 @@ A draft PR gets no card until it is marked Ready for review.
 
 ### mode:
 
-    description: 'card: only post or update the PR card; ping: only the re-review message; all: both. Split them into two jobs so a queued card run never cancels a message'
+    description: 'card: only post or update the PR card; ping: only the re-review / review comments message; all: both. Split them into two jobs so a queued card run never cancels a message'
     required: false
     default: 'all'
 
@@ -44,7 +45,7 @@ A draft PR gets no card until it is marked Ready for review.
 
 ## Example of usage
 
-Two jobs: `card` runs one at a time per PR, so a slower run never overwrites the card with an older state and two runs never post two cards. GitHub cancels the queued runs in between, which is fine because every run rebuilds the whole card. `ping` runs outside that queue, so no re-review message is cancelled.
+Two jobs: `card` runs one at a time per PR, so a slower run never overwrites the card with an older state and two runs never post two cards. GitHub cancels the queued runs in between, which is fine because every run rebuilds the whole card. `ping` runs outside that queue, so no message is cancelled.
 
 ```yaml
 name: Notify Teams about PR reviews
@@ -76,7 +77,7 @@ jobs:
           teams-users: ${{ secrets.TEAMS_USERS }}
 
   ping:
-    if: github.event.action == 'review_requested'
+    if: github.event.action == 'review_requested' || github.event_name == 'pull_request_review'
     runs-on: ubuntu-latest
     permissions:
       pull-requests: read
@@ -109,7 +110,9 @@ One flow and one SharePoint list per channel. The action sends one JSON shape:
 2. In Power Automate, create a flow with the trigger **When a Teams webhook request is received** (not V2: V2 accepts only requests with an Entra token), **Who can trigger the flow** = **Anyone**. The signed URL is the secret.
 3. **Parse JSON** on the trigger body with the schema of the shape above.
 4. **Condition** `kind` = `ping`:
-   - yes: **Post card in a chat or channel** (Flow bot, the channel), Adaptive Card = `string(body('Parse_JSON')?['card'])`;
+   - yes: **Get items** from the list, filter `Title eq '<key>'`, top 1, then:
+     - an item is found: **Reply with an adaptive card in a channel** (Flow bot, the channel) with its `MessageId`, Adaptive Card = `string(body('Parse_JSON')?['card'])`;
+     - no item: **Post card in a chat or channel** with the card;
    - no: **Get items** from the list, filter `Title eq '<key>'`, top 1, then:
      - an item is found: **Update an adaptive card in a chat or channel** with its `MessageId` and the card;
      - no item and `create` = `true`: **Post card in a chat or channel**, then **Create item** with `Title` = key and `MessageId` = the posted message id (`body.id`).
