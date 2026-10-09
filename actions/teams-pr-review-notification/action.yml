@@ -1,0 +1,31 @@
+name: 'Teams PR review notification'
+description: 'Keep one Teams card per PR in sync with its review state'
+inputs:
+  webhook-url:
+    description: 'URL of the Teams Workflows flow that posts or updates the card. Empty skips the run (Dependabot and fork PRs)'
+    required: false
+    default: ''
+  teams-users:
+    description: 'JSON {"github-login": "Entra Object ID"} for Teams mentions, logins not listed stay plain text'
+    required: false
+    default: '{}'
+  mode:
+    description: 'card: only post or update the PR card; ping: only the re-review message; all: both. Split them into two jobs so a queued card run never cancels a message'
+    required: false
+    default: 'all'
+  github-token:
+    description: 'Token with pull-requests: read'
+    required: false
+    default: ${{ github.token }}
+
+runs:
+  using: "composite"
+  steps:
+    - name: Send PR card to Teams
+      shell: bash
+      env:
+        WEBHOOK_URL: ${{ inputs.webhook-url }}
+        TEAMS_USERS: ${{ inputs.teams-users }}
+        GH_TOKEN: ${{ inputs.github-token }}
+        MODE: ${{ inputs.mode }}
+      run: '"$GITHUB_ACTION_PATH/scripts/notify.sh"'
