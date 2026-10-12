@@ -9,7 +9,7 @@ The action rebuilds an Adaptive Card from the current PR state on every event an
 
 Who gets a Teams notification:
 
-- everyone requested when the card is created (the PR is opened as Open, or a draft is marked Ready for review): the new card mentions them;
+- reviewers still waiting for their review when the card is created (the PR is opened as Open, or a draft is marked Ready for review): the new card mentions them;
 - a reviewer whose review is requested again (Re-request review): a 🔁 message that mentions the reviewer;
 - the PR author, when a reviewer requests changes or leaves a comment: a 💬 message that mentions the author (the reviewer stays plain text, the author's own replies are skipped).
 

@@ -16,17 +16,20 @@ repo="$GITHUB_REPOSITORY"
 number=$(jq -r '.pull_request.number' "$GITHUB_EVENT_PATH")
 key="${repo#*/}#$number"
 
-pr=$(gh api "repos/$repo/pulls/$number")
-reviews=$(gh api --paginate "repos/$repo/pulls/$number/reviews" | jq -s 'add // []')
+# Only the fields the card needs: PR and review bodies can push a --argjson value past the 128KB argument limit
+pr=$(gh api "repos/$repo/pulls/$number" --jq 'del(.body, .base, .head.repo, ._links)')
+reviews=$(gh api --paginate "repos/$repo/pulls/$number/reviews" --jq 'map({user: {login: .user.login}, state, submitted_at})' | jq -s 'add // []')
 rows=$(jq -n --argjson pr "$pr" --argjson reviews "$reviews" -f "$here/reviewers.jq")
 
 status=$(jq -r 'if .merged then "Merged" elif .state == "closed" then "Closed" elif .draft then "Draft" else "Open" end' <<<"$pr")
 create=false
 [ "$status" = Open ] && create=true
 
-# Logins with a UPN or Entra Object ID become Teams mentions, the rest stay plain text
+# Logins with a UPN or Entra Object ID become Teams mentions, the rest stay plain text.
+# The card mentions only reviewers who still owe a review: Teams notifies them when the card is first posted.
 mention_defs='
   def mention($l): if $users[$l] then "<at>\($l)</at>" else "@\($l)" end;
+  def pending: .state == "waiting" or .state == "rereview";
   def entities($logins): [$logins[] | select($users[.]) | {type: "mention", text: "<at>\(.)</at>", mentioned: {id: $users[.], name: .}}];
 '
 
@@ -55,10 +58,10 @@ card=$(jq -n --argjson pr "$pr" --argjson rows "$rows" --argjson users "$users" 
              {type: "Column", width: "stretch", items: map({type: "RichTextBlock", inlines: .[1], spacing: "Small"})}]}),
         {type: "TextBlock", text: "Reviewers", weight: "Bolder", spacing: "Medium"}]
         + (if $rows == [] then [{type: "TextBlock", text: "—", spacing: "Small"}]
-           else [$rows[] | {type: "TextBlock", text: "\(mention(.login))   \($label[.state])", spacing: "Small", wrap: true}] end)),
+           else [$rows[] | {type: "TextBlock", text: "\(if pending then mention(.login) else "@\(.login)" end)   \($label[.state])", spacing: "Small", wrap: true}] end)),
       actions: ([{type: "Action.OpenUrl", title: "Open PR", url: $pr.html_url}]
         + (if $jira then [{type: "Action.OpenUrl", title: "Open Jira", url: "https://virtocommerce.atlassian.net/browse/\($jira)"}] else [] end)),
-      msteams: {width: "Full", entities: entities([$rows[].login])}
+      msteams: {width: "Full", entities: entities([$rows[] | select(pending) | .login])}
     }')
 
 post() { curl -fsS -X POST -H 'Content-Type: application/json' --data-binary @- "$WEBHOOK_URL" >/dev/null; }
