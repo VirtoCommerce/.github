@@ -24,7 +24,7 @@ status=$(jq -r 'if .merged then "Merged" elif .state == "closed" then "Closed" e
 create=false
 [ "$status" = Open ] && create=true
 
-# Logins with an Entra Object ID become Teams mentions, the rest stay plain text
+# Logins with a UPN or Entra Object ID become Teams mentions, the rest stay plain text
 mention_defs='
   def mention($l): if $users[$l] then "<at>\($l)</at>" else "@\($l)" end;
   def entities($logins): [$logins[] | select($users[.]) | {type: "mention", text: "<at>\(.)</at>", mentioned: {id: $users[.], name: .}}];

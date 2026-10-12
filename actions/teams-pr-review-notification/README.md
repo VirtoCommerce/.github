@@ -27,7 +27,7 @@ A draft PR gets no card until it is marked Ready for review.
 
 ### teams-users:
 
-    description: 'JSON {"github-login": "Entra Object ID"} for Teams mentions, logins not listed stay plain text'
+    description: 'JSON {"github-login": "UPN or Entra Object ID"} for Teams mentions, logins not listed stay plain text'
     required: false
     default: '{}'
 
@@ -92,7 +92,7 @@ jobs:
 Secrets of the repository:
 
 - `TEAMS_PR_WEBHOOK`: the HTTP URL of the flow trigger;
-- `TEAMS_USERS`: `{"github-login": "<Entra Object ID>", ...}`. A Teams mention needs the user's Object ID (Entra ID → Users → the user → Object ID, or Graph `GET /users/<email>?$select=id`). Keep it in a secret: repositories are public and Actions logs are visible to everyone.
+- `TEAMS_USERS`: `{"github-login": "<UPN or Entra Object ID>", ...}`. A Teams mention needs the user's UPN (Entra ID → Users → the user → User principal name, usually but not always the work email) or Object ID (same page, or Graph `GET /users/<email>?$select=userPrincipalName,id`). Keep it in a secret: repositories are public and Actions logs are visible to everyone.
 
 Several repositories can share one channel: they use the same flow URL, and the card key (`<repository>#<PR number>`) keeps their cards apart.
 

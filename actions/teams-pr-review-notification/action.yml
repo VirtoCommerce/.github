@@ -6,7 +6,7 @@ inputs:
     required: false
     default: ''
   teams-users:
-    description: 'JSON {"github-login": "Entra Object ID"} for Teams mentions, logins not listed stay plain text'
+    description: 'JSON {"github-login": "UPN or Entra Object ID"} for Teams mentions, logins not listed stay plain text'
     required: false
     default: '{}'
   mode:
