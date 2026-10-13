@@ -1,5 +1,6 @@
 [
   "vc-module-admin-shell",
+  "vc-module-admin-ui",
   "vc-module-algolia-search",
   "vc-module-app-insights",
   "vc-module-assets",
