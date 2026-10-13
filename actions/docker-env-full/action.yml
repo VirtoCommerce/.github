@@ -316,7 +316,7 @@ runs:
         New-Item -Path "./$env:INSTALL_FOLDER/modules" -ItemType "directory" -Force | Out-Null
         Push-Location ./$env:INSTALL_FOLDER
         vc-build install -Edge -skip InstallPlatform
-        vc-build install -module VirtoCommerce.Quote VirtoCommerce.XPickup VirtoCommerce.MarketingExperienceApi VirtoCommerce.Pages
+        vc-build install -module VirtoCommerce.Quote VirtoCommerce.XPickup VirtoCommerce.MarketingExperienceApi VirtoCommerce.Pages VirtoCommerce.WhiteLabeling
         Write-Host "`e[32mWaiting for platform docker image pull (started earlier, in the background)"
         Receive-Job -Job $pullJob -Wait | Write-Host
         if ($pullJob.State -ne 'Completed') {
