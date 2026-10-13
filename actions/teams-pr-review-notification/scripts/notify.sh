@@ -9,6 +9,7 @@ if [ -z "${WEBHOOK_URL:-}" ]; then
   exit 0
 fi
 MODE="${MODE:-all}"
+case "$MODE" in card|ping|all) ;; *) echo "::error::mode must be card, ping or all, got '$MODE'"; exit 1 ;; esac
 users="${TEAMS_USERS:-}"
 [ -n "$users" ] || users='{}'
 
@@ -18,7 +19,7 @@ key="${repo#*/}#$number"
 
 # Only the fields the card needs: PR and review bodies can push a --argjson value past the 128KB argument limit
 pr=$(gh api "repos/$repo/pulls/$number" --jq 'del(.body, .base, .head.repo, ._links)')
-reviews=$(gh api --paginate "repos/$repo/pulls/$number/reviews" --jq 'map({user: {login: .user.login}, state, submitted_at})' | jq -s 'add // []')
+reviews=$(gh api --paginate "repos/$repo/pulls/$number/reviews" --jq 'map(select(.user) | {user: {login: .user.login, type: .user.type}, state, submitted_at})' | jq -s 'add // []')
 rows=$(jq -n --argjson pr "$pr" --argjson reviews "$reviews" -f "$here/reviewers.jq")
 
 status=$(jq -r 'if .merged then "Merged" elif .state == "closed" then "Closed" elif .draft then "Draft" else "Open" end' <<<"$pr")
@@ -34,7 +35,7 @@ mention_defs='
 '
 
 card=$(jq -n --argjson pr "$pr" --argjson rows "$rows" --argjson users "$users" --arg status "$status" "$mention_defs"'
-  ($pr.title | [scan("[A-Z][A-Z0-9]+-[0-9]+")] | first) as $jira
+  ($pr.title | [match("^[A-Z][A-Z0-9]+-[0-9]+").string] | first) as $jira
   | {approved: "✅ approved", comments: "💬 comments", rereview: "🔁 re-review", waiting: "⏳ waiting"} as $label
   | {
       type: "AdaptiveCard", version: "1.4",
@@ -64,7 +65,7 @@ card=$(jq -n --argjson pr "$pr" --argjson rows "$rows" --argjson users "$users" 
       msteams: {width: "Full", entities: entities([$rows[] | select(pending) | .login])}
     }')
 
-post() { curl -fsS -X POST -H 'Content-Type: application/json' --data-binary @- "$WEBHOOK_URL" >/dev/null; }
+post() { curl -fsS --max-time 30 --retry 3 -X POST -H 'Content-Type: application/json' --data-binary @- "$WEBHOOK_URL" >/dev/null; }
 
 if [ "$MODE" != ping ]; then
   jq -n --arg key "$key" --argjson create "$create" --argjson card "$card" \
@@ -76,6 +77,7 @@ fi
 # a card update, so whoever has to act gets one:
 # - re-review: a reviewer who has already reviewed this PR was requested again, mention the reviewer;
 # - comments: a reviewer requested changes or left a comment, mention the PR author (the author's own replies are skipped).
+# Bots neither get nor trigger messages, and a message is skipped when its addressee has no Teams mention.
 event_action=$(jq -r '.action // empty' "$GITHUB_EVENT_PATH")
 login=""
 if [ "$MODE" != card ] && [ "$status" = Open ]; then
@@ -88,12 +90,17 @@ if [ "$MODE" != card ] && [ "$status" = Open ]; then
     reviewer=$(jq -r '.review.user.login' "$GITHUB_EVENT_PATH")
     case "$(jq -r '.review.state' "$GITHUB_EVENT_PATH")" in
       changes_requested|commented)
-        if [ "$reviewer" != "$(jq -r .user.login <<<"$pr")" ]; then
+        if [ "$reviewer" != "$(jq -r .user.login <<<"$pr")" ] && [ "$(jq -r '.review.user.type' "$GITHUB_EVENT_PATH")" != Bot ] \
+          && [ "$(jq -r .user.type <<<"$pr")" != Bot ]; then
           login=$(jq -r .user.login <<<"$pr"); text="💬 MENTION, $reviewer left comments"; button="Open review"
           url=$(jq -r '.review.html_url' "$GITHUB_EVENT_PATH")
         fi ;;
     esac
   fi
+fi
+if [ -n "$login" ] && ! jq -e --arg l "$login" '.[$l]' <<<"$users" >/dev/null; then
+  echo "No Teams user for $login, message skipped"
+  login=""
 fi
 if [ -n "$login" ]; then
   jq -n --arg key "$key" --arg login "$login" --arg text "$text" --arg button "$button" --arg url "$url" \

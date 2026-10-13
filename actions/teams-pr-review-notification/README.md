@@ -15,7 +15,7 @@ Who gets a Teams notification:
 
 The messages are separate because Teams does not notify about mentions added by a card update; the flow posts them as replies under the PR card. Every other change (approvals, new commits, title, labels, reviewers added later, merge, close) only updates the card.
 
-A draft PR gets no card until it is marked Ready for review.
+A draft PR gets no card until it is marked Ready for review. Bots (Copilot, Bugbot, Dependabot) are left off the card and get or trigger no messages.
 
 ## inputs:
 
@@ -45,7 +45,7 @@ A draft PR gets no card until it is marked Ready for review.
 
 ## Example of usage
 
-Two jobs: `card` runs one at a time per PR, so a slower run never overwrites the card with an older state and two runs never post two cards. GitHub cancels the queued runs in between, which is fine because every run rebuilds the whole card. `ping` runs outside that queue, so no message is cancelled.
+Two jobs: `card` runs one at a time per PR, so a slower run never sends an older state after a newer one. GitHub cancels the queued runs in between, which is fine because every run rebuilds the whole card. `ping` runs outside that queue, so no message is cancelled.
 
 ```yaml
 name: Notify Teams about PR reviews
@@ -89,6 +89,8 @@ jobs:
           teams-users: ${{ secrets.TEAMS_USERS }}
 ```
 
+Dependabot and fork PRs run without secrets, so `webhook-url` is empty and the run is skipped: a Dependabot PR gets no card. Do not switch to `pull_request_target` to get around this: the action compares the event name with `pull_request` and the 🔁 messages would stop.
+
 Secrets of the repository:
 
 - `TEAMS_PR_WEBHOOK`: the HTTP URL of the flow trigger;
@@ -117,10 +119,12 @@ One flow and one SharePoint list per channel. The action sends one JSON shape:
      - an item is found: **Update an adaptive card in a chat or channel** with its `MessageId` and the card;
      - no item and `create` = `true`: **Post card in a chat or channel**, then **Create item** with `Title` = key and `MessageId` = the posted message id (`body.id`).
 
+In the trigger's **Settings**, turn on **Concurrency control** with **Degree of parallelism** = 1. The trigger answers GitHub before the flow runs, so without it two events seconds apart (`opened` and `review_requested`) run in parallel, both find no item and post two cards.
+
 Run the flow under a service account, so it does not stop when its author leaves.
 
 ## Tests
 
 ```bash
-bash scripts/reviewers.test.sh
+bash actions/teams-pr-review-notification/scripts/reviewers.test.sh
 ```
