@@ -1,5 +1,5 @@
-# v3.1000.3
-# https://virtocommerce.atlassian.net/browse/VCST-6206
+# v3.1000.4
+# https://virtocommerce.atlassian.net/browse/VCST-6033
 name: VC Publish docker
 
 on:
@@ -75,7 +75,7 @@ jobs:
 
     - name: Load Docker image 
       id: load-docker
-      uses: VirtoCommerce/.github/actions/docker-load-image@v3.1000.3
+      uses: VirtoCommerce/.github/actions/docker-load-image@v3.1000.4
       with:
         dockerTar: ${{ env.DOCKER_TAR }}
 
@@ -87,7 +87,7 @@ jobs:
         password: ${{ env.GITHUB_TOKEN }}
 
     - name: Publish Docker Image
-      uses: VirtoCommerce/.github/actions/publish-docker-image@v3.1000.3
+      uses: VirtoCommerce/.github/actions/publish-docker-image@v3.1000.4
       with:
           image: ${{ steps.load-docker.outputs.image }}
           tag: ${{ steps.load-docker.outputs.tag }}
