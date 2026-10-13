@@ -15,7 +15,7 @@ Who gets a Teams notification:
 
 The messages are separate because Teams does not notify about mentions added by a card update; the flow posts them as replies under the PR card. Every other change (approvals, new commits, title, labels, reviewers added later, merge, close) only updates the card.
 
-A draft PR gets no card until it is marked Ready for review. Bots (Copilot, Bugbot, Dependabot) are left off the card and get or trigger no messages.
+A draft PR gets no card until it is marked Ready for review. A PR opened by a bot (Dependabot) gets no card at all; bot reviewers (Copilot, Bugbot) are left off the card and trigger no messages.
 
 ## inputs:
 
@@ -89,7 +89,7 @@ jobs:
           teams-users: ${{ secrets.TEAMS_USERS }}
 ```
 
-Dependabot and fork PRs run without secrets, so `webhook-url` is empty and the run is skipped: a Dependabot PR gets no card. Do not switch to `pull_request_target` to get around this: the action compares the event name with `pull_request` and the 🔁 messages would stop.
+Fork PRs run without secrets, so `webhook-url` is empty and the run is skipped: a fork PR gets no card. Do not switch to `pull_request_target` to get around this: the action compares the event name with `pull_request` and the 🔁 messages would stop.
 
 Secrets of the repository:
 

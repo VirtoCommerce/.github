@@ -16,6 +16,10 @@ users="${TEAMS_USERS:-}"
 repo="$GITHUB_REPOSITORY"
 number=$(jq -r '.pull_request.number' "$GITHUB_EVENT_PATH")
 key="${repo#*/}#$number"
+if [ "$(jq -r '.pull_request.user.type' "$GITHUB_EVENT_PATH")" = Bot ]; then
+  echo "::notice::$key is opened by a bot (Dependabot), skipping"
+  exit 0
+fi
 
 # Only the fields the card needs: PR and review bodies can push a --argjson value past the 128KB argument limit
 pr=$(gh api "repos/$repo/pulls/$number" --jq 'del(.body, .base, .head.repo, ._links)')
@@ -90,8 +94,7 @@ if [ "$MODE" != card ] && [ "$status" = Open ]; then
     reviewer=$(jq -r '.review.user.login' "$GITHUB_EVENT_PATH")
     case "$(jq -r '.review.state' "$GITHUB_EVENT_PATH")" in
       changes_requested|commented)
-        if [ "$reviewer" != "$(jq -r .user.login <<<"$pr")" ] && [ "$(jq -r '.review.user.type' "$GITHUB_EVENT_PATH")" != Bot ] \
-          && [ "$(jq -r .user.type <<<"$pr")" != Bot ]; then
+        if [ "$reviewer" != "$(jq -r .user.login <<<"$pr")" ] && [ "$(jq -r '.review.user.type' "$GITHUB_EVENT_PATH")" != Bot ]; then
           login=$(jq -r .user.login <<<"$pr"); text="💬 MENTION, $reviewer left comments"; button="Open review"
           url=$(jq -r '.review.html_url' "$GITHUB_EVENT_PATH")
         fi ;;
