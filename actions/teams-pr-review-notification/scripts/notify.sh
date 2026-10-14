@@ -34,10 +34,9 @@ create=false
 [ "$status" = Open ] && create=true
 
 # Logins with a UPN or Entra Object ID become Teams mentions, the rest stay plain text.
-# The card mentions only reviewers who still owe a review: Teams notifies them when the card is first posted.
+# The card mentions every reviewer in any state. Teams notifies them only when the card is first posted, an update notifies nobody.
 mention_defs='
   def mention($l): if $users[$l] then "<at>\($l)</at>" else "@\($l)" end;
-  def pending: .state == "waiting" or .state == "rereview";
   def entities($logins): [$logins[] | select($users[.]) | {type: "mention", text: "<at>\(.)</at>", mentioned: {id: $users[.], name: .}}];
 '
 
@@ -69,10 +68,10 @@ card=$(jq -n --argjson pr "$pr" --argjson rows "$rows" --argjson users "$users" 
              {type: "Column", width: "stretch", items: map({type: "RichTextBlock", inlines: .[1], spacing: "Small"})}]}),
         {type: "TextBlock", text: "Reviewers", weight: "Bolder", spacing: "Medium"}]
         + (if $rows == [] then [{type: "TextBlock", text: "—", spacing: "Small"}]
-           else [$rows[] | {type: "TextBlock", text: "\(if pending then mention(.login) else "@\(.login)" end)   \($label[.state])", spacing: "Small", wrap: true}] end)),
+           else [$rows[] | {type: "TextBlock", text: "\(mention(.login))   \($label[.state])", spacing: "Small", wrap: true}] end)),
       actions: ([{type: "Action.OpenUrl", title: "Open PR", url: $pr.html_url}]
         + (if $jira then [{type: "Action.OpenUrl", title: "Open Jira", url: "https://virtocommerce.atlassian.net/browse/\($jira)"}] else [] end)),
-      msteams: {width: "Full", entities: entities([$rows[] | select(pending) | .login])}
+      msteams: {width: "Full", entities: entities([$rows[].login])}
     }')
 
 # Extra curl options: the card is sent with --retry (a repeat only updates it), a ping without (a repeat posts it twice)
