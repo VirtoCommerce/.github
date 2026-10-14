@@ -12,12 +12,15 @@ MODE="${MODE:-all}"
 case "$MODE" in card|ping|all) ;; *) echo "::error::mode must be card, ping or all, got '$MODE'"; exit 1 ;; esac
 users="${TEAMS_USERS:-}"
 [ -n "$users" ] || users='{}'
+# An empty value would pass every "has a Teams user" check and send a mention with an empty id
+users=$(jq -c 'with_entries(select(.value | type == "string" and length > 0))' <<<"$users")
 
 repo="$GITHUB_REPOSITORY"
 number=$(jq -r '.pull_request.number' "$GITHUB_EVENT_PATH")
 key="${repo#*/}#$number"
-if [ "$(jq -r '.pull_request.user.type' "$GITHUB_EVENT_PATH")" = Bot ]; then
-  echo "::notice::$key is opened by a bot (Dependabot), skipping"
+author=$(jq -r '.pull_request.user.login' "$GITHUB_EVENT_PATH")
+if [ "$(jq -r '.pull_request.user.type' "$GITHUB_EVENT_PATH")" = Bot ] && [[ ",${ALLOWED_BOTS// /}," != *",$author,"* ]]; then
+  echo "::notice::$key is opened by $author, a bot not listed in allowed-bots, skipping"
   exit 0
 fi
 
@@ -38,9 +41,12 @@ mention_defs='
   def entities($logins): [$logins[] | select($users[.]) | {type: "mention", text: "<at>\(.)</at>", mentioned: {id: $users[.], name: .}}];
 '
 
-card=$(jq -n --argjson pr "$pr" --argjson rows "$rows" --argjson users "$users" --arg status "$status" "$mention_defs"'
-  ($pr.title | [match("^[A-Z][A-Z0-9]+-[0-9]+").string] | first) as $jira
-  | {approved: "✅ approved", comments: "💬 comments", rereview: "🔁 re-review", waiting: "⏳ waiting"} as $label
+card=$(jq -n --argjson pr "$pr" --argjson rows "$rows" --argjson users "$users" --arg status "$status" \
+  --arg projects "${JIRA_PROJECTS:-}" "$mention_defs"'
+  # Only listed projects, so UTF-8 or CVE-2024 are not taken for a ticket; anywhere in the title, so [VCST-3] and Revert "VCST-3" match
+  ($projects | gsub("\\s"; "") | split(",") | map(select(. != ""))) as $p
+  | (if $p == [] then null else $pr.title | [match("\\b(\($p | join("|")))-[0-9]+\\b").string] | first end) as $jira
+  | {approved: "✅ approved", comments: "💬 comments", rereview: "🔁 re-review", waiting: "⏳ waiting", dismissed: "⚪ dismissed"} as $label
   | {
       type: "AdaptiveCard", version: "1.4",
       "$schema": "http://adaptivecards.io/schemas/adaptive-card.json",
@@ -69,11 +75,12 @@ card=$(jq -n --argjson pr "$pr" --argjson rows "$rows" --argjson users "$users" 
       msteams: {width: "Full", entities: entities([$rows[] | select(pending) | .login])}
     }')
 
-post() { curl -fsS --max-time 30 --retry 3 -X POST -H 'Content-Type: application/json' --data-binary @- "$WEBHOOK_URL" >/dev/null; }
+# Extra curl options: the card is sent with --retry (a repeat only updates it), a ping without (a repeat posts it twice)
+post() { curl -fsS --max-time 30 "$@" -X POST -H 'Content-Type: application/json' --data-binary @- "$WEBHOOK_URL" >/dev/null; }
 
 if [ "$MODE" != ping ]; then
   jq -n --arg key "$key" --argjson create "$create" --argjson card "$card" \
-    '{key: $key, kind: "card", create: $create, card: $card}' | post
+    '{key: $key, kind: "card", create: $create, card: $card}' | post --retry 3
   echo "Card for $key sent (status $status, create $create)"
 fi
 

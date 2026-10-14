@@ -1,5 +1,5 @@
 # Input: --argjson pr (GET pulls/N), --argjson reviews (GET pulls/N/reviews, all pages)
-# Output: [{login, state}] where state is waiting | rereview | approved | comments
+# Output: [{login, state}] where state is waiting | rereview | approved | comments | dismissed
 $pr.user.login as $author
 | [$pr.requested_reviewers[] | select(.type != "Bot") | .login] as $requested
 # A reviewer's verdict is their last approve / request changes; a plain comment counts only when there is no verdict,
@@ -18,4 +18,6 @@ $pr.user.login as $author
     if ($requested | any(. == $l)) then (if $last[$l] then "rereview" else "waiting" end)
     elif $last[$l] == "APPROVED" then "approved"
     elif $last[$l] == "CHANGES_REQUESTED" or $last[$l] == "COMMENTED" then "comments"
+    # A dismissed review (e.g. a stale approval after a push) is not a request: GitHub does not ask the reviewer again
+    elif $last[$l] == "DISMISSED" then "dismissed"
     else "waiting" end)})

@@ -5,7 +5,7 @@ Keep one Microsoft Teams card per pull request in sync with its review state.
 The action rebuilds an Adaptive Card from the current PR state on every event and sends it to a Teams Workflows flow. The flow posts the card the first time and replaces it afterwards, so the channel holds one card per PR:
 
 - title, author, branch, status (Open / Draft / Merged / Closed), `+added` / `−deleted` lines and files, Jira ticket and labels;
-- every reviewer with their state: ⏳ waiting, 🔁 re-review, ✅ approved, 💬 comments.
+- every reviewer with their state: ⏳ waiting, 🔁 re-review, ✅ approved, 💬 comments, ⚪ dismissed (the review was dismissed, e.g. a stale approval after a push, and not requested again).
 
 Who gets a Teams notification:
 
@@ -15,7 +15,7 @@ Who gets a Teams notification:
 
 The messages are separate because Teams does not notify about mentions added by a card update; the flow posts them as replies under the PR card. Every other change (approvals, new commits, title, labels, reviewers added later, merge, close) only updates the card.
 
-A draft PR gets no card until it is marked Ready for review. A PR opened by a bot (Dependabot) gets no card at all; bot reviewers (Copilot, Bugbot) are left off the card and trigger no messages.
+A draft PR gets no card until it is marked Ready for review. A PR opened by a bot gets no card at all, unless the bot is listed in `allowed-bots` (Copilot by default); bot reviewers (Copilot, Bugbot) are left off the card and trigger no messages.
 
 ## inputs:
 
@@ -36,6 +36,18 @@ A draft PR gets no card until it is marked Ready for review. A PR opened by a bo
     description: 'card: only post or update the PR card; ping: only the re-review / review comments message; all: both. Split them into two jobs so a queued card run never cancels a message'
     required: false
     default: 'all'
+
+### jira-projects:
+
+    description: 'Comma-separated Jira project keys, e.g. VCST,VCI. The first such key found anywhere in the PR title becomes the Jira field and button. Empty: no Jira link'
+    required: false
+    default: ''
+
+### allowed-bots:
+
+    description: 'Comma-separated bot logins whose PRs still get a card, e.g. Copilot. PRs of other bots are skipped'
+    required: false
+    default: 'Copilot'
 
 ### github-token:
 
@@ -75,6 +87,7 @@ jobs:
           mode: card
           webhook-url: ${{ secrets.TEAMS_PR_WEBHOOK }}
           teams-users: ${{ secrets.TEAMS_USERS }}
+          jira-projects: ${{ vars.JIRA_PROJECTS }}
 
   ping:
     if: github.event.action == 'review_requested' || github.event_name == 'pull_request_review'
@@ -95,6 +108,8 @@ Secrets of the repository:
 
 - `TEAMS_PR_WEBHOOK`: the HTTP URL of the flow trigger;
 - `TEAMS_USERS`: `{"github-login": "<UPN or Entra Object ID>", ...}`. A Teams mention needs the user's UPN (Entra ID → Users → the user → User principal name, usually but not always the work email) or Object ID (same page, or Graph `GET /users/<email>?$select=userPrincipalName,id`). Keep it in a secret: repositories are public and Actions logs are visible to everyone.
+
+`JIRA_PROJECTS` is a variable, not a secret (Settings → Secrets and variables → Actions → Variables), e.g. `VCST,VCI`. Set it once on the organization, or write the keys straight into the workflow. Only the `card` job needs it.
 
 Several repositories can share one channel: they use the same flow URL, and the card key (`<repository>#<PR number>`) keeps their cards apart.
 

@@ -13,6 +13,14 @@ inputs:
     description: 'card: only post or update the PR card; ping: only the re-review / review comments message; all: both. Split them into two jobs so a queued card run never cancels a message'
     required: false
     default: 'all'
+  jira-projects:
+    description: 'Comma-separated Jira project keys, e.g. VCST,VCI. The first such key found anywhere in the PR title becomes the Jira field and button. Empty: no Jira link'
+    required: false
+    default: ''
+  allowed-bots:
+    description: 'Comma-separated bot logins whose PRs still get a card, e.g. Copilot. PRs of other bots are skipped'
+    required: false
+    default: 'Copilot'
   github-token:
     description: 'Token with pull-requests: read'
     required: false
@@ -28,4 +36,6 @@ runs:
         TEAMS_USERS: ${{ inputs.teams-users }}
         GH_TOKEN: ${{ inputs.github-token }}
         MODE: ${{ inputs.mode }}
+        JIRA_PROJECTS: ${{ inputs.jira-projects }}
+        ALLOWED_BOTS: ${{ inputs.allowed-bots }}
       run: '"$GITHUB_ACTION_PATH/scripts/notify.sh"'

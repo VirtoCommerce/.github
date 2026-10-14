@@ -16,7 +16,7 @@ reviews='[
   {"user": {"login": "author"}, "state": "COMMENTED",         "submitted_at": "2026-10-01T14:00:00Z"}
 ]'
 got=$(jq -nc --argjson pr "$pr" --argjson reviews "$reviews" -f "$here/reviewers.jq" | jq -c 'map({(.login): .state}) | add')
-want='{"andrew":"waiting","ivan":"approved","maya":"rereview","olga":"comments","petr":"waiting","sasha":"comments"}'
+want='{"andrew":"waiting","ivan":"approved","maya":"rereview","olga":"comments","petr":"dismissed","sasha":"comments"}'
 [ "$got" = "$want" ] || { echo "FAIL review states: $got"; exit 1; }
 
 echo OK
