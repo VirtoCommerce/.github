@@ -82,7 +82,7 @@ jobs:
     permissions:
       pull-requests: read
     steps:
-      - uses: VirtoCommerce/.github/actions/teams-pr-review-notification@v3.1000.4
+      - uses: VirtoCommerce/.github/actions/teams-pr-review-notification@v3.1000.5
         with:
           mode: card
           webhook-url: ${{ secrets.TEAMS_PR_WEBHOOK }}
@@ -95,7 +95,7 @@ jobs:
     permissions:
       pull-requests: read
     steps:
-      - uses: VirtoCommerce/.github/actions/teams-pr-review-notification@v3.1000.4
+      - uses: VirtoCommerce/.github/actions/teams-pr-review-notification@v3.1000.5
         with:
           mode: ping
           webhook-url: ${{ secrets.TEAMS_PR_WEBHOOK }}
