@@ -112,6 +112,7 @@ uses: VirtoCommerce/.github/actions/<action>@v3.1000.1
 * [sonar-quality-gate](sonar-quality-gate/README.md)
 * [sonar-scanner-begin](sonar-scanner-begin/README.md)
 * [sonar-scanner-end](sonar-scanner-end/README.md)
+* [teams-pr-review-notification](teams-pr-review-notification/README.md)
 * [update-jira-tasks-with-release-number](update-jira-tasks-with-release-number/README.md)
 * [update-virtocommerce-docs](update-virtocommerce-docs/README.md)
 * [update-virtocommerce-docs-versioned](update-virtocommerce-docs-versioned/README.md)
