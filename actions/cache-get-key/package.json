@@ -2,7 +2,7 @@
     "name": "@virtocommerce/cache-get-key",
     "version": "1.0.0",
     "devDependencies": {
-        "@types/node": "^26.6.4",
+        "@types/node": "^26.6.5",
         "@vercel/ncc": "^0.45.0",
         "typescript": "^5.8.3"
     },
