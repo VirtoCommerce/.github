@@ -13,13 +13,15 @@ Release this repo. `$ARGUMENTS` is the new version (`v3.1000.2`) and optionally 
 
 Never commit, push or tag without the user's explicit OK for that step: stage, show the diff summary, ask.
 
-## 1. Pin the release in the feature PR (one commit)
+## 1. Pin the release (one commit)
 
-On the PR branch, before merge. Commit message: `<TICKET>: Pin actions and workflows to <new>`.
+Every release pins, even one that changes no workflow or template (e.g. a new action only): the refs, headers and deploy default always name the tag they are released in.
+
+Where: on the feature PR branch, before merge, when the PR changes workflows or templates. Otherwise (the feature PR is already merged, or it touches only actions or docs) in a separate PR from `origin/main` (`--no-track`), and the tag goes on that PR's merge commit. Commit message: `<TICKET>: Pin actions and workflows to <new>`.
 
 In `.github/workflows/` and `workflow-templates/`:
 
-- Every `uses: VirtoCommerce/.github/...@<ref>` where `<ref>` is the previous tag or a temporary branch ref (`@vcst-6033-playwright-workflow`, `@VCST-5414`) → `@<new>`.
+- Every `uses: VirtoCommerce/.github/...@<ref>` where `<ref>` is any older tag or a temporary branch ref (`@vcst-6033-playwright-workflow`, `@VCST-5414`) → `@<new>`.
 - The version header on line 1 (`# v3.1000.1`) → `# <new>`, and the ticket header on line 2 (`# https://virtocommerce.atlassian.net/browse/<TICKET>`) → this release's ticket. Only in files that have the headers.
 - `deploy-module-workflows.yml`: the `default:` of the version input → `'<new>'`.
 
@@ -34,7 +36,8 @@ Leave these alone — they are not release refs:
 Verify before committing:
 
 - `git grep -nE 'uses: *VirtoCommerce/\.github/[^@ ]+@' -- .github/workflows workflow-templates | grep -v '@<new>'` prints nothing.
-- `git grep -n '<previous tag>' -- .github/workflows workflow-templates` prints nothing.
+- `git grep -nE '^# v3\.' -- .github/workflows workflow-templates | grep -v '# <new>'` prints nothing (version headers).
+- `git diff --stat` counts only the changed lines (about 76 refs + 15 + 15 headers + 1 default). Edit with a tool that keeps CRLF line ends: Git Bash `sed -i` rewrites them and turns the diff into whole files.
 
 ## 2. Tag the merge commit
 
@@ -54,7 +57,7 @@ The tag is annotated (as `v3.1000.1` is), on the PR's merge commit on `main`. Un
 
 ## 3. Deploy
 
-Per the root README's "Update workflow templates":
+Ask whether to deploy now when the templates changed only by the pin: the module repos keep working on the older tag. Per the root README's "Update workflow templates":
 
 - Run `Deploy Module workflows` (and `Deploy Platform workflows` if platform templates changed) with `Version to deploy` = `<new>`. It has `repos` and `dryRun` inputs: offer a dry run, or 2–3 sample repos, before the full list.
 - Update the composable workflow versions in vc-modules, vc-platform, vc-frontend and vc-testing-module.
