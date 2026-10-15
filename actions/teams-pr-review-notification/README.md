@@ -7,6 +7,8 @@ The action rebuilds an Adaptive Card from the current PR state on every event an
 - title, author, branch, status (Open / Draft / Merged / Closed), `+added` / `−deleted` lines and files, Jira ticket and labels;
 - every reviewer with their state: ⏳ waiting, 🔁 re-review, ✅ approved, 💬 comments, ⚪ dismissed (the review was dismissed, e.g. a stale approval after a push, and not requested again).
 
+A merged or closed PR shrinks to its title, status and the Open PR / Open Jira buttons, so finished PRs take little room in the channel (Teams does not let the flow delete a Flow bot message).
+
 Who gets a Teams notification:
 
 - reviewers when the card is created (the PR is opened as Open, or a draft is marked Ready for review): the card mentions every reviewer in any state, and Teams notifies them about a new card only (a reviewer who already reviewed a draft is notified too);
