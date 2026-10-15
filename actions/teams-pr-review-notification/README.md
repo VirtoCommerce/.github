@@ -57,7 +57,7 @@ A draft PR gets no card until it is marked Ready for review. A PR opened by a bo
 
 ## Example of usage
 
-Two jobs: `card` runs one at a time per PR, so a slower run never sends an older state after a newer one. GitHub cancels the queued runs in between, which is fine because every run rebuilds the whole card. `ping` runs outside that queue, so no message is cancelled.
+Two jobs: `card` runs one at a time per PR, so a slower run never sends an older state after a newer one. GitHub cancels the queued runs in between, which is fine because every run rebuilds the whole card. `ping` runs outside that queue. A comment review waits 2 minutes before its message, so `ping` gets a group per PR and reviewer for comment reviews: a newer comment cancels the waiting run instead of keeping a runner busy, and the run of the last comment sends the message. Every other `ping` run gets its own group (`run_id`), so a 🔁 message or an approval never cancels a waiting comment message. Keep `ping` a separate job: in `mode: all` under the `card` group the wait would hold back card updates.
 
 ```yaml
 name: Notify Teams about PR reviews
@@ -92,6 +92,9 @@ jobs:
   ping:
     if: github.event.action == 'review_requested' || github.event_name == 'pull_request_review'
     runs-on: ubuntu-latest
+    concurrency:
+      group: teams-ping-${{ github.event.pull_request.number }}-${{ contains(fromJSON('["commented","changes_requested"]'), github.event.review.state) && github.event.review.user.login || github.run_id }}
+      cancel-in-progress: true
     permissions:
       pull-requests: read
     steps:
