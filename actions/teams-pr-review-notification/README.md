@@ -11,7 +11,7 @@ Who gets a Teams notification:
 
 - reviewers when the card is created (the PR is opened as Open, or a draft is marked Ready for review): the card mentions every reviewer in any state, and Teams notifies them about a new card only (a reviewer who already reviewed a draft is notified too);
 - a reviewer whose review is requested again (Re-request review): a 🔁 message that mentions the reviewer;
-- the PR author, when a reviewer requests changes or leaves a comment: a 💬 message that mentions the author (the reviewer stays plain text, the author's own replies are skipped).
+- the PR author, when a reviewer requests changes or leaves a comment: a 💬 message that mentions the author (the reviewer stays plain text, the author's own replies are skipped). Single comments arrive as one review each, so the message waits 2 minutes and is sent once for the reviewer's latest comment.
 
 The messages are separate because Teams does not notify about mentions added by a card update; the flow posts them as replies under the PR card. Every other change (approvals, new commits, title, labels, reviewers added later, merge, close) only updates the card.
 

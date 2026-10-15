@@ -111,6 +111,17 @@ if [ -n "$login" ] && ! jq -e --arg l "$login" '.[$l]' <<<"$users" >/dev/null; t
   echo "No Teams user for $login, message skipped"
   login=""
 fi
+# Single comments arrive as one review each, so a burst of them would send a message per comment. Wait 2 minutes, then send
+# only from the run of this reviewer's latest comment review, so the burst gives one message.
+if [ -n "$login" ] && [ "$GITHUB_EVENT_NAME" = pull_request_review ]; then
+  sleep "${COMMENTS_DEBOUNCE:-120}"
+  latest=$(gh api --paginate "repos/$repo/pulls/$number/reviews" --jq 'map(select(.user) | {login: .user.login, state, id})' |
+    jq -s --arg r "$reviewer" 'add // [] | map(select(.login == $r and (.state == "COMMENTED" or .state == "CHANGES_REQUESTED")) | .id) | max')
+  if [ "$latest" != "$(jq -r '.review.id' "$GITHUB_EVENT_PATH")" ]; then
+    echo "$reviewer submitted a later review, its run sends the message"
+    login=""
+  fi
+fi
 if [ -n "$login" ]; then
   jq -n --arg key "$key" --arg login "$login" --arg text "$text" --arg button "$button" --arg url "$url" \
     --argjson pr "$pr" --argjson users "$users" "$mention_defs"'
