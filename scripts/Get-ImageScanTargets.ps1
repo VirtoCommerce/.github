@@ -8,11 +8,9 @@
         [{ "image": "ghcr.io/virtocommerce/x", "tag": "2.60.0@sha256:...", "name": "2.60.0",
            "floatingTag": "latest", "digest": "sha256:...", "artifactName": "...", "username": "" }]
 
-    "tag" pins the scan to the digest, so it scans the image that was listed even if a floating
-    tag moves meanwhile, and the real tag in it stays in the scan results and Jira tickets after
-    the floating tag has moved on. "name" is the image's first tag that is not floating
-    (floatingTags in the config, "*latest" by default); "floatingTag" is the tag that selected
-    the image when that one is floating.
+    "tag" pins the scan to the digest and keeps the real tag in the results after a floating tag
+    moves. "name" is the first non-floating tag (floatingTags, default "*latest"); "floatingTag"
+    is the floating tag that selected the image, if any.
 
     A target is one registry with:
       - repositories: masks (-like) of repository names, e.g. "virtostart/*";
