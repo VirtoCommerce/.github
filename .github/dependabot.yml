@@ -1,11 +1,15 @@
 version: 2
 updates:
-  # GitHub Actions referenced from workflows (.github/workflows) and from every
-  # composite action.yml under actions/.
+  # GitHub Actions referenced from workflows (.github/workflows), workflow
+  # templates, and every composite action.yml under actions/.
+  # Directories are listed explicitly: "/**" expands only one level deep, so it
+  # never reached actions/<name>/action.yml. "/" covers .github/workflows.
+  # deprecated/ (retired reusable workflows) is left out on purpose.
   - package-ecosystem: github-actions
-    directories: ["/**"]
-    # deprecated/ holds retired reusable workflows — not maintained.
-    exclude-paths: ["deprecated/**"]
+    directories:
+      - "/"
+      - "/workflow-templates"
+      - "/actions/*"
     schedule:
       interval: weekly
     groups:
@@ -42,6 +46,3 @@ updates:
           - "*"
         update-types:
           - "major"
-
-# Workflow-templates/ is not scanned by Dependabot's github-actions ecosystem.
-# Those files are kept up-to-date by .github/workflows/auto-update-templates.yml.

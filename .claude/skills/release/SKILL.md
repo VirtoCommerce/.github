@@ -29,7 +29,7 @@ Leave these alone — they are not release refs:
 
 - The docs inside `actions/`: the `@<previous>` examples in `actions/*/README.md` and `actions/README.md`. A README of an action that is new in this release still shows `@<new>`, since the previous tag doesn't have that action.
 - Everything under `deprecated/`, version headers included.
-- `PINACT_VERSION` in `auto-update-templates.yml` / `pin-check.yml` (a tool version).
+- `ZIZMOR_VERSION` in `auto-update-templates.yml` and `PINACT_VERSION` in `pin-check.yml` (tool versions).
 - `deprecated-residual-callers.md` (a snapshot of what callers used).
 - The `git tag ... v3.800.0` example in the root `README.md`.
 
