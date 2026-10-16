@@ -1,25 +1,23 @@
 name: Auto-maintain workflows, templates and actions (zizmor security autofixes)
 
-# Pin bumps are not done here: Dependabot covers .github/workflows/,
-# workflow-templates/ and actions/*/action.yml (see .github/dependabot.yml).
+# Pin bumps are Dependabot's job (see .github/dependabot.yml).
 
 on:
   schedule:
     - cron: '0 8 * * 1' # Monday 08:00 UTC
   workflow_dispatch:
 
+# GITHUB_TOKEN only reads: checkout and zizmor's tag lookups. The PR is pushed
+# and opened with REPO_TOKEN (see "Open PR with updates").
 permissions:
-  contents: write
-  pull-requests: write
+  contents: read
 
 jobs:
   zizmor-autofix:
     runs-on: ubuntu-latest
     env:
       ZIZMOR_VERSION: 1.25.2
-      # Authenticate zizmor's GitHub API calls when resolving tag SHAs (avoids
-      # the 60/hour unauthenticated limit).
-      GH_TOKEN: ${{ github.token }}
+      # Without a token zizmor's tag lookups hit the 60/hour unauthenticated limit.
       GITHUB_TOKEN: ${{ github.token }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -28,7 +26,7 @@ jobs:
 
       - name: Apply zizmor security autofixes
         shell: bash
-        # GH_TOKEN/GITHUB_TOKEN let zizmor resolve SHAs->tags (ref-version-mismatch);
+        # GITHUB_TOKEN lets zizmor resolve SHAs->tags (ref-version-mismatch);
         # zizmor.yml scopes unpinned-uses. --fix=all applies safe+unsafe fixes —
         # this PR reviews the unsafe ones. Collection must match workflow-security.yml
         # (templates as explicit globs, `.` for actions) or the fixer skips what the

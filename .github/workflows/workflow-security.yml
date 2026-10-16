@@ -21,9 +21,9 @@ jobs:
     env:
       ACTIONLINT_VERSION: 1.7.12
       ZIZMOR_VERSION: 1.25.2
-      # zizmor reads GITHUB_TOKEN for its online audits (e.g. unpinned-tools);
-      # the static audits like template-injection run without it.
-      GH_TOKEN: ${{ github.token }}
+      # gh (actionlint download) and zizmor's online audits (e.g. unpinned-tools)
+      # both read GITHUB_TOKEN; the static audits like template-injection run
+      # without it.
       GITHUB_TOKEN: ${{ github.token }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1

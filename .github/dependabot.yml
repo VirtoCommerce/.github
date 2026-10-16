@@ -1,9 +1,7 @@
 version: 2
 updates:
-  # GitHub Actions referenced from workflows (.github/workflows), workflow
-  # templates, and every composite action.yml under actions/.
-  # Directories are listed explicitly: "/**" expands only one level deep, so it
-  # never reached actions/<name>/action.yml. "/" covers .github/workflows.
+  # "/" = .github/workflows. Listed explicitly: "/**" expands only one level
+  # deep and never reached actions/<name>/action.y(a)ml.
   # deprecated/ (retired reusable workflows) is left out on purpose.
   - package-ecosystem: github-actions
     directories:

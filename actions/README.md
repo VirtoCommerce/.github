@@ -133,7 +133,7 @@ uses: actions/checkout@v6
 
 **How updates happen**
 
-- **Dependabot** (`.github/dependabot.yml`) scans `.github/workflows/`, `workflow-templates/` and every `actions/*/action.yml` weekly. When upstream cuts a new tag, it opens a grouped PR bumping the SHA + trailing comment.
+- **Dependabot** (`.github/dependabot.yml`) scans `.github/workflows/`, `workflow-templates/` and every `actions/*/action.y(a)ml` weekly. When upstream cuts a new tag, it opens a grouped PR bumping the SHA + trailing comment.
 - **Pin-check CI** (`.github/workflows/pin-check.yml`) runs `pinact run -check` on every PR that touches workflows or `action.yml` files. PRs with unpinned third-party `uses:` lines fail.
 - **Scope** is configured in [`.pinact.yaml`](.pinact.yaml) — `VirtoCommerce/*` is intentionally ignored (internal, not third-party).
 
