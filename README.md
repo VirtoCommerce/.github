@@ -75,10 +75,11 @@ This applies to both reusable workflows in `.github/workflows/` and starter work
 
 **How updates happen**
 
-- **Dependabot** (`.github/dependabot.yml`) scans `.github/workflows/` weekly and opens grouped PRs bumping SHA + trailing comment when upstream cuts a new tag. Dependabot's `github-actions` ecosystem does NOT scan `workflow-templates/`.
-- **Auto-update for templates** (`.github/workflows/auto-update-templates.yml`) runs Mondays 08:00 UTC, executes `pinact run -update` against `workflow-templates/*.yml`, and opens a PR with the SHA bumps. Closes the gap Dependabot can't cover.
+- **Dependabot** (`.github/dependabot.yml`) scans `.github/workflows/`, `workflow-templates/` and every `actions/*/action.y(a)ml` weekly and opens grouped PRs bumping SHA + trailing comment when upstream cuts a new tag.
+- **Security autofixes** (`.github/workflows/auto-update-templates.yml`) runs Mondays 08:00 UTC, applies `zizmor --fix=all` to workflows, templates and actions, and opens a PR with the fixes for review. Pin bumps are left to Dependabot.
 - **Pin-check CI** (`.github/workflows/pin-check.yml`) runs `pinact run -check` on every PR that touches workflows or templates. PRs with unpinned third-party `uses:` lines fail.
 - **Scope** is configured in [`.pinact.yaml`](.pinact.yaml) — `VirtoCommerce/*` is intentionally ignored (internal, not third-party).
+- **`deprecated/`** is out of scope for all of the above: retired workflows there get no pin bumps, autofixes or pin checks. See [deprecated/README.md](deprecated/README.md).
 
 **For contributors**
 

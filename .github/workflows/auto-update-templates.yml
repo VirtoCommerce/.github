@@ -1,52 +1,32 @@
-name: Auto-maintain workflows and templates (pin updates + security autofixes)
+name: Auto-maintain workflows, templates and actions (zizmor security autofixes)
+
+# Pin bumps are Dependabot's job (see .github/dependabot.yml).
 
 on:
   schedule:
     - cron: '0 8 * * 1' # Monday 08:00 UTC
   workflow_dispatch:
 
+# GITHUB_TOKEN only reads: checkout and zizmor's tag lookups. The PR is pushed
+# and opened with REPO_TOKEN (see "Open PR with updates").
 permissions:
-  contents: write
-  pull-requests: write
+  contents: read
 
 jobs:
-  pinact-update:
+  zizmor-autofix:
     runs-on: ubuntu-latest
     env:
-      PINACT_VERSION: v3.10.1
       ZIZMOR_VERSION: 1.25.2
-      # Authenticate gh + pinact when resolving tag SHAs (avoids the 60/hour
-      # unauthenticated limit). gh uses GH_TOKEN; pinact uses GITHUB_TOKEN.
-      GH_TOKEN: ${{ github.token }}
+      # Without a token zizmor's tag lookups hit the 60/hour unauthenticated limit.
       GITHUB_TOKEN: ${{ github.token }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
 
-      - name: Install pinact
-        run: |
-          cd "$RUNNER_TEMP"
-          gh release download "$PINACT_VERSION" \
-            --repo suzuki-shunsuke/pinact \
-            --pattern 'pinact_linux_amd64.tar.gz'
-          tar -xzf pinact_linux_amd64.tar.gz
-          sudo install pinact /usr/local/bin/
-
-      - name: Bump pinned SHAs in workflow-templates
-        shell: bash
-        run: |
-          shopt -s nullglob
-          files=(workflow-templates/*.yml workflow-templates/*.yaml)
-          if (( ${#files[@]} == 0 )); then
-            echo "No workflow-template files found — nothing to do."
-            exit 0
-          fi
-          pinact run -update "${files[@]}"
-
       - name: Apply zizmor security autofixes
         shell: bash
-        # GH_TOKEN/GITHUB_TOKEN let zizmor resolve SHAs->tags (ref-version-mismatch);
+        # GITHUB_TOKEN lets zizmor resolve SHAs->tags (ref-version-mismatch);
         # zizmor.yml scopes unpinned-uses. --fix=all applies safe+unsafe fixes —
         # this PR reviews the unsafe ones. Collection must match workflow-security.yml
         # (templates as explicit globs, `.` for actions) or the fixer skips what the
@@ -73,24 +53,23 @@ jobs:
           # and GitHub blocks the default GITHUB_TOKEN from pushing workflow files
           # (the `permissions:` block can't grant this).
           token: ${{ secrets.REPO_TOKEN }}
-          commit-message: "ci: Auto-maintain workflows (pin updates + zizmor security autofixes)"
-          title: "ci: Auto-maintain workflows (pin updates + zizmor security autofixes)"
+          commit-message: "ci: Auto-maintain workflows (zizmor security autofixes)"
+          title: "ci: Auto-maintain workflows (zizmor security autofixes)"
           branch: ci/auto-maintain-workflows
           delete-branch: true
           # Request a review so the maintenance PR notifies a human (must not be
           # the REPO_TOKEN owner, or GitHub silently drops the self-request).
           reviewers: AndrewEhlo
           body: |
-            Automated maintenance of GitHub Actions workflows:
+            Automated security autofixes for GitHub Actions workflows:
+            `zizmor --fix=all` applies safe **and unsafe** fixes (e.g.
+            `template-injection`, `artipacked`, `ref-version-mismatch`) across
+            `.github/workflows/`, `workflow-templates/` and the composite
+            actions in `actions/`, since the reusable workflows and actions here
+            are consumed by other repos and the templates are copied into
+            modules.
 
-            - **Pin updates** — `pinact run --update` bumps third-party action
-              SHAs in `workflow-templates/`. (Dependabot covers pins in
-              `.github/workflows/`.)
-            - **Security autofixes** — `zizmor --fix=all` applies safe **and
-              unsafe** fixes (e.g. `template-injection`, `artipacked`,
-              `ref-version-mismatch`) across **both** `.github/workflows/` and
-              `workflow-templates/`, since the reusable workflows here are
-              consumed by other repos and the templates are copied into modules.
+            Pin bumps are not part of this PR: Dependabot opens those.
 
             > [!WARNING]
             > `--fix=all` includes **unsafe** fixes that require human review.
