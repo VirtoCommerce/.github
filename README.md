@@ -2,6 +2,13 @@
 
 Default workflow templates and reusable workflows for VirtoCommerce platform/modules.
 
+## Pull request approval
+
+The `main` branch is protected by the ruleset `main: require approval from github-workflows-reviewers`. Every PR needs one approval from the reviewers team before it can be merged. Direct pushes, force pushes and deleting `main` are blocked. Repository admins and organization owners can bypass all of these rules.
+
+- [`@VirtoCommerce/github-workflows-reviewers`](https://github.com/orgs/VirtoCommerce/teams/github-workflows-reviewers): approvals from this team are the ones that count. Add the people who should review and approve changes to this repository. GitHub does not let an author approve their own PR, so the team needs at least two active members.
+- [`@VirtoCommerce/github-workflows-maintainers`](https://github.com/orgs/VirtoCommerce/teams/github-workflows-maintainers): members can merge a PR without approval ("Merge without waiting for requirements"). This applies only to merging PRs: they still cannot push to `main` directly or force push. Add someone only while they are the only person maintaining the repository and nobody else can approve their PRs. Remove them once a second reviewer is available.
+
 ## Workflow templates
 
 Actual workflow templates are located in `workflow-templates` folder.

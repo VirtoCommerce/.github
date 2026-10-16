@@ -7,7 +7,10 @@ param(
     [string]$buildId,
     [string]$githubRepo
 )
+# No mentions ('@()' evaluates to $null) must not become an empty <at></at> and a mention without an id.
+$mentions = @($mentions | Where-Object { $_ })
 $mentionTags = ($mentions | ForEach-Object { "<at>$($_.name)</at>" }) -join ", "
+$checkText = if ($mentionTags) { "$mentionTags please check" } else { 'Please check' }
 $body = @{
     type        = "message"
     attachments = @(@{
@@ -26,7 +29,7 @@ $body = @{
                     },
                     @{
                         type = "TextBlock"
-                        text = "$mentionTags please check pipeline **$workflowName** - Run **$buildId** - [View Run](https://github.com/$githubRepo/actions/runs/$buildId)"
+                        text = "$checkText pipeline **$workflowName** - Run **$buildId** - [View Run](https://github.com/$githubRepo/actions/runs/$buildId)"
                         wrap = $true
                     }
                 )
