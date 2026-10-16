@@ -210,7 +210,7 @@ foreach ($v in $vulnerabilities) {
             @($v.Images | ForEach-Object { New-Paragraph (New-Text 'Image: ') (New-Text $_ @{ type = 'code' }) })
         ))
     )
-    # Room is left for the "And N more" paragraph.
+    # Room is left for the "Details of N more" paragraph.
     $items.Add($item)
     if ((Get-DescriptionLength ($content + (New-BulletList $items))) -gt $maxDescriptionLength - 200) {
         $items.RemoveAt($items.Count - 1)
