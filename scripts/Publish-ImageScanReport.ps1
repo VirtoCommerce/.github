@@ -46,8 +46,9 @@ param(
 
 $ErrorActionPreference = 'Stop'
 
-# The Jira description is limited to 32767 characters; the run summary always has the full list.
-$maxListedVulnerabilities = 100
+# Jira limits the description to 32767 characters; this budget is checked on the description JSON, which is
+# longer than its text. The details of each vulnerability go in while they fit; the run summary has them all.
+$maxDescriptionLength = 30000
 $runUrl = if ($env:GITHUB_RUN_ID) { "$env:GITHUB_SERVER_URL/$env:GITHUB_REPOSITORY/actions/runs/$env:GITHUB_RUN_ID" } else { '' }
 $sevOrder = @{ 'CRITICAL' = 0; 'HIGH' = 1; 'MEDIUM' = 2; 'LOW' = 3; 'UNKNOWN' = 4 }
 function Get-SevRank($severity) { $rank = $sevOrder["$severity"]; if ($null -eq $rank) { 99 } else { $rank } }
@@ -181,19 +182,8 @@ if ($previous -and $newVulnerabilities.Count -eq 0) {
 }
 
 # A new ticket: every vulnerability of the run, the new ones marked.
-$listed = @($vulnerabilities | Select-Object -First $maxListedVulnerabilities)
-$items = foreach ($v in $listed) {
-    $head = @(if ($v.Url) { New-Link $v.ID $v.Url } else { New-Text $v.ID @{ type = 'strong' } })
-    $head += New-Text " ($($v.Severity))$(if ($previous -and $v.New) { ' - new' })"
-    # The leading comma keeps the paragraph and its sub-list together as one list item.
-    , @(
-        (New-Paragraph @head)
-        (New-BulletList @(
-            @($v.Packages | ForEach-Object { New-Paragraph (New-Text 'Package: ') (New-Text $_) })
-            @($v.Images | ForEach-Object { New-Paragraph (New-Text 'Image: ') (New-Text $_ @{ type = 'code' }) })
-        ))
-    )
-}
+function Get-DescriptionLength($Content) { (@{ type = 'doc'; version = 1; content = @($Content) } | ConvertTo-Json -Depth 100 -Compress).Length }
+
 $intro = @(New-Text '*** Automatic ticket from the scheduled Trivy image scan *** ')
 if ($runUrl) { $intro += New-Link 'Scan run' $runUrl }
 $content = @(
@@ -203,9 +193,33 @@ $content = @(
 if ($previous) {
     $content += New-Paragraph (New-Text "New since ") (New-Link $previous.key "$JiraBaseUrl/browse/$($previous.key)") (New-Text ": $(($newVulnerabilities.ID) -join ', ').")
 }
-$content += New-BulletList $items
-if ($vulnerabilities.Count -gt $listed.Count) {
-    $content += New-Paragraph (New-Text "And $($vulnerabilities.Count - $listed.Count) more, see the scan run summary.")
+# Every ID, whatever fits of the details below: the next run tells new vulnerabilities from this list.
+$content += New-Paragraph (New-Text "All vulnerabilities: $(($vulnerabilities.ID) -join ', ')")
+if ((Get-DescriptionLength $content) -gt $maxDescriptionLength) {
+    throw "$($vulnerabilities.Count) vulnerability IDs alone exceed the Jira description limit: narrow the scan."
+}
+
+$items = [System.Collections.Generic.List[object]]::new()
+foreach ($v in $vulnerabilities) {
+    $head = @(if ($v.Url) { New-Link $v.ID $v.Url } else { New-Text $v.ID @{ type = 'strong' } })
+    $head += New-Text " ($($v.Severity))$(if ($previous -and $v.New) { ' - new' })"
+    $item = @(
+        (New-Paragraph @head)
+        (New-BulletList @(
+            @($v.Packages | ForEach-Object { New-Paragraph (New-Text 'Package: ') (New-Text $_) })
+            @($v.Images | ForEach-Object { New-Paragraph (New-Text 'Image: ') (New-Text $_ @{ type = 'code' }) })
+        ))
+    )
+    # Room is left for the "And N more" paragraph.
+    $items.Add($item)
+    if ((Get-DescriptionLength ($content + (New-BulletList $items))) -gt $maxDescriptionLength - 200) {
+        $items.RemoveAt($items.Count - 1)
+        break
+    }
+}
+if ($items.Count -gt 0) { $content += New-BulletList $items }
+if ($vulnerabilities.Count -gt $items.Count) {
+    $content += New-Paragraph (New-Text "Details of $($vulnerabilities.Count - $items.Count) more are in the scan run summary.")
 }
 
 $fields = @{
