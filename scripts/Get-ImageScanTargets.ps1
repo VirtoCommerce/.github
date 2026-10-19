@@ -83,13 +83,13 @@ function Get-GhcrVersions([string] $Owner, [string] $Repository, [int] $MaxPages
     }
 }
 
-# The same requests az acr makes with --username/--password, sent from this process: the password stays
-# in the environment instead of a command line other processes can read. The username and password are
-# exchanged for an access token of the scope, as ACR asks for a Bearer token. Pages follow the Link header.
+# Sent from this process, so the password stays in the environment instead of a command line other
+# processes can read. ACR wants a Bearer token: the username and password get one for the scope the way
+# docker login does (Basic auth to /oauth2/token). Pages follow the Link header.
 function Invoke-AcrList([string] $Registry, [string] $Username, [string] $Scope, [string] $Path, [string] $Property) {
-    $token = (Invoke-RestMethod -Method Post -Uri "https://$Registry/oauth2/token" -ContentType 'application/x-www-form-urlencoded' -Body @{
-            grant_type = 'password'; service = $Registry; scope = $Scope; username = $Username; password = $env:ACR_PASSWORD
-        }).access_token
+    $basic = 'Basic ' + [Convert]::ToBase64String([Text.Encoding]::UTF8.GetBytes("$($Username):$($env:ACR_PASSWORD)"))
+    $reply = Invoke-RestMethod -Uri "https://$Registry/oauth2/token?service=$Registry&scope=$([uri]::EscapeDataString($Scope))" -Headers @{ Authorization = $basic }
+    $token = if ($reply.access_token) { $reply.access_token } else { $reply.token }
     $next = $Path
     while ($next) {
         $uri = if ($next -match '^https?://') { $next } else { "https://$Registry$next" }
