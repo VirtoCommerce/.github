@@ -58,7 +58,7 @@ $sevOrder = @{ 'CRITICAL' = 0; 'HIGH' = 1; 'MEDIUM' = 2; 'LOW' = 3; 'UNKNOWN' = 
 function Get-SevRank($severity) { $rank = $sevOrder["$severity"]; if ($null -eq $rank) { 99 } else { $rank } }
 $skipList = @("$VulnerabilitySkipList".Split(',') | ForEach-Object { $_.Trim() } | Where-Object { $_ })
 
-# Valid, not expired org exceptions: { IDs (the key and its aliases); Scope }. The same rules as docker-image-vulnerability-process.yml.
+# Valid, not expired org exceptions: { IDs (the key and its aliases); Repositories; Images }. The same rules as docker-image-vulnerability-process.yml.
 $exceptions = @()
 if ($VulnerabilityExceptionsUrl) {
     try {
@@ -71,21 +71,29 @@ if ($VulnerabilityExceptionsUrl) {
                 Write-Host "::warning::Vulnerability exception $($entry.Name) needs a reason and expires (yyyy-MM-dd): not applied."
                 continue
             }
+            # "scope" was one list for repositories and images together; an entry still using it is not widened to everywhere.
+            if ($null -ne $e.scope) { Write-Host "::warning::Vulnerability exception $($entry.Name) uses scope: list it as repositories and images instead. Not applied."; continue }
             if ($expires -lt $today) { Write-Host "Vulnerability exception $($entry.Name) expired on $($e.expires): not applied."; continue }
-            $exceptions += [pscustomobject]@{ IDs = @($entry.Name) + @($e.aliases | Where-Object { $_ }); Scope = @($e.scope | Where-Object { $_ }) }
+            $exceptions += [pscustomobject]@{
+                IDs          = @($entry.Name) + @($e.aliases | Where-Object { $_ })
+                Repositories = @($e.repositories | Where-Object { $_ })
+                Images       = @($e.images | Where-Object { $_ })
+            }
         }
     }
     catch {
         Write-Host "::warning::Could not read the vulnerability exceptions from $VulnerabilityExceptionsUrl, none applied: $($_.Exception.Message)"
     }
 }
-# An exception's scope matches this repository or the image (with and without its tag).
+# An exception applies when it lists no repositories and no images, when a repositories mask matches this
+# repository, or when an images mask matches the image (with and without its tag).
 function Test-Excepted([string] $Id, [string] $Image) {
-    $targets = @("$env:GITHUB_REPOSITORY", $Image, ($Image -replace '@sha256:[0-9a-f]+$', '' -replace ':[^:/]+$', ''))
+    $imageTargets = @($Image, ($Image -replace '@sha256:[0-9a-f]+$', '' -replace ':[^:/]+$', ''))
     foreach ($ex in $exceptions) {
         if ($ex.IDs -notcontains $Id) { continue }
-        if ($ex.Scope.Count -eq 0) { return $true }
-        foreach ($mask in $ex.Scope) { if (@($targets | Where-Object { $_ -like $mask }).Count) { return $true } }
+        if ($ex.Repositories.Count + $ex.Images.Count -eq 0) { return $true }
+        if (@($ex.Repositories | Where-Object { "$env:GITHUB_REPOSITORY" -like $_ }).Count) { return $true }
+        foreach ($mask in $ex.Images) { if (@($imageTargets | Where-Object { $_ -like $mask }).Count) { return $true } }
     }
     return $false
 }
@@ -249,8 +257,8 @@ foreach ($v in $vulnerabilities) {
             @($v.Images | ForEach-Object { New-Paragraph (New-Text 'Image: ') (New-Text $_ @{ type = 'code' }) })
         ))
     )
-    # Room is left for the "Details of N more" paragraph.
     $items.Add($item)
+    # Room is left for the "Details of N more" paragraph.
     if ((Get-DescriptionLength ($content + (New-BulletList $items))) -gt $maxDescriptionLength - 200) {
         $items.RemoveAt($items.Count - 1)
         break

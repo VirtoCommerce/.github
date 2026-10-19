@@ -46,7 +46,7 @@ function Test-AnyLike([string] $Value, [string[]] $Masks) {
     return $false
 }
 
-# Versions are { Digest; Tags; Updated }. Returns digest -> the tag that selected it.
+# Versions are { Digest; Tags; Updated }. Returns digest -> { Tag (the one that selected it); Version }.
 function Select-ImageVersions($Versions, [string[]] $IncludeTags, [string[]] $ExcludeTags, [int] $Limit) {
     $newestFirst = @($Versions | Sort-Object Updated -Descending)
     $picked = [ordered]@{}
@@ -145,6 +145,12 @@ foreach ($target in $config.targets) {
 
     $matched = @($repositories | Where-Object { Test-AnyLike $_ @($target.repositories) } | Sort-Object)
     Write-Host "$registry`: $($matched.Count) of $($repositories.Count) repositories match $($target.repositories -join ', ')"
+    # A mask that matches nothing scans nothing: a renamed repository or a missing permission would go unnoticed.
+    foreach ($mask in @($target.repositories)) {
+        if (-not @($repositories | Where-Object { $_ -like $mask }).Count) {
+            Write-Host "::warning::$registry`: no repository matches '$mask'."
+        }
+    }
     foreach ($repository in $matched) {
         $picked = Select-ImageVersions @(& $getVersions $repository) $includeTags $excludeTags $limit
         $names = @()

@@ -76,13 +76,15 @@ You can also use `main` as version tag to use latest version from the main branc
   "expires": "2027-01-19",
   "aliases": ["GHSA-rvv3-g6hj-g44x"],
   "ticket": "VCST-4911",
-  "scope": ["VirtoCommerce/vc-modules", "*virtostart*"]
+  "repositories": ["VirtoCommerce/vc-modules"],
+  "images": ["*virtostart/platform*"]
 }
 ```
 
 - `reason` and `expires` (`yyyy-MM-dd`, the last day it applies) are required; an entry without them is not applied, and after `expires` the finding is reported again.
-- `scope` (optional): masks of the calling repository or the scanned image, with or without its tag. Without it the entry applies everywhere.
-- `scope` lists several places in one entry: one entry per advisory, never repeated per scope.
+- `repositories` (optional): masks of the repository that runs the scan. The scheduled image scan runs in `VirtoCommerce/.github`, so that mask covers all of its images.
+- `images` (optional): masks of the scanned image, with or without its tag.
+- The entry applies where a `repositories` or an `images` mask matches; with neither, everywhere. One entry per advisory lists all its places.
 - The key is the ID Trivy reports; `aliases` (optional) lists the other IDs of the same advisory (`GHSA-…` of a `CVE-…`), skipped along with it.
 
 ## Supply-chain security: pinned third-party actions
