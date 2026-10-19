@@ -14,8 +14,8 @@
 
     A target is one registry with:
       - repositories: masks (-like) of repository names, e.g. "virtostart/*";
-      - includeTags:  tag masks; for each mask the newest maxTagsPerMask image versions that carry a
-                      matching tag are taken, so "latest" gives one image and "[0-9]*" the last releases;
+      - includeTags:  tag masks; for each mask the newest maxTagsPerMask (default 1, also per target)
+                      image versions that carry a matching tag are taken;
       - excludeTags:  tag masks that never count, e.g. "*-alpha.*";
       - username:     ACR only, the password comes from the ACR_PASSWORD environment variable.
 
@@ -110,7 +110,7 @@ function Get-AcrVersions([string] $Registry, [string] $Username, [string] $Repos
 }
 
 $config = Get-Content -Raw $ConfigPath | ConvertFrom-Json
-$defaultLimit = if ($config.maxTagsPerMask) { [int] $config.maxTagsPerMask } else { 3 }
+$defaultLimit = if ($config.maxTagsPerMask) { [int] $config.maxTagsPerMask } else { 1 }
 $maxPages = if ($config.maxGhcrVersionPages) { [int] $config.maxGhcrVersionPages } else { 5 }
 $floatingTags = if ($config.floatingTags) { @($config.floatingTags) } else { @('*latest') }
 
