@@ -21,7 +21,7 @@
 
     Registries:
       - ghcr.io: GitHub Packages API via gh; GH_TOKEN needs read:packages for the owner's packages.
-      - *.azurecr.io: the ACR REST API with the registry username and password (Basic auth), no az login.
+      - *.azurecr.io: the ACR REST API with an access token for the registry username and password, no az login.
 
 .EXAMPLE
     $env:GH_TOKEN = gh auth token
@@ -84,24 +84,27 @@ function Get-GhcrVersions([string] $Owner, [string] $Repository, [int] $MaxPages
 }
 
 # The same requests az acr makes with --username/--password, sent from this process: the password stays
-# in the environment instead of a command line other processes can read. Pages follow the Link header.
-function Invoke-AcrList([string] $Registry, [string] $Username, [string] $Path, [string] $Property) {
-    $auth = 'Basic ' + [Convert]::ToBase64String([Text.Encoding]::UTF8.GetBytes("$($Username):$($env:ACR_PASSWORD)"))
+# in the environment instead of a command line other processes can read. The username and password are
+# exchanged for an access token of the scope, as ACR asks for a Bearer token. Pages follow the Link header.
+function Invoke-AcrList([string] $Registry, [string] $Username, [string] $Scope, [string] $Path, [string] $Property) {
+    $token = (Invoke-RestMethod -Method Post -Uri "https://$Registry/oauth2/token" -ContentType 'application/x-www-form-urlencoded' -Body @{
+            grant_type = 'password'; service = $Registry; scope = $Scope; username = $Username; password = $env:ACR_PASSWORD
+        }).access_token
     $next = $Path
     while ($next) {
         $uri = if ($next -match '^https?://') { $next } else { "https://$Registry$next" }
-        $response = Invoke-RestMethod -Uri $uri -Headers @{ Authorization = $auth } -ResponseHeadersVariable responseHeaders
+        $response = Invoke-RestMethod -Uri $uri -Headers @{ Authorization = "Bearer $token" } -ResponseHeadersVariable responseHeaders
         @($response.$Property)
         $next = if ("$($responseHeaders['Link'])" -match '<([^>]+)>;\s*rel="next"') { $Matches[1] } else { $null }
     }
 }
 
 function Get-AcrRepositories([string] $Registry, [string] $Username) {
-    @(Invoke-AcrList $Registry $Username '/acr/v1/_catalog?n=1000' 'repositories')
+    @(Invoke-AcrList $Registry $Username 'registry:catalog:*' '/acr/v1/_catalog?n=1000' 'repositories')
 }
 
 function Get-AcrVersions([string] $Registry, [string] $Username, [string] $Repository) {
-    $items = @(Invoke-AcrList $Registry $Username "/acr/v1/$Repository/_manifests?n=1000&orderby=timedesc" 'manifests')
+    $items = @(Invoke-AcrList $Registry $Username "repository:$($Repository):metadata_read" "/acr/v1/$Repository/_manifests?n=1000&orderby=timedesc" 'manifests')
     foreach ($item in $items) {
         $tags = @($item.tags)
         if ($tags.Count -eq 0) { continue }
