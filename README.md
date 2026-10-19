@@ -74,6 +74,7 @@ You can also use `main` as version tag to use latest version from the main branc
 "CVE-2026-32933": {
   "reason": "why the finding does not apply or is accepted",
   "expires": "2027-01-19",
+  "aliases": ["GHSA-rvv3-g6hj-g44x"],
   "ticket": "VCST-4911",
   "scope": ["VirtoCommerce/vc-modules", "*virtostart*"]
 }
@@ -81,7 +82,8 @@ You can also use `main` as version tag to use latest version from the main branc
 
 - `reason` and `expires` (`yyyy-MM-dd`, the last day it applies) are required; an entry without them is not applied, and after `expires` the finding is reported again.
 - `scope` (optional): masks of the calling repository or the scanned image, with or without its tag. Without it the entry applies everywhere.
-- The key is the ID Trivy reports; add each alias (`CVE-…`, `GHSA-…`) Trivy may report for the same advisory.
+- `scope` lists several places in one entry: one entry per advisory, never repeated per scope.
+- The key is the ID Trivy reports; `aliases` (optional) lists the other IDs of the same advisory (`GHSA-…` of a `CVE-…`), skipped along with it.
 
 ## Supply-chain security: pinned third-party actions
 

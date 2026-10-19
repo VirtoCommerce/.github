@@ -58,7 +58,7 @@ $sevOrder = @{ 'CRITICAL' = 0; 'HIGH' = 1; 'MEDIUM' = 2; 'LOW' = 3; 'UNKNOWN' = 
 function Get-SevRank($severity) { $rank = $sevOrder["$severity"]; if ($null -eq $rank) { 99 } else { $rank } }
 $skipList = @("$VulnerabilitySkipList".Split(',') | ForEach-Object { $_.Trim() } | Where-Object { $_ })
 
-# Valid, not expired org exceptions: { ID; Scope }. The same rules as docker-image-vulnerability-process.yml.
+# Valid, not expired org exceptions: { IDs (the key and its aliases); Scope }. The same rules as docker-image-vulnerability-process.yml.
 $exceptions = @()
 if ($VulnerabilityExceptionsUrl) {
     try {
@@ -72,7 +72,7 @@ if ($VulnerabilityExceptionsUrl) {
                 continue
             }
             if ($expires -lt $today) { Write-Host "Vulnerability exception $($entry.Name) expired on $($e.expires): not applied."; continue }
-            $exceptions += [pscustomobject]@{ ID = $entry.Name; Scope = @($e.scope | Where-Object { $_ }) }
+            $exceptions += [pscustomobject]@{ IDs = @($entry.Name) + @($e.aliases | Where-Object { $_ }); Scope = @($e.scope | Where-Object { $_ }) }
         }
     }
     catch {
@@ -83,7 +83,7 @@ if ($VulnerabilityExceptionsUrl) {
 function Test-Excepted([string] $Id, [string] $Image) {
     $targets = @("$env:GITHUB_REPOSITORY", $Image, ($Image -replace '@sha256:[0-9a-f]+$', '' -replace ':[^:/]+$', ''))
     foreach ($ex in $exceptions) {
-        if ($ex.ID -ne $Id) { continue }
+        if ($ex.IDs -notcontains $Id) { continue }
         if ($ex.Scope.Count -eq 0) { return $true }
         foreach ($mask in $ex.Scope) { if (@($targets | Where-Object { $_ -like $mask }).Count) { return $true } }
     }
