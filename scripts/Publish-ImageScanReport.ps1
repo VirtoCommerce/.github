@@ -40,6 +40,10 @@ param(
     # Comma separated vulnerability IDs to leave out.
     [string] $VulnerabilitySkipList = '',
 
+    # The org-wide exceptions (vulnerability-exceptions.json), applied per image like
+    # docker-image-vulnerability-process.yml does. Empty - none.
+    [string] $VulnerabilityExceptionsUrl = 'https://raw.githubusercontent.com/VirtoCommerce/.github/main/vulnerability-exceptions.json',
+
     # No Jira calls: print the ticket that would be created.
     [switch] $DryRun
 )
@@ -54,12 +58,45 @@ $sevOrder = @{ 'CRITICAL' = 0; 'HIGH' = 1; 'MEDIUM' = 2; 'LOW' = 3; 'UNKNOWN' = 
 function Get-SevRank($severity) { $rank = $sevOrder["$severity"]; if ($null -eq $rank) { 99 } else { $rank } }
 $skipList = @("$VulnerabilitySkipList".Split(',') | ForEach-Object { $_.Trim() } | Where-Object { $_ })
 
+# Valid, not expired org exceptions: { ID; Scope }. The same rules as docker-image-vulnerability-process.yml.
+$exceptions = @()
+if ($VulnerabilityExceptionsUrl) {
+    try {
+        $list = (Invoke-WebRequest -Uri $VulnerabilityExceptionsUrl -UseBasicParsing).Content | ConvertFrom-Json
+        $today = [datetime]::UtcNow.Date
+        foreach ($entry in @($list.PSObject.Properties)) {
+            $e = $entry.Value
+            $expires = [datetime]::MinValue
+            if (-not "$($e.reason)".Trim() -or -not [datetime]::TryParseExact("$($e.expires)", 'yyyy-MM-dd', [cultureinfo]::InvariantCulture, 'None', [ref] $expires)) {
+                Write-Host "::warning::Vulnerability exception $($entry.Name) needs a reason and expires (yyyy-MM-dd): not applied."
+                continue
+            }
+            if ($expires -lt $today) { Write-Host "Vulnerability exception $($entry.Name) expired on $($e.expires): not applied."; continue }
+            $exceptions += [pscustomobject]@{ ID = $entry.Name; Scope = @($e.scope | Where-Object { $_ }) }
+        }
+    }
+    catch {
+        Write-Host "::warning::Could not read the vulnerability exceptions from $VulnerabilityExceptionsUrl, none applied: $($_.Exception.Message)"
+    }
+}
+# An exception's scope matches this repository or the image (with and without its tag).
+function Test-Excepted([string] $Id, [string] $Image) {
+    $targets = @("$env:GITHUB_REPOSITORY", $Image, ($Image -replace '@sha256:[0-9a-f]+$', '' -replace ':[^:/]+$', ''))
+    foreach ($ex in $exceptions) {
+        if ($ex.ID -ne $Id) { continue }
+        if ($ex.Scope.Count -eq 0) { return $true }
+        foreach ($mask in $ex.Scope) { if (@($targets | Where-Object { $_ -like $mask }).Count) { return $true } }
+    }
+    return $false
+}
+
 # --- Collect the findings of every image ---
 $files = @(Get-ChildItem -Path $ResultsPath -Filter '*.json' -Recurse -File)
 if ($files.Count -eq 0) { throw "No scan results in '$ResultsPath': every image scan failed." }
 
 $occurrences = [System.Collections.Generic.List[object]]::new()
 $images = [System.Collections.Generic.List[string]]::new()
+$ignoredIds = [System.Collections.Generic.SortedSet[string]]::new()
 foreach ($file in $files) {
     $scan = Get-Content -Raw $file.FullName | ConvertFrom-Json
     $image = if ($scan.ArtifactName) { "$($scan.ArtifactName)" } else { $file.BaseName }
@@ -67,7 +104,7 @@ foreach ($file in $files) {
     foreach ($result in @($scan.Results)) {
         foreach ($vuln in @($result.Vulnerabilities)) {
             if ($null -eq $vuln -or -not $vuln.VulnerabilityID) { continue }
-            if ($skipList -contains $vuln.VulnerabilityID) { continue }
+            if ($skipList -contains $vuln.VulnerabilityID -or (Test-Excepted $vuln.VulnerabilityID $image)) { [void] $ignoredIds.Add($vuln.VulnerabilityID); continue }
             $occurrences.Add([pscustomobject]@{ Vuln = $vuln; Image = $image })
         }
     }
@@ -96,6 +133,7 @@ $vulnerabilities = @($occurrences |
 $affectedImages = @($vulnerabilities | ForEach-Object { $_.Images } | Sort-Object -Unique)
 $scannedText = if ($ExpectedImages -gt 0) { "$($files.Count) of $ExpectedImages" } else { "$($files.Count)" }
 Write-Host "Scanned images: $scannedText. Vulnerabilities: $($vulnerabilities.Count) in $($affectedImages.Count) image(s)."
+if ($ignoredIds.Count) { Write-Host "Skipped (skip list or exceptions): $(@($ignoredIds) -join ', ')" }
 if ($ExpectedImages -gt $files.Count) {
     Write-Host "::warning::$($ExpectedImages - $files.Count) image scan(s) left no results, see the failed scan jobs."
 }
@@ -110,6 +148,7 @@ function Publish-Summary([string] $ticketLine) {
     $lines.Add('## Vulnerabilities in this run')
     $lines.Add('')
     $lines.Add("**Scanned images:** $scannedText &nbsp;|&nbsp; **Vulnerabilities:** $($vulnerabilities.Count) &nbsp;|&nbsp; **Affected images:** $($affectedImages.Count)  ")
+    if ($ignoredIds.Count) { $lines.Add("**Skipped (skip list or exceptions):** $(@($ignoredIds) -join ', ')  ") }
     $lines.Add("**Jira:** $ticketLine")
     if ($vulnerabilities.Count -gt 0) {
         $lines.Add('')
