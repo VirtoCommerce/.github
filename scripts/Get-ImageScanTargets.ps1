@@ -21,7 +21,7 @@
 
     Registries:
       - ghcr.io: GitHub Packages API via gh; GH_TOKEN needs read:packages for the owner's packages.
-      - *.azurecr.io: az acr with the registry username and password, no az login.
+      - *.azurecr.io: the ACR REST API with the registry username and password (Basic auth), no az login.
 
 .EXAMPLE
     $env:GH_TOKEN = gh auth token
@@ -83,12 +83,25 @@ function Get-GhcrVersions([string] $Owner, [string] $Repository, [int] $MaxPages
     }
 }
 
+# The same requests az acr makes with --username/--password, sent from this process: the password stays
+# in the environment instead of a command line other processes can read. Pages follow the Link header.
+function Invoke-AcrList([string] $Registry, [string] $Username, [string] $Path, [string] $Property) {
+    $auth = 'Basic ' + [Convert]::ToBase64String([Text.Encoding]::UTF8.GetBytes("$($Username):$($env:ACR_PASSWORD)"))
+    $next = $Path
+    while ($next) {
+        $uri = if ($next -match '^https?://') { $next } else { "https://$Registry$next" }
+        $response = Invoke-RestMethod -Uri $uri -Headers @{ Authorization = $auth } -ResponseHeadersVariable responseHeaders
+        @($response.$Property)
+        $next = if ("$($responseHeaders['Link'])" -match '<([^>]+)>;\s*rel="next"') { $Matches[1] } else { $null }
+    }
+}
+
 function Get-AcrRepositories([string] $Registry, [string] $Username) {
-    @(az acr repository list --name $Registry --username $Username --password $env:ACR_PASSWORD --only-show-errors -o json | ConvertFrom-Json)
+    @(Invoke-AcrList $Registry $Username '/acr/v1/_catalog?n=1000' 'repositories')
 }
 
 function Get-AcrVersions([string] $Registry, [string] $Username, [string] $Repository) {
-    $items = @(az acr manifest list-metadata --registry $Registry --name $Repository --username $Username --password $env:ACR_PASSWORD --orderby time_desc --only-show-errors -o json | ConvertFrom-Json)
+    $items = @(Invoke-AcrList $Registry $Username "/acr/v1/$Repository/_manifests?n=1000&orderby=timedesc" 'manifests')
     foreach ($item in $items) {
         $tags = @($item.tags)
         if ($tags.Count -eq 0) { continue }
@@ -118,11 +131,10 @@ foreach ($target in $config.targets) {
     }
     elseif ($registry -like '*.azurecr.io') {
         if (-not $env:ACR_PASSWORD) { throw "ACR_PASSWORD is not set: it is needed to read $registry." }
-        $acrName = $registry.Split('.')[0]
         $prefix = $registry
         $username = "$($target.username)"
-        $repositories = Get-AcrRepositories $acrName $username
-        $getVersions = { param($repository) Get-AcrVersions $acrName $username $repository }
+        $repositories = Get-AcrRepositories $registry $username
+        $getVersions = { param($repository) Get-AcrVersions $registry $username $repository }
     }
     else {
         throw "Unsupported registry '$registry': only ghcr.io and *.azurecr.io."
