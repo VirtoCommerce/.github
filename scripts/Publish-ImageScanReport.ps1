@@ -40,8 +40,7 @@ param(
     # Comma separated vulnerability IDs to leave out.
     [string] $VulnerabilitySkipList = '',
 
-    # The org-wide exceptions (vulnerability-exceptions.json), applied per image like
-    # docker-image-vulnerability-process.yml does. Empty - none.
+    # The org-wide exceptions list (vulnerability-exceptions.json). Empty - none.
     [string] $VulnerabilityExceptionsUrl = 'https://raw.githubusercontent.com/VirtoCommerce/.github/main/vulnerability-exceptions.json',
 
     # No Jira calls: print the ticket that would be created.

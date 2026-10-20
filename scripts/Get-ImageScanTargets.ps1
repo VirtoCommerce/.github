@@ -83,9 +83,8 @@ function Get-GhcrVersions([string] $Owner, [string] $Repository, [int] $MaxPages
     }
 }
 
-# Sent from this process, so the password stays in the environment instead of a command line other
-# processes can read. ACR wants a Bearer token: the username and password get one for the scope the way
-# docker login does (Basic auth to /oauth2/token). Pages follow the Link header.
+# In-process, so the password never lands on a command line other processes can read. ACR wants a Bearer token:
+# Basic auth to /oauth2/token gets one per scope, as docker login does. Pages follow the Link header.
 function Invoke-AcrList([string] $Registry, [string] $Username, [string] $Scope, [string] $Path, [string] $Property) {
     $basic = 'Basic ' + [Convert]::ToBase64String([Text.Encoding]::UTF8.GetBytes("$($Username):$($env:ACR_PASSWORD)"))
     $reply = Invoke-RestMethod -Uri "https://$Registry/oauth2/token?service=$Registry&scope=$([uri]::EscapeDataString($Scope))" -Headers @{ Authorization = $basic }
