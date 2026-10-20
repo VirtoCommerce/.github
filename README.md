@@ -2,6 +2,13 @@
 
 Default workflow templates and reusable workflows for VirtoCommerce platform/modules.
 
+## Pull request approval
+
+The `main` branch is protected by the ruleset `main: require approval from github-workflows-reviewers`. Every PR needs one approval from the reviewers team before it can be merged. Direct pushes, force pushes and deleting `main` are blocked. Repository admins and organization owners can bypass all of these rules.
+
+- [`@VirtoCommerce/github-workflows-reviewers`](https://github.com/orgs/VirtoCommerce/teams/github-workflows-reviewers): approvals from this team are the ones that count. Add the people who should review and approve changes to this repository. GitHub does not let an author approve their own PR, so the team needs at least two active members.
+- [`@VirtoCommerce/github-workflows-maintainers`](https://github.com/orgs/VirtoCommerce/teams/github-workflows-maintainers): members can merge a PR without approval ("Merge without waiting for requirements"). This applies only to merging PRs: they still cannot push to `main` directly or force push. Add someone only while they are the only person maintaining the repository and nobody else can approve their PRs. Remove them once a second reviewer is available.
+
 ## Workflow templates
 
 Actual workflow templates are located in `workflow-templates` folder.
@@ -58,6 +65,28 @@ You can also use `main` as version tag to use latest version from the main branc
 - Add new workflow file name to `TEMPLATES_LIST` environment variable in `deploy-module-workflows.yml`, `deploy-platform-workflows.yml` or both workflows for deploy new workflow to the repositories.
 
 ![Templates-list](docs/media/templates-list.png)
+
+## Vulnerability exceptions
+
+[`vulnerability-exceptions.json`](vulnerability-exceptions.json) is the one list of vulnerabilities the image scans of all repositories skip. `docker-image-vulnerability-process.yml` (vc-platform, vc-modules, the scheduled image scan) reads it from `main`, so a merged entry applies at once, without a release; a caller's own `vulnerabilitySkipList` still adds to it.
+
+```json
+"CVE-2026-32933": {
+  "reason": "why the finding does not apply or is accepted",
+  "expires": "2027-01-19",
+  "aliases": ["GHSA-rvv3-g6hj-g44x"],
+  "ticket": "VCST-4911",
+  "repositories": ["VirtoCommerce/vc-modules"],
+  "images": ["*virtostart/platform*"]
+}
+```
+
+- `reason` and `expires` (`yyyy-MM-dd`, the last day it applies) are required; an entry without them is not applied, and after `expires` the finding is reported again.
+- `repositories` (optional): masks of the repository that runs the scan. The scheduled image scan runs in `VirtoCommerce/.github`, so that mask covers all of its images.
+- `images` (optional): masks of the scanned image, with or without its tag.
+- `ticket` (optional): the Jira key that tracks the exception.
+- The entry applies where a `repositories` or an `images` mask matches; with neither, everywhere. One entry per advisory lists all its places.
+- The key is the ID Trivy reports; `aliases` (optional) lists the other IDs of the same advisory (`GHSA-…` of a `CVE-…`), skipped along with it.
 
 ## Supply-chain security: pinned third-party actions
 
