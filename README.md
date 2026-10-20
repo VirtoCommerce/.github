@@ -84,6 +84,7 @@ You can also use `main` as version tag to use latest version from the main branc
 - `reason` and `expires` (`yyyy-MM-dd`, the last day it applies) are required; an entry without them is not applied, and after `expires` the finding is reported again.
 - `repositories` (optional): masks of the repository that runs the scan. The scheduled image scan runs in `VirtoCommerce/.github`, so that mask covers all of its images.
 - `images` (optional): masks of the scanned image, with or without its tag.
+- `ticket` (optional): the Jira key that tracks the exception.
 - The entry applies where a `repositories` or an `images` mask matches; with neither, everywhere. One entry per advisory lists all its places.
 - The key is the ID Trivy reports; `aliases` (optional) lists the other IDs of the same advisory (`GHSA-…` of a `CVE-…`), skipped along with it.
 
