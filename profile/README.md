@@ -7,21 +7,27 @@
 [![Community](https://img.shields.io/badge/Community-virtocommerce.org-7B68EE?style=flat-square&logo=discourse&logoColor=white)](https://www.virtocommerce.org/)
 [![YouTube](https://img.shields.io/badge/YouTube-virtocommerce-FF0000?style=flat&logo=youtube&logoColor=white)](https://www.youtube.com/c/virtocommerce)
 
-**Virto Commerce** is an open-source, .NET-based, headless, API-first commerce platform — built B2B-first, ready for B2C, marketplace, DTC, and composable scenarios. This page is the entry point for developers: spin it up, understand what you're building, and ship.
+**Virto Commerce** is a source-available .NET digital commerce platform for organizations building sales operations, procurement, and distribution ecosystems across the online channels through which they sell, buy, and serve. Manufacturers, distributors, and multi-entity enterprises use it to run B2B selling, customer and supplier portals, and marketplaces on one foundation.
+
+## How it is built
+* **Virto Atomic Architecture™**: 100+ pre-built modules with defined granularity, so a single capability such as pricing, catalog, or checkout can be replaced or extended while the rest of the system keeps running.
+* **Managed composable**: Virto owns the module contracts, the compatibility between modules, and the path between versions, so upgrade cost does not grow with every customization.
+* **API-first**: connects to the ERP, CRM, and PIM systems a business already runs.
+* **Deploy your way**: Virto Cloud, or self-managed in your own cloud, private cloud, or on-premises, on the same tested releases.
 
 ## JOIN US NOW
 👉 [Explore Virto Commerce](https://virtocommerce.com/)
 
 👉 [Virto Commerce B2B Marketplace](https://virtocommerce.com/solutions/marketplace)
 
-👉 [Explore Virto’s Open-Source .NET ecommerce platform](https://virtocommerce.com/open-source-net-ecommerce-platform)
+👉 [Explore Virto’s Source-Available .NET ecommerce platform](https://virtocommerce.com/open-source-net-ecommerce-platform)
 
 👉 [Learn more about B2B features of Virto’s platform](https://virtocommerce.com/b2b-ecommerce-platform)
 
 👉 [Browse careers at Virto Commerce](https://virtocommerce.com/career)
 
 ## WHO WE ARE
-As a Microsoft Gold Partner, Virto serves over 100 companies worldwide and has offices in five countries, including the Americas and Europe. Leveraging our open-source ecommerce platform, hosted solution and full-service offering, our clients strategically use ecommerce to build stronger customer relationships and rapidly increase global online sales. Virto Commerce’s flagship product, the ecommerce cloud-based, open-source, [.NET platform](https://virtocommerce.com/open-source-net-ecommerce-platform), is the only [B2B-first headless digital commerce solution](https://virtocommerce.com/b2b-headless-ecommerce-solution) that is specifically designed to adapt to ever-changing complex scenarios common in the B2B market. 
+As a Microsoft Gold Partner, Virto serves over 100 companies worldwide and has offices in five countries, including the Americas and Europe. Leveraging our source-available ecommerce platform, hosted solution and full-service offering, our clients strategically use ecommerce to build stronger customer relationships and rapidly increase global online sales. Virto Commerce’s flagship product, the ecommerce cloud-based, source-available, [.NET platform](https://virtocommerce.com/open-source-net-ecommerce-platform), is the only [B2B-first headless digital commerce solution](https://virtocommerce.com/b2b-headless-ecommerce-solution) that is specifically designed to adapt to ever-changing complex scenarios common in the B2B market. 
 
 ## INTRODUCTION
 These docs will help you learn and use Virto Commerce:
@@ -82,3 +88,4 @@ We welcome contributions — code, docs, bug reports, and feature ideas. The fas
 - 🐛 Browse [open issues](https://github.com/search?q=org%3AVirtoCommerce+is%3Aissue+is%3Aopen&type=issues) — issues labelled **good first issue** are best for newcomers.
 - 💡 For larger ideas, [open a discussion](https://www.virtocommerce.org/) or an issue *before* coding so maintainers can shape the approach.
 - 📝 Code fixes are always welcome and the easiest way to get familiar with [Contribution guide](https://www.virtocommerce.org/t/how-to-contribute-to-virto-commerce/459)
+- 📝 Source code is available under the Virto Commerce Open Software License. See each repository's LICENSE file.
