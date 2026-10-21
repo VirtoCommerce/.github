@@ -63,6 +63,7 @@
   "vc-module-otp",
   "vc-module-pagebuilder",
   "vc-module-pages",
+  "vc-module-passkeys",
   "vc-module-payment",
   "vc-module-power-bi-reports",
   "vc-module-price-export-import",
