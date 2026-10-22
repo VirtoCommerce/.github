@@ -7,11 +7,13 @@ The action rebuilds an Adaptive Card from the current PR state on every event an
 - title, author, branch, status (Open / Draft / Merged / Closed), `+added` / `−deleted` lines and files, Jira ticket and labels;
 - every reviewer with their state: ⏳ waiting, 🔁 re-review, ✅ approved, 💬 comments, ⚪ dismissed (the review was dismissed, e.g. a stale approval after a push, and not requested again).
 
+A merged or closed PR shrinks to its title, status and the Open PR / Open Jira buttons, so finished PRs take little room in the channel (Teams does not let the flow delete a Flow bot message).
+
 Who gets a Teams notification:
 
 - reviewers when the card is created (the PR is opened as Open, or a draft is marked Ready for review): the card mentions every reviewer in any state, and Teams notifies them about a new card only (a reviewer who already reviewed a draft is notified too);
 - a reviewer whose review is requested again (Re-request review): a 🔁 message that mentions the reviewer;
-- the PR author, when a reviewer requests changes or leaves a comment: a 💬 message that mentions the author (the reviewer stays plain text, the author's own replies are skipped).
+- the PR author, when a reviewer requests changes or leaves a comment: a 💬 message that mentions the author (the reviewer stays plain text, the author's own replies are skipped). Single comments arrive as one review each, so the message waits 2 minutes and is sent once for the reviewer's latest comment.
 
 The messages are separate because Teams does not notify about mentions added by a card update; the flow posts them as replies under the PR card. Every other change (approvals, new commits, title, labels, reviewers added later, merge, close) only updates the card.
 
@@ -57,7 +59,7 @@ A draft PR gets no card until it is marked Ready for review. A PR opened by a bo
 
 ## Example of usage
 
-Two jobs: `card` runs one at a time per PR, so a slower run never sends an older state after a newer one. GitHub cancels the queued runs in between, which is fine because every run rebuilds the whole card. `ping` runs outside that queue, so no message is cancelled.
+Two jobs: `card` runs one at a time per PR, so a slower run never sends an older state after a newer one. GitHub cancels the queued runs in between, which is fine because every run rebuilds the whole card. `ping` runs outside that queue. A comment review waits 2 minutes before its message, so `ping` gets a group per PR and reviewer for comment reviews: a newer comment cancels the waiting run instead of keeping a runner busy, and the run of the last comment sends the message. Every other `ping` run gets its own group (`run_id`), so a 🔁 message or an approval never cancels a waiting comment message. Keep `ping` a separate job: in `mode: all` under the `card` group the wait would hold back card updates.
 
 ```yaml
 name: Notify Teams about PR reviews
@@ -92,6 +94,9 @@ jobs:
   ping:
     if: github.event.action == 'review_requested' || github.event_name == 'pull_request_review'
     runs-on: ubuntu-latest
+    concurrency:
+      group: teams-ping-${{ github.event.pull_request.number }}-${{ contains(fromJSON('["commented","changes_requested"]'), github.event.review.state) && github.event.review.user.login || github.run_id }}
+      cancel-in-progress: true
     permissions:
       pull-requests: read
     steps:
