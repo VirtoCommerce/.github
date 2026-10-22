@@ -149,6 +149,9 @@ function Set-TicketOutput([string] $Action, [string] $Key = '', [string] $Url = 
     if ($env:GITHUB_OUTPUT) { "ticketAction=$Action", "ticketKey=$Key", "ticketUrl=$Url" >> $env:GITHUB_OUTPUT }
 }
 
+# The outcome of the check for new vulnerabilities, for the run summary; set once the open run ticket is known.
+$newCheck = ''
+
 function Format-Cell($value) { "$value" -replace '\|', '\|' }
 function Publish-Summary([string] $ticketLine) {
     $lines = [System.Collections.Generic.List[string]]::new()
@@ -156,6 +159,7 @@ function Publish-Summary([string] $ticketLine) {
     $lines.Add('')
     $lines.Add("**Scanned images:** $scannedText &nbsp;|&nbsp; **Vulnerabilities:** $($vulnerabilities.Count) &nbsp;|&nbsp; **Affected images:** $($affectedImages.Count)  ")
     if ($ignoredIds.Count) { $lines.Add("**Skipped (skip list or exceptions):** $(@($ignoredIds) -join ', ')  ") }
+    if ($newCheck) { $lines.Add("**New vulnerabilities:** $newCheck  ") }
     $lines.Add("**Jira:** $ticketLine")
     if ($vulnerabilities.Count -gt 0) {
         $lines.Add('')
@@ -212,6 +216,28 @@ if ($previous) {
     }
 }
 $newVulnerabilities = @($vulnerabilities | Where-Object New)
+
+# The check that decides between a new ticket and a comment: the count in the run summary, the IDs with their
+# packages and images in the log.
+$newCheck = if ($DryRun) {
+    "dry run, not compared with an open run ticket ($($vulnerabilities.Count) in this run)"
+}
+elseif (-not $previous) {
+    "no open run ticket, so all $($vulnerabilities.Count) are new"
+}
+else {
+    # The table's New column marks the IDs.
+    "$($newVulnerabilities.Count) of $($vulnerabilities.Count) not in the open run ticket [$($previous.key)]($JiraBaseUrl/browse/$($previous.key))"
+}
+if ($previous) {
+    Write-Host "New vulnerabilities: $($newVulnerabilities.Count) of $($vulnerabilities.Count) not in the open run ticket $($previous.key)$(if ($newVulnerabilities.Count) { ': ' + ($newVulnerabilities.ID -join ', ') })."
+    foreach ($v in $newVulnerabilities) {
+        Write-Host "  + $($v.ID) ($($v.Severity)): $($v.Packages -join '; ') in $($v.Images -join ', ')"
+    }
+}
+else {
+    Write-Host "New vulnerabilities: $newCheck."
+}
 
 if ($previous -and $newVulnerabilities.Count -eq 0) {
     $previousUrl = "$JiraBaseUrl/browse/$($previous.key)"
