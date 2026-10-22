@@ -23,7 +23,7 @@ inputs:
 runs:
   using: "composite"
   steps:
-    - name: Install Commerce Bundle Modules
+    - name: Post the notification to Teams
       working-directory: ${{ github.action_path }}
       shell: pwsh
       env:
