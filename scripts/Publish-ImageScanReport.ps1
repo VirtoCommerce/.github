@@ -217,7 +217,8 @@ if ($previous) {
 }
 $newVulnerabilities = @($vulnerabilities | Where-Object New)
 
-# The check that decides between a new ticket and a comment, with each new vulnerability's packages and images.
+# The check that decides between a new ticket and a comment: the count in the run summary, the IDs with their
+# packages and images in the log.
 $newCheck = if ($DryRun) {
     "dry run, not compared with an open run ticket ($($vulnerabilities.Count) in this run)"
 }
@@ -225,13 +226,17 @@ elseif (-not $previous) {
     "no open run ticket, so all $($vulnerabilities.Count) are new"
 }
 else {
-    "$($newVulnerabilities.Count) of $($vulnerabilities.Count) not in the open run ticket $($previous.key)$(if ($newVulnerabilities.Count) { ': ' + ($newVulnerabilities.ID -join ', ') })"
+    # The table's New column marks the IDs.
+    "$($newVulnerabilities.Count) of $($vulnerabilities.Count) not in the open run ticket [$($previous.key)]($JiraBaseUrl/browse/$($previous.key))"
 }
-Write-Host "New vulnerabilities: $newCheck."
 if ($previous) {
+    Write-Host "New vulnerabilities: $($newVulnerabilities.Count) of $($vulnerabilities.Count) not in the open run ticket $($previous.key)$(if ($newVulnerabilities.Count) { ': ' + ($newVulnerabilities.ID -join ', ') })."
     foreach ($v in $newVulnerabilities) {
         Write-Host "  + $($v.ID) ($($v.Severity)): $($v.Packages -join '; ') in $($v.Images -join ', ')"
     }
+}
+else {
+    Write-Host "New vulnerabilities: $newCheck."
 }
 
 if ($previous -and $newVulnerabilities.Count -eq 0) {
