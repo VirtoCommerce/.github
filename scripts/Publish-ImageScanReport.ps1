@@ -9,10 +9,12 @@
 
     Then, in Jira, against the newest open ticket with the label (the previous run's ticket):
       - no open ticket, or the run found vulnerabilities that ticket does not list: a new ticket, and the
-        open one gets a comment linking it and is cancelled (stays open when some image scans failed);
+        open one is cancelled and gets a comment linking it (stays open when some image scans failed);
       - otherwise: a comment on that ticket with a link to the run and the IDs it lists that the run no longer found.
-    A run without vulnerabilities comments on the open ticket and moves it to Done; when some image scans
+    A run without vulnerabilities moves the open ticket to Done and comments on it; when some image scans
     failed, it only comments. With no open ticket, it changes nothing in Jira.
+    Older open tickets with the label, left open by such runs, are cancelled by the next run that scans every image.
+    A failed move is a warning, not a failed run.
 
     The run summary (GITHUB_STEP_SUMMARY) gets the same table and the ticket.
     Step outputs (GITHUB_OUTPUT): ticketAction (created, commented, closed or none), ticketKey, ticketUrl.
@@ -26,7 +28,7 @@ param(
     [Parameter(Mandatory)]
     [string] $ResultsPath,
 
-    # Images the run meant to scan; fewer results means some scans failed.
+    # Images the run meant to scan; fewer results means some scans failed. 0 (unknown): no ticket is closed.
     [int] $ExpectedImages = 0,
 
     [string] $JiraBaseUrl = 'https://virtocommerce.atlassian.net',
@@ -143,8 +145,12 @@ $affectedImages = @($vulnerabilities | ForEach-Object { $_.Images } | Sort-Objec
 $scannedText = if ($ExpectedImages -gt 0) { "$($files.Count) of $ExpectedImages" } else { "$($files.Count)" }
 Write-Host "Scanned images: $scannedText. Vulnerabilities: $($vulnerabilities.Count) in $($affectedImages.Count) image(s)."
 if ($ignoredIds.Count) { Write-Host "Skipped (skip list or exceptions): $(@($ignoredIds) -join ', ')" }
-$scanComplete = $files.Count -ge $ExpectedImages
-if (-not $scanComplete) {
+# Without -ExpectedImages a failed scan cannot be told apart: such a run closes and cancels nothing.
+$scanComplete = $ExpectedImages -gt 0 -and $files.Count -ge $ExpectedImages
+if ($ExpectedImages -le 0) {
+    Write-Host '::warning::No -ExpectedImages: failed image scans cannot be detected, so no ticket is closed.'
+}
+elseif (-not $scanComplete) {
     Write-Host "::warning::$($ExpectedImages - $files.Count) image scan(s) left no results, see the failed scan jobs."
 }
 
@@ -204,34 +210,57 @@ function Invoke-Jira([string] $Method, [string] $Path, $Body) {
     $json = $Body | ConvertTo-Json -Depth 100 -Compress
     Invoke-RestMethod -Uri "$JiraBaseUrl$Path" -Headers $headers -Method $Method -Body ([Text.Encoding]::UTF8.GetBytes($json))
 }
-# The transition that closes a ticket: into the Done category, its name or target status matching $Status -
-# Done for a clean scan, Cancelled for a ticket whose work moved to a new one. Jira offers only the transitions
-# from the current status: a workflow with steps before Done needs a global transition ("any status") to it.
-# Without one, a warning and $null; it is looked up before the comment, so the comment says what happens.
+function Add-JiraComment([string] $Key, $Content) {
+    Invoke-Jira Post "/rest/api/3/issue/$Key/comment" @{ body = @{ type = 'doc'; version = 1; content = @($Content) } } | Out-Null
+}
+# Closes a ticket and returns the status it moved to: the transition into the Done category whose name or target
+# status matches $Status - Done for a clean scan, Cancelled for a ticket whose work moved to another one. Jira
+# offers only the transitions from the current status: a workflow with steps before Done needs a global
+# transition ("any status") to it. Without one, or when Jira refuses the move (a required field on the
+# transition screen, no permission), a warning and $null: a ticket left open does not fail the run.
+# The ticket is moved before it is commented on, so the comment says what happened.
 $doneStatus = '^(Done|Closed|Resolved)$'
 $cancelStatus = 'cancel|won.?t do'
-function Find-CloseTransition([string] $Key, [string] $Status) {
-    $transitions = @((Invoke-Jira Get "/rest/api/3/issue/$Key/transitions").transitions)
-    $close = @($transitions | Where-Object { $_.to.statusCategory.key -eq 'done' -and ($_.name -match $Status -or $_.to.name -match $Status) })[0]
-    if (-not $close) {
-        Write-Host "::warning::$Key has no transition matching '$Status' from its status (available: $(@($transitions | ForEach-Object { "$($_.name) -> $($_.to.name)" }) -join ', ')): close it by hand."
+function Close-JiraTicket([string] $Key, [string] $Status) {
+    try {
+        $transitions = @((Invoke-Jira Get "/rest/api/3/issue/$Key/transitions").transitions)
+        $close = @($transitions | Where-Object { $_.to.statusCategory.key -eq 'done' -and ($_.name -match $Status -or $_.to.name -match $Status) })[0]
+        if (-not $close) {
+            Write-Host "::warning::$Key has no transition matching '$Status' from its status (available: $(@($transitions | ForEach-Object { "$($_.name) -> $($_.to.name)" }) -join ', ')): close it by hand."
+            return $null
+        }
+        Invoke-Jira Post "/rest/api/3/issue/$Key/transitions" @{ transition = @{ id = "$($close.id)" } } | Out-Null
+        Write-Host "Moved $Key to $($close.to.name)."
+        return "$($close.to.name)"
     }
-    $close
-}
-function Move-JiraTicket([string] $Key, $Transition) {
-    Invoke-Jira Post "/rest/api/3/issue/$Key/transitions" @{ transition = @{ id = "$($Transition.id)" } } | Out-Null
-    Write-Host "Moved $Key to $($Transition.to.name)."
+    catch {
+        Write-Host "::warning::Could not move $Key to a status matching '$Status', close it by hand: $($_.Exception.Message)"
+        return $null
+    }
 }
 
-# The previous run's ticket: the newest open one with the label.
+# The previous run's ticket: the newest open one with the label. The older open ones were left open by a run
+# with failed image scans or a failed move; the newest supersedes them, and a run that scans every image cancels them.
 $previous = $null
+$olderOpen = @()
 if (-not $DryRun) {
     $search = Invoke-Jira Post '/rest/api/3/search/jql' @{
         jql        = "project = `"$JiraProject`" AND labels = `"$Label`" AND statusCategory != Done ORDER BY created DESC"
         fields     = @('summary', 'description')
-        maxResults = 1
+        maxResults = 20
     }
     $previous = @($search.issues)[0]
+    $olderOpen = @($search.issues | Select-Object -Skip 1)
+}
+# A failed move leaves no comment: the next run tries again, and a comment each night would only repeat itself.
+function Close-OlderTickets([string] $SupersededBy) {
+    if (-not $scanComplete) { return }
+    foreach ($ticket in $olderOpen) {
+        $status = Close-JiraTicket $ticket.key $cancelStatus
+        if (-not $status) { continue }
+        try { Add-JiraComment $ticket.key (New-Paragraph (New-Text 'Superseded by ') (New-Link $SupersededBy "$JiraBaseUrl/browse/$SupersededBy") (New-Text ", moved to $status.")) }
+        catch { Write-Host "::warning::Could not comment on $($ticket.key): $($_.Exception.Message)" }
+    }
 }
 if ($previous) {
     $previousText = $previous.fields.description | ConvertTo-Json -Depth 100 -Compress
@@ -253,38 +282,34 @@ if ($vulnerabilities.Count -eq 0) {
     }
     $previousUrl = "$JiraBaseUrl/browse/$($previous.key)"
     $runRef = if ($runUrl) { New-Link 'Scan run' $runUrl } else { New-Text 'Scan run' }
-    # Failed scans may hide what the ticket lists: it stays open until a full scan is clean.
-    $close = if ($scanComplete) { Find-CloseTransition $previous.key $doneStatus }
-    $closing = if (-not $scanComplete) { 'but not every image was scanned, so the ticket stays open.' }
-    elseif ($close) { 'closing this ticket.' }
-    else { 'but the ticket has no transition to Done from its status: close it by hand.' }
+    # Failed scans may hide what the ticket lists: it stays open until a run scans every image.
+    $closedAs = if ($scanComplete) { Close-JiraTicket $previous.key $doneStatus }
+    $outcome = if (-not $scanComplete) { 'not every image was scanned, so the ticket stays open.' }
+    elseif ($closedAs) { "ticket moved to $closedAs." }
+    else { 'the ticket could not be moved to Done, see the scan run log: close it by hand.' }
+    $comment = @(New-Paragraph $runRef (New-Text ": no vulnerabilities, scanned $scannedText, $outcome"))
+    if ($goneIds.Count) { $comment += New-Paragraph (New-Text "No longer found: $($goneIds -join ', ').") }
     # A ticket left open would get the same comment every night: not when the last comment already says it.
-    $lastComment = if (-not $close) { @((Invoke-Jira Get "/rest/api/3/issue/$($previous.key)/comment?orderBy=-created&maxResults=1").comments)[0] }
-    if ($lastComment -and ($lastComment.body | ConvertTo-Json -Depth 100 -Compress).Contains($closing)) {
-        Write-Host "The last comment on $($previous.key) already says this: no new one."
+    $repeat = $false
+    if (-not $closedAs) {
+        $lastComment = @((Invoke-Jira Get "/rest/api/3/issue/$($previous.key)/comment?orderBy=-created&maxResults=1").comments)[0]
+        $repeat = $lastComment -and ($lastComment.body | ConvertTo-Json -Depth 100 -Compress).Contains($outcome)
+    }
+    if ($repeat) { Write-Host "The last comment on $($previous.key) already says this: no new one." }
+    else { Add-JiraComment $previous.key $comment }
+    Close-OlderTickets $previous.key
+
+    if ($closedAs) {
+        Write-Host "No vulnerabilities: moved $($previous.key) to $closedAs."
+        Publish-Summary "no vulnerabilities, closed [$($previous.key)]($previousUrl)"
+        Set-TicketOutput 'closed' $previous.key $previousUrl
     }
     else {
-        Invoke-Jira Post "/rest/api/3/issue/$($previous.key)/comment" @{
-            body = @{ type = 'doc'; version = 1; content = @(
-                (New-Paragraph $runRef (New-Text ": no vulnerabilities, scanned $scannedText, $closing"))
-            ) }
-        } | Out-Null
+        $why = if (-not $scanComplete) { 'not every image was scanned' } else { 'could not move it to Done, see the log' }
+        Write-Host "No vulnerabilities, $($previous.key) left open: $why."
+        Publish-Summary "no vulnerabilities, [$($previous.key)]($previousUrl) left open: $why"
+        Set-TicketOutput $(if ($repeat) { 'none' } else { 'commented' }) $previous.key $previousUrl
     }
-    if (-not $scanComplete) {
-        Write-Host "No vulnerabilities, but scanned $scannedText`: $($previous.key) left open."
-        Publish-Summary "no vulnerabilities in the scanned images, [$($previous.key)]($previousUrl) left open: not every image was scanned"
-        Set-TicketOutput 'commented' $previous.key $previousUrl
-        exit 0
-    }
-    if (-not $close) {
-        Publish-Summary "no vulnerabilities, could not close [$($previous.key)]($previousUrl): no transition to Done from its status"
-        Set-TicketOutput 'commented' $previous.key $previousUrl
-        exit 0
-    }
-    Move-JiraTicket $previous.key $close
-    Write-Host "No vulnerabilities: commented on $($previous.key) and closed it."
-    Publish-Summary "no vulnerabilities, closed [$($previous.key)]($previousUrl)"
-    Set-TicketOutput 'closed' $previous.key $previousUrl
     exit 0
 }
 
@@ -325,9 +350,8 @@ if ($previous -and $newVulnerabilities.Count -eq 0) {
     if ($goneIds.Count) {
         $comment += New-Paragraph (New-Text "No longer found: $($goneIds -join ', ')$(if (-not $scanComplete) { ' (not every image was scanned)' }).")
     }
-    Invoke-Jira Post "/rest/api/3/issue/$($previous.key)/comment" @{
-        body = @{ type = 'doc'; version = 1; content = $comment }
-    } | Out-Null
+    Add-JiraComment $previous.key $comment
+    Close-OlderTickets $previous.key
     Write-Host "No new vulnerabilities: commented on $($previous.key)."
     Publish-Summary "no new vulnerabilities, commented on [$($previous.key)]($previousUrl)"
     Set-TicketOutput 'commented' $previous.key $previousUrl
@@ -395,26 +419,24 @@ if ($DryRun) {
 $created = Invoke-Jira Post '/rest/api/3/issue' @{ fields = $fields }
 $createdUrl = "$JiraBaseUrl/browse/$($created.key)"
 Write-Host "Created $($created.key): $createdUrl"
+# The outputs first: whatever happens to the old tickets, the notification names the new one.
+Set-TicketOutput 'created' $created.key $createdUrl
 $reason = if ($previous) { "new vulnerabilities since $($previous.key)" } else { 'no open run ticket' }
 
 # The new ticket lists everything the run found and takes the work over, so the previous one is cancelled, not
-# done. After failed scans it may list what this run could not check, and stays open.
+# done. After failed scans it may list what this run could not check, and stays open until a run scans every image.
 $previousOutcome = ''
 if ($previous) {
     $previousUrl = "$JiraBaseUrl/browse/$($previous.key)"
-    $cancel = if ($scanComplete) { Find-CloseTransition $previous.key $cancelStatus }
-    $closing = if (-not $scanComplete) { 'this ticket stays open: not every image was scanned.' }
-    elseif ($cancel) { 'cancelling this ticket.' }
-    else { 'this ticket has no transition to Cancelled from its status: cancel it by hand.' }
-    Invoke-Jira Post "/rest/api/3/issue/$($previous.key)/comment" @{
-        body = @{ type = 'doc'; version = 1; content = @(
-            (New-Paragraph (New-Text 'New vulnerabilities, followed up in ') (New-Link $created.key $createdUrl) (New-Text ": $closing"))
-        ) }
-    } | Out-Null
-    if ($cancel) { Move-JiraTicket $previous.key $cancel }
+    $cancelledAs = if ($scanComplete) { Close-JiraTicket $previous.key $cancelStatus }
+    $outcome = if (-not $scanComplete) { 'this ticket stays open: not every image was scanned.' }
+    elseif ($cancelledAs) { "this ticket moved to $cancelledAs." }
+    else { 'this ticket could not be moved to Cancelled, see the scan run log: cancel it by hand.' }
+    try { Add-JiraComment $previous.key (New-Paragraph (New-Text 'New vulnerabilities, followed up in ') (New-Link $created.key $createdUrl) (New-Text ": $outcome")) }
+    catch { Write-Host "::warning::Could not comment on $($previous.key): $($_.Exception.Message)" }
     $previousOutcome = if (-not $scanComplete) { "; [$($previous.key)]($previousUrl) left open: not every image was scanned" }
-    elseif ($cancel) { "; cancelled [$($previous.key)]($previousUrl)" }
-    else { "; could not cancel [$($previous.key)]($previousUrl): no transition to Cancelled from its status" }
+    elseif ($cancelledAs) { "; cancelled [$($previous.key)]($previousUrl)" }
+    else { "; could not cancel [$($previous.key)]($previousUrl), see the log" }
 }
+Close-OlderTickets $created.key
 Publish-Summary "created [$($created.key)]($createdUrl) ($reason)$previousOutcome"
-Set-TicketOutput 'created' $created.key $createdUrl
