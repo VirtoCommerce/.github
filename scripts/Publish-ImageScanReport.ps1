@@ -213,6 +213,23 @@ function Invoke-Jira([string] $Method, [string] $Path, $Body) {
 function Add-JiraComment([string] $Key, $Content) {
     Invoke-Jira Post "/rest/api/3/issue/$Key/comment" @{ body = @{ type = 'doc'; version = 1; content = @($Content) } } | Out-Null
 }
+# Whether the newest comment on a ticket already contains $Text: a ticket left open is not told the same every
+# night. Comments come oldest first, so the newest is read by its index rather than with a sort parameter.
+# A failed lookup counts as no: at worst one comment a night.
+function Test-LastComment([string] $Key, [string] $Text) {
+    try {
+        $page = Invoke-Jira Get "/rest/api/3/issue/$Key/comment?maxResults=1"
+        $total = [int] $page.total
+        if ($total -eq 0) { return $false }
+        if ($total -gt 1) { $page = Invoke-Jira Get "/rest/api/3/issue/$Key/comment?startAt=$($total - 1)&maxResults=1" }
+        $last = @($page.comments)[0]
+        return [bool] ($last -and ($last.body | ConvertTo-Json -Depth 100 -Compress).Contains($Text))
+    }
+    catch {
+        Write-Host "::warning::Could not read the last comment on $Key, commenting anyway: $($_.Exception.Message)"
+        return $false
+    }
+}
 # Closes a ticket and returns the status it moved to: the transition into the Done category whose name or target
 # status matches $Status - Done for a clean scan, Cancelled for a ticket whose work moved to another one. Jira
 # offers only the transitions from the current status: a workflow with steps before Done needs a global
@@ -252,13 +269,15 @@ if (-not $DryRun) {
     $previous = @($search.issues)[0]
     $olderOpen = @($search.issues | Select-Object -Skip 1)
 }
-# A failed move leaves no comment: the next run tries again, and a comment each night would only repeat itself.
-function Close-OlderTickets([string] $SupersededBy) {
+# $Reason: the ADF text nodes that start the comment ("Superseded by VCST-1", "Scan run: no vulnerabilities").
+# A failed move is said once on the ticket; the next runs try again without repeating it.
+function Close-OlderTickets($Reason) {
     if (-not $scanComplete) { return }
     foreach ($ticket in $olderOpen) {
         $status = Close-JiraTicket $ticket.key $cancelStatus
-        if (-not $status) { continue }
-        try { Add-JiraComment $ticket.key (New-Paragraph (New-Text 'Superseded by ') (New-Link $SupersededBy "$JiraBaseUrl/browse/$SupersededBy") (New-Text ", moved to $status.")) }
+        $outcome = if ($status) { ", moved to $status." } else { ', but the ticket could not be moved to Cancelled, see the scan run log: cancel it by hand.' }
+        if (-not $status -and (Test-LastComment $ticket.key $outcome)) { continue }
+        try { Add-JiraComment $ticket.key (New-Paragraph @(@($Reason) + (New-Text $outcome))) }
         catch { Write-Host "::warning::Could not comment on $($ticket.key): $($_.Exception.Message)" }
     }
 }
@@ -289,15 +308,14 @@ if ($vulnerabilities.Count -eq 0) {
     else { 'the ticket could not be moved to Done, see the scan run log: close it by hand.' }
     $comment = @(New-Paragraph $runRef (New-Text ": no vulnerabilities, scanned $scannedText, $outcome"))
     if ($goneIds.Count) { $comment += New-Paragraph (New-Text "No longer found: $($goneIds -join ', ').") }
-    # A ticket left open would get the same comment every night: not when the last comment already says it.
-    $repeat = $false
-    if (-not $closedAs) {
-        $lastComment = @((Invoke-Jira Get "/rest/api/3/issue/$($previous.key)/comment?orderBy=-created&maxResults=1").comments)[0]
-        $repeat = $lastComment -and ($lastComment.body | ConvertTo-Json -Depth 100 -Compress).Contains($outcome)
-    }
+    $repeat = -not $closedAs -and (Test-LastComment $previous.key $outcome)
     if ($repeat) { Write-Host "The last comment on $($previous.key) already says this: no new one." }
-    else { Add-JiraComment $previous.key $comment }
-    Close-OlderTickets $previous.key
+    else {
+        # The ticket may already be Done: a failed comment is a warning, so the outputs and the summary still follow.
+        try { Add-JiraComment $previous.key $comment }
+        catch { Write-Host "::warning::Could not comment on $($previous.key): $($_.Exception.Message)" }
+    }
+    Close-OlderTickets @($runRef, (New-Text ': no vulnerabilities'))
 
     if ($closedAs) {
         Write-Host "No vulnerabilities: moved $($previous.key) to $closedAs."
@@ -351,7 +369,7 @@ if ($previous -and $newVulnerabilities.Count -eq 0) {
         $comment += New-Paragraph (New-Text "No longer found: $($goneIds -join ', ')$(if (-not $scanComplete) { ' (not every image was scanned)' }).")
     }
     Add-JiraComment $previous.key $comment
-    Close-OlderTickets $previous.key
+    Close-OlderTickets @((New-Text 'Superseded by '), (New-Link $previous.key $previousUrl))
     Write-Host "No new vulnerabilities: commented on $($previous.key)."
     Publish-Summary "no new vulnerabilities, commented on [$($previous.key)]($previousUrl)"
     Set-TicketOutput 'commented' $previous.key $previousUrl
@@ -438,5 +456,5 @@ if ($previous) {
     elseif ($cancelledAs) { "; cancelled [$($previous.key)]($previousUrl)" }
     else { "; could not cancel [$($previous.key)]($previousUrl), see the log" }
 }
-Close-OlderTickets $created.key
+Close-OlderTickets @((New-Text 'Superseded by '), (New-Link $created.key $createdUrl))
 Publish-Summary "created [$($created.key)]($createdUrl) ($reason)$previousOutcome"
