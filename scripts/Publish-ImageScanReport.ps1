@@ -8,12 +8,14 @@
     by vulnerability, listing the images each one was found in.
 
     Then, in Jira, against the newest open ticket with the label (the previous run's ticket):
-      - no open ticket, or the run found vulnerabilities that ticket does not list: a new ticket;
-      - otherwise: a comment on that ticket with a link to the run.
-    A run without vulnerabilities changes nothing in Jira.
+      - no open ticket, or the run found vulnerabilities that ticket does not list: a new ticket, and the
+        open one gets a comment linking it and is cancelled (stays open when some image scans failed);
+      - otherwise: a comment on that ticket with a link to the run and the IDs it lists that the run no longer found.
+    A run without vulnerabilities comments on the open ticket and moves it to Done; when some image scans
+    failed, it only comments. With no open ticket, it changes nothing in Jira.
 
     The run summary (GITHUB_STEP_SUMMARY) gets the same table and the ticket.
-    Step outputs (GITHUB_OUTPUT): ticketAction (created, commented or none), ticketKey, ticketUrl.
+    Step outputs (GITHUB_OUTPUT): ticketAction (created, commented, closed or none), ticketKey, ticketUrl.
     JIRA_USER and JIRA_TOKEN come from the environment.
 
 .EXAMPLE
@@ -141,7 +143,8 @@ $affectedImages = @($vulnerabilities | ForEach-Object { $_.Images } | Sort-Objec
 $scannedText = if ($ExpectedImages -gt 0) { "$($files.Count) of $ExpectedImages" } else { "$($files.Count)" }
 Write-Host "Scanned images: $scannedText. Vulnerabilities: $($vulnerabilities.Count) in $($affectedImages.Count) image(s)."
 if ($ignoredIds.Count) { Write-Host "Skipped (skip list or exceptions): $(@($ignoredIds) -join ', ')" }
-if ($ExpectedImages -gt $files.Count) {
+$scanComplete = $files.Count -ge $ExpectedImages
+if (-not $scanComplete) {
     Write-Host "::warning::$($ExpectedImages - $files.Count) image scan(s) left no results, see the failed scan jobs."
 }
 
@@ -151,6 +154,8 @@ function Set-TicketOutput([string] $Action, [string] $Key = '', [string] $Url = 
 
 # The outcome of the check for new vulnerabilities, for the run summary; set once the open run ticket is known.
 $newCheck = ''
+# The IDs the open run ticket lists that this run did not find; set with the ticket too.
+$goneIds = @()
 
 function Format-Cell($value) { "$value" -replace '\|', '\|' }
 function Publish-Summary([string] $ticketLine) {
@@ -160,6 +165,7 @@ function Publish-Summary([string] $ticketLine) {
     $lines.Add("**Scanned images:** $scannedText &nbsp;|&nbsp; **Vulnerabilities:** $($vulnerabilities.Count) &nbsp;|&nbsp; **Affected images:** $($affectedImages.Count)  ")
     if ($ignoredIds.Count) { $lines.Add("**Skipped (skip list or exceptions):** $(@($ignoredIds) -join ', ')  ") }
     if ($newCheck) { $lines.Add("**New vulnerabilities:** $newCheck  ") }
+    if ($goneIds.Count) { $lines.Add("**No longer found (listed in the open run ticket):** $($goneIds -join ', ')  ") }
     $lines.Add("**Jira:** $ticketLine")
     if ($vulnerabilities.Count -gt 0) {
         $lines.Add('')
@@ -175,8 +181,8 @@ function Publish-Summary([string] $ticketLine) {
     if ($env:GITHUB_STEP_SUMMARY) { $lines -join "`n" >> $env:GITHUB_STEP_SUMMARY }
 }
 
-if ($vulnerabilities.Count -eq 0) {
-    Write-Host 'No vulnerabilities: nothing to report in Jira.'
+if ($vulnerabilities.Count -eq 0 -and $DryRun) {
+    Write-Host 'No vulnerabilities, dry run: no Jira calls.'
     Publish-Summary 'nothing to report'
     Set-TicketOutput 'none'
     exit 0
@@ -194,8 +200,27 @@ if (-not $DryRun) {
     $headers = @{ Authorization = "Basic $auth"; 'Content-Type' = 'application/json' }
 }
 function Invoke-Jira([string] $Method, [string] $Path, $Body) {
+    if ($null -eq $Body) { return Invoke-RestMethod -Uri "$JiraBaseUrl$Path" -Headers $headers -Method $Method }
     $json = $Body | ConvertTo-Json -Depth 100 -Compress
     Invoke-RestMethod -Uri "$JiraBaseUrl$Path" -Headers $headers -Method $Method -Body ([Text.Encoding]::UTF8.GetBytes($json))
+}
+# The transition that closes a ticket: into the Done category, its name or target status matching $Status -
+# Done for a clean scan, Cancelled for a ticket whose work moved to a new one. Jira offers only the transitions
+# from the current status: a workflow with steps before Done needs a global transition ("any status") to it.
+# Without one, a warning and $null; it is looked up before the comment, so the comment says what happens.
+$doneStatus = '^(Done|Closed|Resolved)$'
+$cancelStatus = 'cancel|won.?t do'
+function Find-CloseTransition([string] $Key, [string] $Status) {
+    $transitions = @((Invoke-Jira Get "/rest/api/3/issue/$Key/transitions").transitions)
+    $close = @($transitions | Where-Object { $_.to.statusCategory.key -eq 'done' -and ($_.name -match $Status -or $_.to.name -match $Status) })[0]
+    if (-not $close) {
+        Write-Host "::warning::$Key has no transition matching '$Status' from its status (available: $(@($transitions | ForEach-Object { "$($_.name) -> $($_.to.name)" }) -join ', ')): close it by hand."
+    }
+    $close
+}
+function Move-JiraTicket([string] $Key, $Transition) {
+    Invoke-Jira Post "/rest/api/3/issue/$Key/transitions" @{ transition = @{ id = "$($Transition.id)" } } | Out-Null
+    Write-Host "Moved $Key to $($Transition.to.name)."
 }
 
 # The previous run's ticket: the newest open one with the label.
@@ -210,6 +235,60 @@ if (-not $DryRun) {
 }
 if ($previous) {
     $previousText = $previous.fields.description | ConvertTo-Json -Depth 100 -Compress
+    # The ticket's "All vulnerabilities: ..." paragraph. An ID can also go away with a failed image scan,
+    # a new exception or an image taken out of the scan, so they are "no longer found", not "fixed".
+    if ($previousText -match '"text":"All vulnerabilities: ([^"]*)"') {
+        $runIds = @($vulnerabilities | ForEach-Object { $_.ID })
+        $goneIds = @($Matches[1].Split(',') | ForEach-Object { $_.Trim() } | Where-Object { $_ -and $runIds -notcontains $_ })
+    }
+    if ($goneIds.Count) { Write-Host "No longer found, listed in $($previous.key): $($goneIds -join ', ')" }
+}
+
+if ($vulnerabilities.Count -eq 0) {
+    if (-not $previous) {
+        Write-Host 'No vulnerabilities and no open run ticket: nothing to report in Jira.'
+        Publish-Summary 'nothing to report'
+        Set-TicketOutput 'none'
+        exit 0
+    }
+    $previousUrl = "$JiraBaseUrl/browse/$($previous.key)"
+    $runRef = if ($runUrl) { New-Link 'Scan run' $runUrl } else { New-Text 'Scan run' }
+    # Failed scans may hide what the ticket lists: it stays open until a full scan is clean.
+    $close = if ($scanComplete) { Find-CloseTransition $previous.key $doneStatus }
+    $closing = if (-not $scanComplete) { 'but not every image was scanned, so the ticket stays open.' }
+    elseif ($close) { 'closing this ticket.' }
+    else { 'but the ticket has no transition to Done from its status: close it by hand.' }
+    # A ticket left open would get the same comment every night: not when the last comment already says it.
+    $lastComment = if (-not $close) { @((Invoke-Jira Get "/rest/api/3/issue/$($previous.key)/comment?orderBy=-created&maxResults=1").comments)[0] }
+    if ($lastComment -and ($lastComment.body | ConvertTo-Json -Depth 100 -Compress).Contains($closing)) {
+        Write-Host "The last comment on $($previous.key) already says this: no new one."
+    }
+    else {
+        Invoke-Jira Post "/rest/api/3/issue/$($previous.key)/comment" @{
+            body = @{ type = 'doc'; version = 1; content = @(
+                (New-Paragraph $runRef (New-Text ": no vulnerabilities, scanned $scannedText, $closing"))
+            ) }
+        } | Out-Null
+    }
+    if (-not $scanComplete) {
+        Write-Host "No vulnerabilities, but scanned $scannedText`: $($previous.key) left open."
+        Publish-Summary "no vulnerabilities in the scanned images, [$($previous.key)]($previousUrl) left open: not every image was scanned"
+        Set-TicketOutput 'commented' $previous.key $previousUrl
+        exit 0
+    }
+    if (-not $close) {
+        Publish-Summary "no vulnerabilities, could not close [$($previous.key)]($previousUrl): no transition to Done from its status"
+        Set-TicketOutput 'commented' $previous.key $previousUrl
+        exit 0
+    }
+    Move-JiraTicket $previous.key $close
+    Write-Host "No vulnerabilities: commented on $($previous.key) and closed it."
+    Publish-Summary "no vulnerabilities, closed [$($previous.key)]($previousUrl)"
+    Set-TicketOutput 'closed' $previous.key $previousUrl
+    exit 0
+}
+
+if ($previous) {
     foreach ($v in $vulnerabilities) {
         # Whole IDs only: CVE-2026-3949 must not match inside CVE-2026-39490.
         $v.New = -not ($previousText -match ('(?<![\w-])' + [regex]::Escape($v.ID) + '(?![\w-])'))
@@ -242,10 +321,12 @@ else {
 if ($previous -and $newVulnerabilities.Count -eq 0) {
     $previousUrl = "$JiraBaseUrl/browse/$($previous.key)"
     $runRef = if ($runUrl) { New-Link 'Scan run' $runUrl } else { New-Text 'Scan run' }
+    $comment = @(New-Paragraph $runRef (New-Text ": $($vulnerabilities.Count) vulnerabilities in $($affectedImages.Count) image(s), scanned $scannedText, no new ones since this ticket."))
+    if ($goneIds.Count) {
+        $comment += New-Paragraph (New-Text "No longer found: $($goneIds -join ', ')$(if (-not $scanComplete) { ' (not every image was scanned)' }).")
+    }
     Invoke-Jira Post "/rest/api/3/issue/$($previous.key)/comment" @{
-        body = @{ type = 'doc'; version = 1; content = @(
-            (New-Paragraph $runRef (New-Text ": $($vulnerabilities.Count) vulnerabilities in $($affectedImages.Count) image(s), scanned $scannedText, no new ones since this ticket."))
-        ) }
+        body = @{ type = 'doc'; version = 1; content = $comment }
     } | Out-Null
     Write-Host "No new vulnerabilities: commented on $($previous.key)."
     Publish-Summary "no new vulnerabilities, commented on [$($previous.key)]($previousUrl)"
@@ -315,5 +396,25 @@ $created = Invoke-Jira Post '/rest/api/3/issue' @{ fields = $fields }
 $createdUrl = "$JiraBaseUrl/browse/$($created.key)"
 Write-Host "Created $($created.key): $createdUrl"
 $reason = if ($previous) { "new vulnerabilities since $($previous.key)" } else { 'no open run ticket' }
-Publish-Summary "created [$($created.key)]($createdUrl) ($reason)"
+
+# The new ticket lists everything the run found and takes the work over, so the previous one is cancelled, not
+# done. After failed scans it may list what this run could not check, and stays open.
+$previousOutcome = ''
+if ($previous) {
+    $previousUrl = "$JiraBaseUrl/browse/$($previous.key)"
+    $cancel = if ($scanComplete) { Find-CloseTransition $previous.key $cancelStatus }
+    $closing = if (-not $scanComplete) { 'this ticket stays open: not every image was scanned.' }
+    elseif ($cancel) { 'cancelling this ticket.' }
+    else { 'this ticket has no transition to Cancelled from its status: cancel it by hand.' }
+    Invoke-Jira Post "/rest/api/3/issue/$($previous.key)/comment" @{
+        body = @{ type = 'doc'; version = 1; content = @(
+            (New-Paragraph (New-Text 'New vulnerabilities, followed up in ') (New-Link $created.key $createdUrl) (New-Text ": $closing"))
+        ) }
+    } | Out-Null
+    if ($cancel) { Move-JiraTicket $previous.key $cancel }
+    $previousOutcome = if (-not $scanComplete) { "; [$($previous.key)]($previousUrl) left open: not every image was scanned" }
+    elseif ($cancel) { "; cancelled [$($previous.key)]($previousUrl)" }
+    else { "; could not cancel [$($previous.key)]($previousUrl): no transition to Cancelled from its status" }
+}
+Publish-Summary "created [$($created.key)]($createdUrl) ($reason)$previousOutcome"
 Set-TicketOutput 'created' $created.key $createdUrl
