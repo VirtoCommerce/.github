@@ -230,12 +230,8 @@ function Test-LastComment([string] $Key, [string] $Text) {
         return $false
     }
 }
-# Closes a ticket and returns the status it moved to: the transition into the Done category whose name or target
-# status matches $Status - Done for a clean scan, Cancelled for a ticket whose work moved to another one. Jira
-# offers only the transitions from the current status: a workflow with steps before Done needs a global
-# transition ("any status") to it. Without one, or when Jira refuses the move (a required field on the
-# transition screen, no permission), a warning and $null: a ticket left open does not fail the run.
-# The ticket is moved before it is commented on, so the comment says what happened.
+# Moves a ticket through the Done-category transition whose name or target status matches $Status (Done: clean scan; Cancelled: work moved on) and returns the new status, before any comment so the comment can say it.
+# Jira offers only the transitions from the current status (skipping steps needs a global transition); without one, or when Jira refuses the move (required field, no permission): a warning and $null, not a failed run.
 $doneStatus = '^(Done|Closed|Resolved)$'
 $cancelStatus = 'cancel|won.?t do'
 function Close-JiraTicket([string] $Key, [string] $Status) {
