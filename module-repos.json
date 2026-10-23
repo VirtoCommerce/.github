@@ -69,6 +69,7 @@
   "vc-module-price-export-import",
   "vc-module-pricing",
   "vc-module-product-snapshot",
+  "vc-module-product-subscription",
   "vc-module-profile-experience-api",
   "vc-module-punchout",
   "vc-module-push-messages",
