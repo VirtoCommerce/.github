@@ -45,33 +45,37 @@ card=$(jq -n --argjson pr "$pr" --argjson rows "$rows" --argjson users "$users" 
   # Only listed projects, so UTF-8 or CVE-2024 are not taken for a ticket; anywhere in the title, so [VCST-3] and Revert "VCST-3" match
   ($projects | gsub("\\s"; "") | split(",") | map(select(. != ""))) as $p
   | (if $p == [] then null else $pr.title | [match("\\b(\($p | join("|")))-[0-9]+\\b").string] | first end) as $jira
+  # A merged or closed PR keeps a short card: title, status and the buttons
+  | ($status == "Merged" or $status == "Closed") as $done
   | {approved: "✅ approved", comments: "💬 comments", rereview: "🔁 re-review", waiting: "⏳ waiting", dismissed: "⚪ dismissed"} as $label
   | {
       type: "AdaptiveCard", version: "1.4",
       "$schema": "http://adaptivecards.io/schemas/adaptive-card.json",
       body: ([
-        {type: "TextBlock", text: $pr.title, weight: "Bolder", size: "Medium", wrap: true},
-        {type: "ColumnSet", columns: [
+        {type: "TextBlock", text: $pr.title, weight: "Bolder", size: "Medium", wrap: true}]
+        + (if $done then [] else [{type: "ColumnSet", columns: [
           {type: "Column", width: "auto", items: [{type: "Image", url: $pr.user.avatar_url, size: "Small", style: "Person"}]},
           {type: "Column", width: "stretch", verticalContentAlignment: "Center",
            items: [{type: "TextBlock", text: "\($pr.user.login) · \($pr.head.ref)", isSubtle: true, wrap: true}]}
-        ]},
+        ]}] end)
+        + [
         # Two columns instead of a FactSet: a FactSet value cannot be coloured, and Changes shows +added green, −deleted red
-        ([["Status", [{type: "TextRun", text: $status}]],
-          ["Changes", [{type: "TextRun", text: "+\($pr.additions)", color: "Good"}, {type: "TextRun", text: " / "},
+        ([["Status", [{type: "TextRun", text: $status}]]]
+         + (if $done then [] else [["Changes", [{type: "TextRun", text: "+\($pr.additions)", color: "Good"}, {type: "TextRun", text: " / "},
                        {type: "TextRun", text: "−\($pr.deletions)", color: "Attention"},
                        {type: "TextRun", text: " · \($pr.changed_files) files"}]]]
-         + (if $jira then [["Jira", [{type: "TextRun", text: $jira}]]] else [] end)
-         + (if ($pr.labels | length) > 0 then [["Labels", [{type: "TextRun", text: ($pr.labels | map(.name) | join(", "))}]]] else [] end)
+           + (if $jira then [["Jira", [{type: "TextRun", text: $jira}]]] else [] end)
+           + (if ($pr.labels | length) > 0 then [["Labels", [{type: "TextRun", text: ($pr.labels | map(.name) | join(", "))}]]] else [] end) end)
          | {type: "ColumnSet", columns: [
              {type: "Column", width: "auto", items: map({type: "TextBlock", text: .[0], weight: "Bolder", spacing: "Small"})},
-             {type: "Column", width: "stretch", items: map({type: "RichTextBlock", inlines: .[1], spacing: "Small"})}]}),
-        {type: "TextBlock", text: "Reviewers", weight: "Bolder", spacing: "Medium"}]
-        + (if $rows == [] then [{type: "TextBlock", text: "—", spacing: "Small"}]
-           else [$rows[] | {type: "TextBlock", text: "\(mention(.login))   \($label[.state])", spacing: "Small", wrap: true}] end)),
+             {type: "Column", width: "stretch", items: map({type: "RichTextBlock", inlines: .[1], spacing: "Small"})}]})]
+        + (if $done then []
+           else [{type: "TextBlock", text: "Reviewers", weight: "Bolder", spacing: "Medium"}]
+             + (if $rows == [] then [{type: "TextBlock", text: "—", spacing: "Small"}]
+                else [$rows[] | {type: "TextBlock", text: "\(mention(.login))   \($label[.state])", spacing: "Small", wrap: true}] end) end)),
       actions: ([{type: "Action.OpenUrl", title: "Open PR", url: $pr.html_url}]
         + (if $jira then [{type: "Action.OpenUrl", title: "Open Jira", url: "https://virtocommerce.atlassian.net/browse/\($jira)"}] else [] end)),
-      msteams: {width: "Full", entities: entities([$rows[].login])}
+      msteams: {width: "Full", entities: (if $done then [] else entities([$rows[].login]) end)}
     }')
 
 # Extra curl options: the card is sent with --retry (a repeat only updates it), a ping without (a repeat posts it twice)
@@ -110,6 +114,18 @@ fi
 if [ -n "$login" ] && ! jq -e --arg l "$login" '.[$l]' <<<"$users" >/dev/null; then
   echo "No Teams user for $login, message skipped"
   login=""
+fi
+# Single comments arrive as one review each, so a burst of them would send a message per comment. Wait 2 minutes, then send
+# only from the run of this reviewer's latest comment review, so the burst gives one message. The ping job's concurrency group
+# (see README) cancels the earlier runs anyway; this check covers workflows without it. A failed lookup sends the message.
+if [ -n "$login" ] && [ "$GITHUB_EVENT_NAME" = pull_request_review ]; then
+  sleep 120
+  latest=$(gh api --paginate "repos/$repo/pulls/$number/reviews" --jq 'map(select(.user) | {login: .user.login, state, id})' |
+    jq -s --arg r "$reviewer" 'add // [] | map(select(.login == $r and (.state == "COMMENTED" or .state == "CHANGES_REQUESTED")) | .id) | max') || latest=""
+  if [ -n "$latest" ] && [ "$latest" != "$(jq -r '.review.id' "$GITHUB_EVENT_PATH")" ]; then
+    echo "$reviewer submitted a later review, its run sends the message"
+    login=""
+  fi
 fi
 if [ -n "$login" ]; then
   jq -n --arg key "$key" --arg login "$login" --arg text "$text" --arg button "$button" --arg url "$url" \
