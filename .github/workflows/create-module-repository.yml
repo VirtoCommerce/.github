@@ -275,6 +275,26 @@ jobs:
               --field permission=${TEAMS[$TEAM]}
           done
 
+      - name: Add repository secrets (private repository)
+        # On GitHub Free, org secrets are not visible to private repositories, so a private
+        # module gets its own copies of the org secrets its workflows use. Before the first
+        # push: that push starts module-ci, which needs them.
+        if: ${{ env.VISIBILITY == 'private' }}
+        env:
+          REPO_TOKEN_VALUE: ${{ secrets.REPO_TOKEN }}
+          BLOB_TOKEN_VALUE: ${{ secrets.BLOB_TOKEN }}
+        run: |
+          declare -A SECRETS=([REPO_TOKEN]="$REPO_TOKEN_VALUE" [BLOB_TOKEN]="$BLOB_TOKEN_VALUE")
+          for NAME in "${!SECRETS[@]}"; do
+            if [ -z "${SECRETS[$NAME]}" ]; then
+              echo "::error::Org secret $NAME is not available to this workflow."
+              exit 1
+            fi
+            # Value on stdin, not in the command line.
+            printf '%s' "${SECRETS[$NAME]}" | gh secret set "$NAME" --repo "$REPO_FULL_NAME"
+          done
+          echo "Repository secrets set: ${!SECRETS[*]}"
+
       - name: Configure pull request webhook
         # Registers the new repo with the pull-request automation Logic App.
         # The URL contains a signature, so it is stored as a secret rather than
@@ -607,29 +627,6 @@ jobs:
               echo "$NEW_REPO registered in $FILE."
             fi
           fi
-
-      - name: NuGet Trusted Publishing instructions
-        # nuget.org has no API for Trusted Publishing policies and requires a
-        # federated (MFA) login, so the 3 policies for this repo can't be created
-        # from CI. Surface the exact manual command for an operator to run locally.
-        # See scripts/nuget-trusted-publishers/README.md.
-        run: |
-          {
-            echo "### ⚠️ Manual step: NuGet Trusted Publishing"
-            echo ""
-            echo "nuget.org has no API for Trusted Publishing policies (federated MFA login only),"
-            echo "so the 3 publishing policies for **\`$REPO_NAME\`** must be created manually."
-            echo ""
-            echo "Log in to nuget.org in your browser, then from a checkout of the \`.github\` repo run"
-            echo "(you'll be prompted to paste your nuget.org \`cookie:\` header — see the README):"
-            echo ""
-            echo '```bash'
-            echo "cd scripts/nuget-trusted-publishers"
-            echo "node add-nuget-trusted-publishers.mjs --repos $REPO_NAME"
-            echo '```'
-            echo ""
-            echo "This creates policies for \`module-ci.yml\`, \`publish-nugets.yml\` and \`module-release-hotfix.yml\`."
-          } >> "$GITHUB_STEP_SUMMARY"
 
       - name: Delete GitHub repository (rollback)
         if: failure() && steps.create-repo.outputs.created == 'true'

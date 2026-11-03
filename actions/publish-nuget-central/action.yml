@@ -1,0 +1,71 @@
+name: 'publish-nuget-central'
+description: 'Publish NuGet packages through the central publisher repository (nuget.org Trusted Publishing)'
+inputs:
+  githubToken:
+    description: 'Token that can dispatch and watch workflow runs in the publisher repository'
+    required: true
+  path:
+    description: 'Folder with the .nupkg and .snupkg files to publish'
+    required: false
+    default: 'artifacts'
+  publisherRepository:
+    description: 'Repository whose workflow pushes to nuget.org'
+    required: false
+    default: 'VirtoCommerce/vc-nuget-publisher'
+  publisherWorkflow:
+    description: 'Workflow file in the publisher repository'
+    required: false
+    default: 'publish.yml'
+outputs:
+  publishRunUrl:
+    description: 'URL of the publisher run that pushed the packages'
+    value: ${{ steps.publish.outputs.runUrl }}
+runs:
+  using: "composite"
+  steps:
+    # run_attempt in the name: a re-run must not collide with the artifact of the failed attempt.
+    - name: Upload packages
+      id: upload
+      uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+      with:
+        name: nuget-packages-${{ github.job }}-${{ github.run_attempt }}
+        path: |
+          ${{ inputs.path }}/*.nupkg
+          ${{ inputs.path }}/*.snupkg
+        if-no-files-found: error
+        retention-days: 1
+        overwrite: true
+
+    # The publisher checks that this run is in progress, so this step must wait for the push to finish.
+    - name: Publish through the publisher repository
+      id: publish
+      shell: bash
+      env:
+        GH_TOKEN: ${{ inputs.githubToken }}
+        PUBLISHER_REPO: ${{ inputs.publisherRepository }}
+        PUBLISHER_WORKFLOW: ${{ inputs.publisherWorkflow }}
+        ARTIFACT_ID: ${{ steps.upload.outputs.artifact-id }}
+      run: |
+        # API version 2026-03-10 answers the dispatch with the id of the run it created.
+        RUN_ID=$(gh api --method POST \
+          -H "X-GitHub-Api-Version: 2026-03-10" \
+          "repos/$PUBLISHER_REPO/actions/workflows/$PUBLISHER_WORKFLOW/dispatches" \
+          -f ref=main \
+          -f "inputs[repository]=$GITHUB_REPOSITORY" \
+          -f "inputs[run_id]=$GITHUB_RUN_ID" \
+          -f "inputs[artifact_id]=$ARTIFACT_ID" \
+          --jq '.workflow_run_id')
+        if ! [[ "$RUN_ID" =~ ^[0-9]+$ ]]; then
+          echo "::error::Dispatch to $PUBLISHER_REPO/$PUBLISHER_WORKFLOW returned no run id."
+          exit 1
+        fi
+
+        RUN_URL="$GITHUB_SERVER_URL/$PUBLISHER_REPO/actions/runs/$RUN_ID"
+        echo "runUrl=$RUN_URL" >> "$GITHUB_OUTPUT"
+        echo "Publishing in $RUN_URL"
+        echo "NuGet publish run: $RUN_URL" >> "$GITHUB_STEP_SUMMARY"
+
+        if ! gh run watch "$RUN_ID" --repo "$PUBLISHER_REPO" --exit-status --compact --interval 10; then
+          echo "::error::NuGet publish failed, see $RUN_URL"
+          exit 1
+        fi

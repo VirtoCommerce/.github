@@ -104,6 +104,7 @@ uses: VirtoCommerce/.github/actions/<action>@v3.1000.1
 * [publish-jira-link](publish-jira-link/README.md)
 * [publish-manifest](publish-manifest/README.md)
 * [publish-nuget](publish-nuget/README.md)
+* [publish-nuget-central](publish-nuget-central/README.md)
 * [publish-teams-webhook-notification](publish-teams-webhook-notification/README.md)
 * [run-playwright-tests](run-playwright-tests/README.md)
 * [run-pytest-tests](run-pytest-tests/README.md)

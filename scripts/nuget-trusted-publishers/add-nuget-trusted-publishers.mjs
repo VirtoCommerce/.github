@@ -41,6 +41,7 @@
  *   --workflows a,b   Override the workflow file list (comma-separated).
  *   --scopes a,b      Policy scopes: package:push, package:pushversion, package:unlist. Default: package:push
  *   --subjects a,b    Package ID globs the scopes apply to.                              Default: *
+ *   --environment <n> GitHub environment the workflow job must run in.                   Default: none
  *   --curl <file>     Read the cookie from a saved "Copy as cURL" file instead of prompting.
  *   --dry-run         Show what would be done; do not POST.
  *   --activate        Re-enable every NON-permanent policy (restarts its 7-day window). Does NOT
@@ -75,6 +76,7 @@ function parseArgs(argv) {
     workflows: DEFAULT_WORKFLOWS,
     scopes: DEFAULT_SCOPES,
     subjects: DEFAULT_SUBJECTS,
+    environment: '',
     curl: '',
     dryRun: false,
     activate: false,
@@ -90,6 +92,7 @@ function parseArgs(argv) {
       case '--workflows': args.workflows = splitList(next()); break;
       case '--scopes': args.scopes = splitList(next()); break;
       case '--subjects': args.subjects = splitList(next()); break;
+      case '--environment': args.environment = next() || ''; break;
       case '--curl': args.curl = next(); break;
       case '--dry-run': args.dryRun = true; break;
       case '--activate': args.activate = true; break;
@@ -273,7 +276,7 @@ const decodeEntities = (s) =>
     .replace(/&gt;/g, '>')
     .replace(/&amp;/g, '&');
 
-function policyExists(policies, { owner, githubOwner, repo, workflow }) {
+function policyExists(policies, { owner, githubOwner, repo, workflow, environment }) {
   return policies.some((p) => {
     const d = p.PolicyDetails || p;
     return (
@@ -281,7 +284,7 @@ function policyExists(policies, { owner, githubOwner, repo, workflow }) {
       String(d.RepositoryOwner || '').toLowerCase() === githubOwner.toLowerCase() &&
       String(d.Repository || '').toLowerCase() === repo.toLowerCase() &&
       String(d.WorkflowFile || '').toLowerCase() === workflow.toLowerCase() &&
-      !String(d.Environment || '')
+      String(d.Environment || '').toLowerCase() === environment.toLowerCase()
     );
   });
 }
@@ -414,6 +417,7 @@ async function main() {
   console.log(`RepositoryOwner: ${args.githubOwner}`);
   console.log(`Workflows:       ${args.workflows.join(', ')}`);
   console.log(`Scopes:          ${args.scopes.join(', ')} on ${args.subjects.join(', ')}`);
+  console.log(`Environment:     ${args.environment || '(none)'}`);
   console.log(`Repos (${repos.length}):       ${repos.join(', ')}`);
   if (args.dryRun) console.log('Mode:            DRY RUN (no changes will be made)');
   console.log('');
@@ -434,11 +438,11 @@ async function main() {
         RepositoryOwner: args.githubOwner,
         Repository: repo,
         WorkflowFile: workflow,
-        Environment: '',
+        Environment: args.environment,
       };
       const label = `${repo} / ${workflow}`;
 
-      if (policyExists(state.policies, { owner: args.owner, githubOwner: args.githubOwner, repo, workflow })) {
+      if (policyExists(state.policies, { owner: args.owner, githubOwner: args.githubOwner, repo, workflow, environment: args.environment })) {
         results.push({ label, status: 'SKIP' });
         log('SKIP', label, 'already exists');
         continue;

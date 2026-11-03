@@ -5,7 +5,17 @@ policies on nuget.org for VirtoCommerce **module** repositories, so their GitHub
 Actions workflows can push packages with short-lived OIDC keys instead of a
 long-lived `NUGET_KEY`.
 
-Each module repo gets **3 policies** (one per publishing workflow, Environment left blank):
+> Module repos now publish through `VirtoCommerce/vc-nuget-publisher`, which holds the one
+> policy they need (see its [README](https://github.com/VirtoCommerce/vc-nuget-publisher#readme)). New module repos need no policies of their
+> own. The per-repo policies below are only for repos still on the old templates.
+
+Create the publisher's policy with:
+
+```bash
+node add-nuget-trusted-publishers.mjs --repos vc-nuget-publisher --workflows publish.yml --environment nuget-publish
+```
+
+Each module repo on the old templates has **3 policies** (one per publishing workflow, Environment left blank):
 
 | Workflow file               | Policy name pattern            |
 | --------------------------- | ------------------------------ |
@@ -83,14 +93,7 @@ so re-running is safe. If the cookie has expired it will tell you to grab a fres
 | `--workflows a,b` | the 3 above    | Override the workflow file list.                     |
 | `--scopes a,b`    | `package:push` | Policy scopes (`package:push`, `package:pushversion`, `package:unlist`). |
 | `--subjects a,b`  | `*`            | Package ID globs the scopes apply to.                |
+| `--environment`   | *(none)*       | GitHub environment the publishing job must run in.   |
 | `--curl <file>`   | *(prompt)*     | Read the cookie from a saved "Copy as cURL" file.    |
 | `--dry-run`       | off            | Show what would be done; do not POST.                |
 | `--activate`      | off            | Refresh the 7-day timer on all non-permanent policies (ignores `--repos`). |
-
-## New-repo checklist
-
-After creating a `vc-module-*` repo, run:
-
-```bash
-node add-nuget-trusted-publishers.mjs --repos <new-repo-name>
-```
