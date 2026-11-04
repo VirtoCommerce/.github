@@ -58,6 +58,8 @@ jobs:
           exit 1
 
       - name: Publish Nuget
+        # Bounds the wait for the publisher run; a normal publish takes under a minute.
+        timeout-minutes: 30
         uses: VirtoCommerce/.github/actions/publish-nuget-central@v3.1000.7
         with:
           githubToken: ${{ secrets.REPO_TOKEN }}
