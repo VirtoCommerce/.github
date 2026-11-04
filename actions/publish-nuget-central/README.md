@@ -44,7 +44,7 @@ The job needs no `id-token` permission and no nuget.org key: the publisher run g
   run: vc-build Pack -skip Clean+Restore+Compile+Test
 
 - name: Publish Nuget
-  uses: VirtoCommerce/.github/actions/publish-nuget-central@VCST-6642
+  uses: VirtoCommerce/.github/actions/publish-nuget-central@v3.1000.7
   with:
     githubToken: ${{ secrets.REPO_TOKEN }}
 ```
