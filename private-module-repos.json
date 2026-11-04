@@ -1,0 +1,13 @@
+[
+  "vc-module-ai",
+  "vc-module-ai-document-processing",
+  "vc-module-audit-log",
+  "vc-module-big-pricing",
+  "vc-module-intent-search",
+  "vc-module-marketplace-import",
+  "vc-module-marketplace-vendor",
+  "vc-module-posthog",
+  "vc-module-ui-migration",
+  "vc-module-virto-oz-management",
+  "vc-module-workflow"
+]
