@@ -9,13 +9,13 @@ Provisions a complete, standards-compliant VirtoCommerce module repository from 
 3. **Requests approval** — pauses for a designated reviewer via the `create-org-repo` environment gate.
 4. **Creates the GitHub repository** with the computed name `vc-module-{kebab}` and the requested visibility.
 5. **Configures the repository**: merge strategy (squash-only), Actions permissions (`allowed_actions=all`), team permissions, branch structure (`main` + `dev`), and branch protection rules.
-   - Private repos only: copies the org secrets `REPO_TOKEN` and `BLOB_TOKEN` into repository secrets. On GitHub Free a private repository can't read org secrets, and the module workflows need these two.
+   - Private repos only: copies the org secrets `REPO_TOKEN` and `BLOB_TOKEN` into repository secrets. On GitHub Free a private repository can't read org secrets, and the module workflows need these two. To refresh these copies in existing private modules (after rotating an org secret, or when a copy has expired), run `Sync private module secrets` (`sync-private-module-secrets.yml`): it starts as a dry run and syncs the repos in `private-module-repos.json`, or a subset of them.
    - Registers a `pull_request` webhook pointing at the automation Logic App (skipped when `MODULE_PR_WEBHOOK_URL` is not set).
 6. **Generates module code** using the selected [vc-cli-module-template](https://github.com/VirtoCommerce/vc-cli-module-template) and commits it.
 7. **Wires up CI/CD**: copies workflow templates (`module-ci.yml`, `release.yml`, `publish-nugets.yml`, `module-release-hotfix.yml`) and writes the cloud deployment config.
 8. **Provisions SonarCloud** (public repos only): creates and binds the project to GitHub, grants project-level admin to the token user, disables Automatic Analysis, and sets the New Code definition to "Previous version".
 9. **Tags the repository** with custom properties (template, module ID, creator, creation time, workflow run link).
-10. **Registers** the new repository in `deploy-module-workflows.yml`.
+10. **Registers** the new repository in `module-repos.json` (the repos `deploy-module-workflows.yml` deploys to) and, for a private repo, in `private-module-repos.json` (the repos `sync-private-module-secrets.yml` keeps the secret copies of).
 11. **Rolls back** GitHub and SonarCloud resources automatically on failure.
 
 ## Prerequisites
