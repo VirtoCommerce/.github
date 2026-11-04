@@ -231,8 +231,7 @@ jobs:
         if: ${{ github.ref == 'refs/heads/master' || github.ref == 'refs/heads/main' }}
         run: vc-build Pack -skip Clean+Restore+Compile+Test
 
-      # Trusted Publishing: VirtoCommerce/vc-nuget-publisher holds the one nuget.org policy and
-      # pushes the packages; this step hands them over and waits for the push.
+      # Trusted Publishing: vc-nuget-publisher holds the one nuget.org policy and pushes the packages.
       - name: Publish Nuget
         if: ${{ github.ref == 'refs/heads/master' || github.ref == 'refs/heads/main' }}
         # Bounds the wait for the publisher run; a normal publish takes under a minute.

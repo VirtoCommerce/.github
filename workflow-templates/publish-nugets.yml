@@ -30,9 +30,8 @@ jobs:
     secrets:
       envPAT: ${{ secrets.REPO_TOKEN }}
 
-  # Trusted Publishing: VirtoCommerce/vc-nuget-publisher holds the one nuget.org policy and pushes
-  # the packages; this job hands them over and waits for the push. The push can't run in a
-  # cross-repo reusable workflow here (job_workflow_ref wouldn't match any policy — NuGet/login issues #6/#9).
+  # Trusted Publishing: vc-nuget-publisher holds the one nuget.org policy and pushes the packages.
+  # The push can't run in a cross-repo reusable workflow (job_workflow_ref wouldn't match any policy — NuGet/login issues #6/#9).
   publish-nuget:
     needs: [build, test]
     runs-on: ubuntu-24.04

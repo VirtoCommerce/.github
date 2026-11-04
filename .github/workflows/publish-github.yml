@@ -103,8 +103,8 @@ jobs:
     # Pushes with the caller-supplied `nugetKey`. Do NOT add NuGet/login (OIDC) here to mint the
     # key: this is a cross-repo reusable, so the OIDC token's job_workflow_ref would be this file
     # (in the .github repo), not the caller's workflow, and no per-repo trust policy would match
-    # it (NuGet/login issues #6 and #9). Callers using Trusted Publishing mint the short-lived key
-    # in their OWN job and pass it in via the `nugetKey` secret.
+    # it (NuGet/login issues #6 and #9). Module templates call this with forceNuget: false and
+    # publish through vc-nuget-publisher instead.
     - name: Publish Nuget
       if: ${{ inputs.forceNuget }}
       uses: VirtoCommerce/.github/actions/publish-nuget@v3.1000.7
