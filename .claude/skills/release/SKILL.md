@@ -60,7 +60,7 @@ The tag is annotated (as `v3.1000.1` is), on the PR's merge commit on `main`. Un
 Ask whether to deploy now when the templates changed only by the pin: the module repos keep working on the older tag. Per the root README's "Update workflow templates":
 
 - Run `Deploy Module workflows` (and `Deploy Platform workflows` if platform templates changed) with `Version to deploy` = `<new>`. It has `repos` and `dryRun` inputs: offer a dry run, or 2–3 sample repos, before the full list.
-- Update the composable workflow versions in vc-modules, vc-platform, vc-frontend and vc-testing-module.
+- Update the composable workflow versions in vc-modules, vc-platform, vc-frontend and vc-test-automation-framework.
 
 ## Report
 

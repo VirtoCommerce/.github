@@ -4,7 +4,7 @@ Runs Node/TypeScript Playwright Auto Tests.
 
 The Node/Playwright counterpart of [run-pytest-tests](../run-pytest-tests/README.md). It checks out the test repository, writes its `.env`, installs dependencies with `npm ci` and the Playwright browsers, seeds the dataset with the `seed` Playwright project, reindexes the platform, then runs each suite in `testSuites` as its own `playwright test --project=<suite>`.
 
-Built for the TypeScript [vc-testing-module](https://github.com/VirtoCommerce/vc-testing-module): Playwright projects `seed`, `restapi`, `graphql`, `e2e-frontend` and `e2e-backend`, configuration read from `.env`, `allure-playwright` results and the `allure` (Allure 3) package for the HTML report.
+Built for the TypeScript [vc-test-automation-framework](https://github.com/VirtoCommerce/vc-test-automation-framework): Playwright projects `seed`, `restapi`, `graphql`, `e2e-frontend` and `e2e-backend`, configuration read from `.env`, `allure-playwright` results and the `allure` (Allure 3) package for the HTML report.
 
 Tests tagged `@destructive` (platform restart, index drop, ...) are excluded by the test repo's config unless `RUN_DESTRUCTIVE_TESTS=true` is set in `testSecretEnvFile`.
 
@@ -111,7 +111,7 @@ The report must be served over HTTP: unzip the artifact and run `npx allure open
     backUrl: http://localhost:8090
     baseUrl: http://localhost
     testSecretEnvFile: ${{ secrets.TEST_SECRET_ENV_FILE }}
-    vctestingPath: vc-testing-module
-    vctestingRepo: VirtoCommerce/vc-testing-module
+    vctestingPath: vc-test-automation-framework
+    vctestingRepo: VirtoCommerce/vc-test-automation-framework
     vctestingRepoBranch: dev
 ```

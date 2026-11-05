@@ -12,7 +12,7 @@ param(
     [int]   $timeoutSeconds  = 150,
     [int]   $pollIntervalSec = 5,
     # Per-type minimum indexed-document count. Defaults track the current
-    # vc-testing-module dataset. Callers can override per environment:
+    # vc-test-automation-framework dataset. Callers can override per environment:
     #   -minDocCounts @{ Product=166; Category=4; Member=38; CustomerOrder=20; PickupLocation=34 }
     [hashtable]$minDocCounts = @{
         Member         = 38
