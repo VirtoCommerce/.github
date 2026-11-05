@@ -275,14 +275,16 @@ jobs:
               --field permission=${TEAMS[$TEAM]}
           done
 
-      - name: Add repository secrets (private repository)
-        # On GitHub Free, org secrets are not visible to private repositories, so a private
-        # module gets its own copies of the org secrets its workflows use. Before the first
-        # push: that push starts module-ci, which needs them.
+      - name: Add repository secrets and variables (private repository)
+        # On GitHub Free, org secrets and variables are not visible to private repositories, so a
+        # private module gets its own copies of the ones its workflows use. Before the first
+        # push: that push starts module-ci, which needs them. BLOB_URL: module-ci passes
+        # vars.BLOB_URL to publish-blob-release; empty, the upload fails in azcopy.
         if: ${{ env.VISIBILITY == 'private' }}
         env:
           REPO_TOKEN_VALUE: ${{ secrets.REPO_TOKEN }}
           BLOB_TOKEN_VALUE: ${{ secrets.BLOB_TOKEN }}
+          BLOB_URL_VALUE: ${{ vars.BLOB_URL }}
         run: |
           declare -A SECRETS=([REPO_TOKEN]="$REPO_TOKEN_VALUE" [BLOB_TOKEN]="$BLOB_TOKEN_VALUE")
           for NAME in "${!SECRETS[@]}"; do
@@ -294,6 +296,16 @@ jobs:
             printf '%s' "${SECRETS[$NAME]}" | gh secret set "$NAME" --repo "$REPO_FULL_NAME"
           done
           echo "Repository secrets set: ${!SECRETS[*]}"
+
+          declare -A VARIABLES=([BLOB_URL]="$BLOB_URL_VALUE")
+          for NAME in "${!VARIABLES[@]}"; do
+            if [ -z "${VARIABLES[$NAME]}" ]; then
+              echo "::error::Org variable $NAME is not available to this workflow."
+              exit 1
+            fi
+            gh variable set "$NAME" --repo "$REPO_FULL_NAME" --body "${VARIABLES[$NAME]}"
+          done
+          echo "Repository variables set: ${!VARIABLES[*]}"
 
       - name: Configure pull request webhook
         # Registers the new repo with the pull-request automation Logic App.
