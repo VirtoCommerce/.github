@@ -102,12 +102,12 @@ on:
         description: 'UI tests path'
         required: false
         type: string
-        default: 'vc-testing-module'
+        default: 'vc-test-automation-framework'
       vctestingRepo:
         description: 'UI tests repository'
         required: false
         type: string
-        default: 'VirtoCommerce/vc-testing-module'
+        default: 'VirtoCommerce/vc-test-automation-framework'
       vctestingRepoBranch:
         description: 'UI tests repository branch'
         required: false
