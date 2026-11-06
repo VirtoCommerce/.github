@@ -3,6 +3,8 @@
 Publish NuGet packages through `VirtoCommerce/vc-nuget-publisher`, the one repository with a
 nuget.org Trusted Publishing policy. The action uploads the packages as an artifact, dispatches
 the publisher's `publish.yml` with this run's id, and waits for it. A failed push fails the step.
+When the folder has no `.nupkg` files (a module without NuGet packages), the step writes a notice
+and publishes nothing.
 
 The job needs no `id-token` permission and no nuget.org key: the publisher run gets the key.
 
@@ -35,7 +37,7 @@ The job needs no `id-token` permission and no nuget.org key: the publisher run g
 
 ### publishRunUrl:
 
-    description: 'URL of the publisher run that pushed the packages'
+    description: 'URL of the publisher run that pushed the packages; empty when there were none'
 
 ## Example of usage
 

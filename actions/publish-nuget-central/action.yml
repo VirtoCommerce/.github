@@ -18,14 +18,29 @@ inputs:
     default: 'publish.yml'
 outputs:
   publishRunUrl:
-    description: 'URL of the publisher run that pushed the packages'
+    description: 'URL of the publisher run that pushed the packages; empty when there were none'
     value: ${{ steps.publish.outputs.runUrl }}
 runs:
   using: "composite"
   steps:
+    # A module without NuGet packages (e.g. vc-module-admin-angular-js) packs nothing: nothing to publish.
+    - name: Find packages
+      id: find
+      shell: bash
+      env:
+        PACKAGES_PATH: ${{ inputs.path }}
+      run: |
+        if compgen -G "$PACKAGES_PATH/*.nupkg" > /dev/null; then
+          echo "found=true" >> "$GITHUB_OUTPUT"
+        else
+          echo "::notice::No .nupkg files in $PACKAGES_PATH, nothing to publish."
+          echo "found=false" >> "$GITHUB_OUTPUT"
+        fi
+
     # run_attempt in the name: a re-run must not collide with the artifact of the failed attempt.
     - name: Upload packages
       id: upload
+      if: steps.find.outputs.found == 'true'
       uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
       with:
         name: nuget-packages-${{ github.job }}-${{ github.run_attempt }}
@@ -39,6 +54,7 @@ runs:
     # The publisher checks that this run is in progress, so this step must wait for the push to finish.
     - name: Publish through the publisher repository
       id: publish
+      if: steps.find.outputs.found == 'true'
       shell: bash
       env:
         GH_TOKEN: ${{ inputs.githubToken }}
