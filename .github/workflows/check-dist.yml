@@ -3,6 +3,7 @@ name: check-dist
 # Verifies that each Node action's committed dist/ matches what ncc would
 # emit from its current src/ + package-lock.json. Fails the PR if the bundle
 # is stale, so contributors cannot ship a src/ change without rebuilding.
+# Also runs the action's unit tests when it has any (`npm test`).
 # The actions live under actions/ (moved from vc-github-actions, VCST-5414).
 
 on:
@@ -132,6 +133,18 @@ jobs:
         if: steps.gate.outputs.skip != 'true'
         working-directory: ${{ matrix.action }}
         run: npm ci --no-audit --no-fund
+
+      - name: Run unit tests
+        if: steps.gate.outputs.skip != 'true'
+        working-directory: ${{ matrix.action }}
+        run: |
+          # Most actions still carry npm's "no test specified" stub, which exits 1;
+          # run only real suites.
+          if jq -e '(.scripts.test // "") as $script | $script != "" and ($script | test("no test specified") | not)' package.json >/dev/null; then
+            npm test
+          else
+            echo "::notice::No unit tests; skipping."
+          fi
 
       - name: Rebuild dist/
         if: steps.gate.outputs.skip != 'true'
