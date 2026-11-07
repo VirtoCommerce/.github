@@ -37,8 +37,9 @@ function cleanMessages(messages) {
             const msgAndBody = oneLineMsg.split('BODY:');
             const msg = msgAndBody[0].split('MSG:')[1].trim();
             const body = msgAndBody[1].trim()
-                .replace(/^\s*\(+/, '') // Remove any leading spaces and opening parentheses
-                .replace(/\)+\s*$/, ''); // Remove any trailing spaces and closing parentheses
+                .replace(/^\s*\(/, '') // Remove the "(%b)" wrapper: one paren each side,
+                .replace(/\)\s*$/, '') // so a body ending in "(#2876)" keeps its own
+                .replace(/\s*\b(Co-authored-by|Signed-off-by): .*$/, ''); // Remove git trailers at the end
 
             // Example message (PT-3771: Provide option to show user-friendly errors) 
             if (jiraTasksRegex.test(msg)) {
@@ -90,7 +91,9 @@ function cleanMessages(messages) {
                 for (let i = 0; i < groupIndexes.length; i++) {
                     const message = groupIndexes[i].prefix + body
                         .substring(groupIndexes[i].index, groupIndexes[i + 1]?.index) // the last marker runs to the end
-                        .replace(groupIndexes[i].template, '');
+                        .replace(groupIndexes[i].template, '')
+                        .trim()
+                        .replace(/\s+[*-]$/, ''); // Remove the bullet of the next squashed commit
 
                     core.info(`${groupIndexes[i].key.toUpperCase()} -> ${message}`);
                     releaseNoteGroups.find(group => group.key === groupIndexes[i].key).items.push(message);
@@ -99,10 +102,11 @@ function cleanMessages(messages) {
             }
             else if (subjectTypeRegex.test(msg)) {
                 const header = msg.match(subjectTypeRegex);
+                const isBreaking = !!header[2] || /(^|\s)BREAKING[ -]CHANGE: /.test(body); // "!" or the footer
 
                 releaseNoteGroups.forEach(group => {
                     if (header[1] !== group.key) { return; }
-                    const message = (header[2] ? breakingPrefix : '') + msg.replace(header[0], '');
+                    const message = (isBreaking ? breakingPrefix : '') + msg.replace(header[0], '');
 
                     core.info(`${group.key.toUpperCase()} -> ${message}`);
                     group.items.push(message);
