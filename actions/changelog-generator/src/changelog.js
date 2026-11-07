@@ -11,14 +11,22 @@ function cleanMessages(messages) {
         { key: "refactor", items: [] },
         { key: "perf", items: [] },
         { key: "test", items: [] },
+        { key: "build", items: [] },
         { key: "ci", items: [] },
         { key: "chore", items: [] },
     ]
 
+    // Conventional Commits header: "type: ", "type(scope): ", "type!: " or "type(scope)!: "
+    const typePattern = "(" + releaseNoteGroups.map(group => group.key).join("|") + ")(?:\\([^()]+\\))?(!)?:\\s";
+    const subjectTypeRegex = new RegExp("^" + typePattern);
+    // In a body, a marker starts a word: "hotfix: " is not "fix: "
+    const bodyTypeRegex = new RegExp("(?<![\\w-])" + typePattern, "g");
+    const breakingPrefix = "BREAKING: ";
+
     // Collect messages in groups
     messages.split('HASH:')
         .forEach(commitMsg => {
-            const oneLineMsg = commitMsg.replaceAll("\n", "") // Remove newlines
+            const oneLineMsg = commitMsg.replaceAll("\n", " ") // Replace newlines
                 .replace(/\s+/g, ' ')       // Replace multiple spaces with a single space
                 .trim() // Trim any leading/trailing spaces
 
@@ -46,18 +54,12 @@ function cleanMessages(messages) {
                     return;
                 }
 
-                const groupIndexes = [];
-                releaseNoteGroups.forEach(group => {
-                    const template = group.key + ': ';
-                    let startIndex = 0;
-                    while (startIndex < body.length) {
-                        let templateIndex = body.indexOf(template, startIndex);
-                        if (templateIndex !== -1) {
-                            groupIndexes.push({ key: group.key, index: templateIndex });
-                        }
-                        startIndex += template.length;
-                    }
-                })
+                const groupIndexes = [...body.matchAll(bodyTypeRegex)].map(match => ({
+                    key: match[1],
+                    index: match.index,
+                    template: match[0],
+                    prefix: match[2] ? breakingPrefix : '',
+                }));
 
                 // Only text in body message => use message as source of truth
                 if (groupIndexes.length === 0) {
@@ -73,7 +75,7 @@ function cleanMessages(messages) {
                 // One match
                 if (groupIndexes.length === 1) {
                     let key = groupIndexes[0].key;
-                    const message = body.replace(key + ': ', '');
+                    const message = groupIndexes[0].prefix + body.replace(groupIndexes[0].template, '');
 
                     core.info(`${key.toUpperCase()} -> ${message}`);
                     releaseNoteGroups.find(group => group.key === key).items.push(message);
@@ -85,22 +87,22 @@ function cleanMessages(messages) {
                 // Sort by position
                 groupIndexes.sort((indexGroupA, indexGroupB) => indexGroupA.index - indexGroupB.index);
 
-                for (let i = 0; i < groupIndexes.length - 1; i++) {
-                    const message = body
-                        .substring(groupIndexes[i].index, groupIndexes[i + 1].index)
-                        .replace(groupIndexes[i].key + ': ', '');
+                for (let i = 0; i < groupIndexes.length; i++) {
+                    const message = groupIndexes[i].prefix + body
+                        .substring(groupIndexes[i].index, groupIndexes[i + 1]?.index) // the last marker runs to the end
+                        .replace(groupIndexes[i].template, '');
 
                     core.info(`${groupIndexes[i].key.toUpperCase()} -> ${message}`);
                     releaseNoteGroups.find(group => group.key === groupIndexes[i].key).items.push(message);
                     core.info("----------");
                 }
             }
-            else if (new RegExp("^(feat|fix|docs|style|refactor|perf|test|ci|chore):\\s").test(msg)) {
+            else if (subjectTypeRegex.test(msg)) {
+                const header = msg.match(subjectTypeRegex);
 
                 releaseNoteGroups.forEach(group => {
-                    const template = group.key + ': ';
-                    if (!msg.startsWith(template)) { return; }
-                    const message = msg.replace(template, '');
+                    if (header[1] !== group.key) { return; }
+                    const message = (header[2] ? breakingPrefix : '') + msg.replace(header[0], '');
 
                     core.info(`${group.key.toUpperCase()} -> ${message}`);
                     group.items.push(message);
@@ -150,10 +152,11 @@ function cleanMessages(messages) {
         result += generateGroup("🐞 Bug fixes", fixesItems);
     }
 
-    // Chore (style + chore)
+    // Chore (style + chore + build)
     const choreItems = [
         ...releaseNoteGroups.find(group => group.key === "style").items,
-        ...releaseNoteGroups.find(group => group.key === "chore").items
+        ...releaseNoteGroups.find(group => group.key === "chore").items,
+        ...releaseNoteGroups.find(group => group.key === "build").items
     ];
     if (choreItems.length > 0) {
         result += generateGroup("🗿 Chore", choreItems);
