@@ -76,7 +76,9 @@ function cleanMessages(messages) {
                 // One match
                 if (groupIndexes.length === 1) {
                     let key = groupIndexes[0].key;
-                    const message = groupIndexes[0].prefix + body.replace(groupIndexes[0].template, '');
+                    const message = groupIndexes[0].prefix
+                        + body.slice(0, groupIndexes[0].index) // text before the marker is kept
+                        + body.slice(groupIndexes[0].index + groupIndexes[0].template.length);
 
                     core.info(`${key.toUpperCase()} -> ${message}`);
                     releaseNoteGroups.find(group => group.key === key).items.push(message);

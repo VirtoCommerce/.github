@@ -108,6 +108,15 @@ describe('Jira-key subject', () => {
             section(BUG_FIXES, 'Allow to save empty field'));
     });
 
+    test('single marker keeps the text before it', () => {
+        assert.equal(notes('VCST-1: Subject', 'Some intro fix: X'), section(BUG_FIXES, 'Some intro X'));
+    });
+
+    test('single marker after a "hotfix: " word removes the marker, not the word', () => {
+        assert.equal(notes('VCST-1: Subject', 'Applied a hotfix: first fix: second'),
+            section(BUG_FIXES, 'Applied a hotfix: first second'));
+    });
+
     test('scoped marker drops the scope', () => {
         assert.equal(notes('VCST-1: Subject', 'fix(catalog): Repair search'), section(BUG_FIXES, 'Repair search'));
     });
