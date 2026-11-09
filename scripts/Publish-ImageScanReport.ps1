@@ -162,7 +162,8 @@ function Set-TicketOutput([string] $Action, [string] $Key = '', [string] $Url = 
 
 # The outcome of the check for new vulnerabilities, for the run summary; set once the open run ticket is known.
 $newCheck = ''
-# The IDs the open run ticket lists that this run did not find; set with the ticket too.
+# The IDs in the open run ticket's "All vulnerabilities" list ($null without one), and those this run did not find.
+$listedIds = $null
 $goneIds = @()
 
 function Format-Cell($value) { "$value" -replace '\|', '\|' }
@@ -285,7 +286,8 @@ if ($previous) {
     # a new exception or an image taken out of the scan, so they are "no longer found", not "fixed".
     if ($previousText -match '"text":"All vulnerabilities: ([^"]*)"') {
         $runIds = @($vulnerabilities | ForEach-Object { $_.ID })
-        $goneIds = @($Matches[1].Split(',') | ForEach-Object { $_.Trim() } | Where-Object { $_ -and $runIds -notcontains $_ })
+        $listedIds = @($Matches[1].Split(',') | ForEach-Object { $_.Trim() } | Where-Object { $_ })
+        $goneIds = @($listedIds | Where-Object { $runIds -notcontains $_ })
     }
     if ($goneIds.Count) { Write-Host "No longer found, listed in $($previous.key): $($goneIds -join ', ')" }
 }
@@ -331,8 +333,10 @@ if ($vulnerabilities.Count -eq 0) {
 
 if ($previous) {
     foreach ($v in $vulnerabilities) {
-        # Whole IDs only: CVE-2026-3949 must not match inside CVE-2026-39490.
-        $v.New = -not ($previousText -match ('(?<![\w-])' + [regex]::Escape($v.ID) + '(?![\w-])'))
+        # Against the "All vulnerabilities" list: a rewritten ticket may still name a removed ID elsewhere.
+        # A ticket without the list: anywhere in the description, whole IDs only (CVE-2026-3949 is not in CVE-2026-39490).
+        $v.New = if ($null -ne $listedIds) { $listedIds -notcontains $v.ID }
+        else { -not ($previousText -match ('(?<![\w-])' + [regex]::Escape($v.ID) + '(?![\w-])')) }
     }
 }
 $newVulnerabilities = @($vulnerabilities | Where-Object New)
@@ -360,17 +364,27 @@ else {
 }
 
 # The run ticket's summary and description: every vulnerability of the run, as much of the details as fits.
-# $Since: the "New since <ticket>: ..." paragraph, or $null; with it, the new vulnerabilities are marked.
+#   $Intro: the first paragraph, linking the run that created the ticket; $null - a new one linking this run.
+#   $SinceKey, $NewIds: the previous run ticket and the IDs new since it, marked in the list ($null - none).
+#   $Updated: a rewrite by this run, which the counts paragraph links.
 function Get-TicketSummary([string] $Date) { "[Vulnerability scan] $($vulnerabilities.Count) vulnerabilities in $($affectedImages.Count) image(s), $Date" }
 function Get-DescriptionLength($Content) { (@{ type = 'doc'; version = 1; content = @($Content) } | ConvertTo-Json -Depth 100 -Compress).Length }
-function New-TicketDescription($Since) {
-    $intro = @(New-Text '*** Automatic ticket from the scheduled Trivy image scan *** ')
-    if ($runUrl) { $intro += New-Link 'Scan run' $runUrl }
-    $content = @(
-        (New-Paragraph @intro)
-        (New-Paragraph (New-Text "Scanned images: $scannedText. Vulnerabilities: $($vulnerabilities.Count) in $($affectedImages.Count) image(s)."))
-    )
-    if ($Since) { $content += $Since }
+function New-TicketDescription($Intro, [string] $SinceKey, [string[]] $NewIds, [switch] $Updated) {
+    if (-not $Intro) {
+        $text = @(New-Text '*** Automatic ticket from the scheduled Trivy image scan *** ')
+        if ($runUrl) { $text += New-Link 'Scan run' $runUrl }
+        $Intro = New-Paragraph @text
+    }
+    $counts = New-Text "Scanned images: $scannedText. Vulnerabilities: $($vulnerabilities.Count) in $($affectedImages.Count) image(s)."
+    $content = @($Intro)
+    if ($Updated) {
+        $runRef = if ($runUrl) { New-Link 'scan run' $runUrl } else { New-Text 'scan run' }
+        $content += New-Paragraph (New-Text 'Updated by the ') $runRef (New-Text " on $(Get-Date -Format 'yyyy-MM-dd'). ") $counts
+    }
+    else { $content += New-Paragraph $counts }
+    if ($SinceKey -and $NewIds.Count) {
+        $content += New-Paragraph (New-Text 'New since ') (New-Link $SinceKey "$JiraBaseUrl/browse/$SinceKey") (New-Text ": $($NewIds -join ', ').")
+    }
     # Every ID, whatever fits of the details below: the next run tells new vulnerabilities from this list.
     $content += New-Paragraph (New-Text "All vulnerabilities: $(($vulnerabilities.ID) -join ', ')")
     if ((Get-DescriptionLength $content) -gt $maxDescriptionLength) {
@@ -380,7 +394,7 @@ function New-TicketDescription($Since) {
     $items = [System.Collections.Generic.List[object]]::new()
     foreach ($v in $vulnerabilities) {
         $head = @(if ($v.Url) { New-Link $v.ID $v.Url } else { New-Text $v.ID @{ type = 'strong' } })
-        $head += New-Text " ($($v.Severity))$(if ($Since -and $v.New) { ' - new' })"
+        $head += New-Text " ($($v.Severity))$(if ($NewIds -contains $v.ID) { ' - new' })"
         $item = @(
             (New-Paragraph @head)
             (New-BulletList @(
@@ -405,15 +419,29 @@ function New-TicketDescription($Since) {
 if ($previous -and $newVulnerabilities.Count -eq 0) {
     $previousUrl = "$JiraBaseUrl/browse/$($previous.key)"
     $runRef = if ($runUrl) { New-Link 'Scan run' $runUrl } else { New-Text 'Scan run' }
-    # IDs no longer found after a run that scanned every image leave the ticket: it is rewritten to this run, keeping
-    # its "New since" paragraph and creation date, so they are reported once. After failed scans they may only be
-    # unchecked: removed, they would come back as new. A failed update is a warning; the comment still lists them.
+    # IDs no longer found after a run that scanned every image leave the ticket, so they are reported once: it is
+    # rewritten to this run, keeping its first paragraph (the run that created it), its creation date and the "New
+    # since" IDs still found. After failed scans they may only be unchecked: removed, they would come back as new.
+    # A failed update is a warning, and the comment says so.
     $updated = $false
     if ($goneIds.Count -and $scanComplete) {
         try {
-            $since = @($previous.fields.description.content | Where-Object { $_.type -eq 'paragraph' -and "$(@($_.content)[0].text)" -eq 'New since ' })[0]
+            # Paragraph texts joined: Jira may split or merge the text nodes of a paragraph.
+            $paragraphs = @($previous.fields.description.content | Where-Object { $_.type -eq 'paragraph' } | ForEach-Object {
+                [pscustomobject]@{ Node = $_; Text = (@($_.content) | ForEach-Object { "$($_.text)" }) -join '' }
+            })
+            $intro = @($paragraphs | Where-Object { $_.Text.StartsWith('*** Automatic ticket') })[0].Node
+            $sinceKey = ''
+            $sinceIds = @()
+            $sinceText = @($paragraphs | Where-Object { $_.Text.StartsWith('New since ') })[0].Text
+            if ($sinceText -match '^New since (\S+): (.*?)\.?$') {
+                $sinceKey = $Matches[1]
+                $sinceIds = @($Matches[2].Split(',') | ForEach-Object { $_.Trim() } | Where-Object { $_ -and $runIds -contains $_ })
+            }
+            elseif ($sinceText) { Write-Host "::warning::Could not read the 'New since' paragraph of $($previous.key), left out: $sinceText" }
             $ticketDate = if ("$($previous.fields.summary)" -match ', (\d{4}-\d{2}-\d{2})$') { $Matches[1] } else { Get-Date -Format 'yyyy-MM-dd' }
-            Invoke-Jira Put "/rest/api/3/issue/$($previous.key)" @{ fields = @{ summary = Get-TicketSummary $ticketDate; description = New-TicketDescription $since } } | Out-Null
+            $description = New-TicketDescription -Intro $intro -SinceKey $sinceKey -NewIds $sinceIds -Updated
+            Invoke-Jira Put "/rest/api/3/issue/$($previous.key)" @{ fields = @{ summary = Get-TicketSummary $ticketDate; description = $description } } | Out-Null
             $updated = $true
             Write-Host "Removed from $($previous.key): $($goneIds -join ', ')."
         }
@@ -421,7 +449,9 @@ if ($previous -and $newVulnerabilities.Count -eq 0) {
     }
     $comment = @(New-Paragraph $runRef (New-Text ": $($vulnerabilities.Count) vulnerabilities in $($affectedImages.Count) image(s), scanned $scannedText, no new ones since this ticket."))
     if ($goneIds.Count) {
-        $note = if ($updated) { ', removed from the description' } elseif (-not $scanComplete) { ' (not every image was scanned)' }
+        $note = if ($updated) { ', removed from the description' }
+        elseif ($scanComplete) { ', but they could not be removed from the description, see the scan run log' }
+        else { ' (not every image was scanned)' }
         $comment += New-Paragraph (New-Text "No longer found: $($goneIds -join ', ')$note.")
     }
     Add-JiraComment $previous.key $comment
@@ -434,16 +464,16 @@ if ($previous -and $newVulnerabilities.Count -eq 0) {
 }
 
 # A new ticket: every vulnerability of the run, the new ones marked.
-$since = if ($previous) {
-    New-Paragraph (New-Text "New since ") (New-Link $previous.key "$JiraBaseUrl/browse/$($previous.key)") (New-Text ": $(($newVulnerabilities.ID) -join ', ').")
-}
+# Without an open run ticket every ID is new, and none is marked.
+$sinceKey = if ($previous) { $previous.key }
+$sinceIds = if ($previous) { @($newVulnerabilities.ID) } else { @() }
 $fields = @{
     project     = @{ key = $JiraProject }
     issuetype   = @{ name = 'Task' }
     summary     = Get-TicketSummary (Get-Date -Format 'yyyy-MM-dd')
     labels      = @('Vulnerability', $Label)
     assignee    = @{ accountId = $AssigneeAccountId }
-    description = New-TicketDescription $since
+    description = New-TicketDescription -SinceKey $sinceKey -NewIds $sinceIds
 }
 
 if ($DryRun) {
