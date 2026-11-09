@@ -201,6 +201,8 @@ if ($vulnerabilities.Count -eq 0 -and $DryRun) {
 function New-Text($text, $marks) { $node = @{ type = 'text'; text = "$text" }; if ($marks) { $node.marks = @($marks) }; $node }
 function New-Link($text, $href) { New-Text $text @{ type = 'link'; attrs = @{ href = "$href" } } }
 function New-Paragraph { @{ type = 'paragraph'; content = @($args | ForEach-Object { $_ }) } }
+# A link to this run, or the plain text when the script runs outside GitHub Actions.
+function New-RunRef([string] $Text = 'Scan run') { if ($runUrl) { New-Link $Text $runUrl } else { New-Text $Text } }
 function New-BulletList($items) { @{ type = 'bulletList'; content = @($items | ForEach-Object { @{ type = 'listItem'; content = @($_) } }) } }
 
 if (-not $DryRun) {
@@ -280,13 +282,19 @@ function Close-OlderTickets($Reason) {
         catch { Write-Host "::warning::Could not comment on $($ticket.key): $($_.Exception.Message)" }
     }
 }
+$runIds = @($vulnerabilities | ForEach-Object { $_.ID })
+$paragraphs = @()
 if ($previous) {
     $previousText = $previous.fields.description | ConvertTo-Json -Depth 100 -Compress
+    # The ticket's paragraphs as text, joined from their text nodes: Jira may split or merge them.
+    $paragraphs = @($previous.fields.description.content | Where-Object { $_.type -eq 'paragraph' } | ForEach-Object {
+        [pscustomobject]@{ Node = $_; Text = (@($_.content) | ForEach-Object { "$($_.text)" }) -join '' }
+    })
     # The ticket's "All vulnerabilities: ..." paragraph. An ID can also go away with a failed image scan,
     # a new exception or an image taken out of the scan, so they are "no longer found", not "fixed".
-    if ($previousText -match '"text":"All vulnerabilities: ([^"]*)"') {
-        $runIds = @($vulnerabilities | ForEach-Object { $_.ID })
-        $listedIds = @($Matches[1].Split(',') | ForEach-Object { $_.Trim() } | Where-Object { $_ })
+    $listed = @($paragraphs | Where-Object { $_.Text.StartsWith('All vulnerabilities: ') })[0]
+    if ($listed) {
+        $listedIds = @($listed.Text.Substring('All vulnerabilities: '.Length).Split(',') | ForEach-Object { $_.Trim() } | Where-Object { $_ })
         $goneIds = @($listedIds | Where-Object { $runIds -notcontains $_ })
     }
     if ($goneIds.Count) { Write-Host "No longer found, listed in $($previous.key): $($goneIds -join ', ')" }
@@ -300,7 +308,7 @@ if ($vulnerabilities.Count -eq 0) {
         exit 0
     }
     $previousUrl = "$JiraBaseUrl/browse/$($previous.key)"
-    $runRef = if ($runUrl) { New-Link 'Scan run' $runUrl } else { New-Text 'Scan run' }
+    $runRef = New-RunRef
     # Failed scans may hide what the ticket lists: it stays open until a run scans every image.
     $closedAs = if ($scanComplete) { Close-JiraTicket $previous.key $doneStatus }
     $outcome = if (-not $scanComplete) { 'not every image was scanned, so the ticket stays open.' }
@@ -333,8 +341,9 @@ if ($vulnerabilities.Count -eq 0) {
 
 if ($previous) {
     foreach ($v in $vulnerabilities) {
-        # Against the "All vulnerabilities" list: a rewritten ticket may still name a removed ID elsewhere.
-        # A ticket without the list: anywhere in the description, whole IDs only (CVE-2026-3949 is not in CVE-2026-39490).
+        # Against the "All vulnerabilities" list, the ticket's record of what it covers: an ID named elsewhere in the
+        # description (a note added by hand) is still new. A ticket without the list: anywhere in the description,
+        # whole IDs only (CVE-2026-3949 is not in CVE-2026-39490).
         $v.New = if ($null -ne $listedIds) { $listedIds -notcontains $v.ID }
         else { -not ($previousText -match ('(?<![\w-])' + [regex]::Escape($v.ID) + '(?![\w-])')) }
     }
@@ -370,16 +379,15 @@ else {
 function Get-TicketSummary([string] $Date) { "[Vulnerability scan] $($vulnerabilities.Count) vulnerabilities in $($affectedImages.Count) image(s), $Date" }
 function Get-DescriptionLength($Content) { (@{ type = 'doc'; version = 1; content = @($Content) } | ConvertTo-Json -Depth 100 -Compress).Length }
 function New-TicketDescription($Intro, [string] $SinceKey, [string[]] $NewIds, [switch] $Updated) {
+    # A rewrite without the original first paragraph does not link this run in its place: it is not the creating run.
     if (-not $Intro) {
-        $text = @(New-Text '*** Automatic ticket from the scheduled Trivy image scan *** ')
-        if ($runUrl) { $text += New-Link 'Scan run' $runUrl }
-        $Intro = New-Paragraph @text
+        $Intro = if ($Updated) { New-Paragraph (New-Text '*** Automatic ticket from the scheduled Trivy image scan ***') }
+        else { New-Paragraph (New-Text '*** Automatic ticket from the scheduled Trivy image scan *** ') (New-RunRef) }
     }
     $counts = New-Text "Scanned images: $scannedText. Vulnerabilities: $($vulnerabilities.Count) in $($affectedImages.Count) image(s)."
     $content = @($Intro)
     if ($Updated) {
-        $runRef = if ($runUrl) { New-Link 'scan run' $runUrl } else { New-Text 'scan run' }
-        $content += New-Paragraph (New-Text 'Updated by the ') $runRef (New-Text " on $(Get-Date -Format 'yyyy-MM-dd'). ") $counts
+        $content += New-Paragraph (New-Text 'Updated by the ') (New-RunRef 'scan run') (New-Text " on $(Get-Date -Format 'yyyy-MM-dd'). ") $counts
     }
     else { $content += New-Paragraph $counts }
     if ($SinceKey -and $NewIds.Count) {
@@ -418,7 +426,7 @@ function New-TicketDescription($Intro, [string] $SinceKey, [string[]] $NewIds, [
 
 if ($previous -and $newVulnerabilities.Count -eq 0) {
     $previousUrl = "$JiraBaseUrl/browse/$($previous.key)"
-    $runRef = if ($runUrl) { New-Link 'Scan run' $runUrl } else { New-Text 'Scan run' }
+    $runRef = New-RunRef
     # IDs no longer found after a run that scanned every image leave the ticket, so they are reported once: it is
     # rewritten to this run, keeping its first paragraph (the run that created it), its creation date and the "New
     # since" IDs still found. After failed scans they may only be unchecked: removed, they would come back as new.
@@ -426,11 +434,8 @@ if ($previous -and $newVulnerabilities.Count -eq 0) {
     $updated = $false
     if ($goneIds.Count -and $scanComplete) {
         try {
-            # Paragraph texts joined: Jira may split or merge the text nodes of a paragraph.
-            $paragraphs = @($previous.fields.description.content | Where-Object { $_.type -eq 'paragraph' } | ForEach-Object {
-                [pscustomobject]@{ Node = $_; Text = (@($_.content) | ForEach-Object { "$($_.text)" }) -join '' }
-            })
             $intro = @($paragraphs | Where-Object { $_.Text.StartsWith('*** Automatic ticket') })[0].Node
+            if (-not $intro) { Write-Host "::warning::$($previous.key) has no '*** Automatic ticket' first paragraph: the link to the run that created it is not kept." }
             $sinceKey = ''
             $sinceIds = @()
             $sinceText = @($paragraphs | Where-Object { $_.Text.StartsWith('New since ') })[0].Text
