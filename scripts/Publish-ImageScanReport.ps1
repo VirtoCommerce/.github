@@ -11,6 +11,8 @@
       - no open ticket, or the run found vulnerabilities that ticket does not list: a new ticket, and the
         open one is cancelled and gets a comment linking it (stays open when some image scans failed);
       - otherwise: a comment on that ticket with a link to the run and the IDs it lists that the run no longer found.
+        When the run scanned every image, its description and summary are also rewritten to what the run found,
+        so those IDs are reported once and the next run compares with the current list.
     A run without vulnerabilities moves the open ticket to Done and comments on it; when some image scans
     failed, it only comments. With no open ticket, it changes nothing in Jira.
     Older open tickets with the label, left open by such runs, are cancelled by the next run that scans every image.
@@ -357,69 +359,91 @@ else {
     Write-Host "New vulnerabilities: $newCheck."
 }
 
+# The run ticket's summary and description: every vulnerability of the run, as much of the details as fits.
+# $Since: the "New since <ticket>: ..." paragraph, or $null; with it, the new vulnerabilities are marked.
+function Get-TicketSummary([string] $Date) { "[Vulnerability scan] $($vulnerabilities.Count) vulnerabilities in $($affectedImages.Count) image(s), $Date" }
+function Get-DescriptionLength($Content) { (@{ type = 'doc'; version = 1; content = @($Content) } | ConvertTo-Json -Depth 100 -Compress).Length }
+function New-TicketDescription($Since) {
+    $intro = @(New-Text '*** Automatic ticket from the scheduled Trivy image scan *** ')
+    if ($runUrl) { $intro += New-Link 'Scan run' $runUrl }
+    $content = @(
+        (New-Paragraph @intro)
+        (New-Paragraph (New-Text "Scanned images: $scannedText. Vulnerabilities: $($vulnerabilities.Count) in $($affectedImages.Count) image(s)."))
+    )
+    if ($Since) { $content += $Since }
+    # Every ID, whatever fits of the details below: the next run tells new vulnerabilities from this list.
+    $content += New-Paragraph (New-Text "All vulnerabilities: $(($vulnerabilities.ID) -join ', ')")
+    if ((Get-DescriptionLength $content) -gt $maxDescriptionLength) {
+        throw "$($vulnerabilities.Count) vulnerability IDs alone exceed the Jira description limit: narrow the scan."
+    }
+
+    $items = [System.Collections.Generic.List[object]]::new()
+    foreach ($v in $vulnerabilities) {
+        $head = @(if ($v.Url) { New-Link $v.ID $v.Url } else { New-Text $v.ID @{ type = 'strong' } })
+        $head += New-Text " ($($v.Severity))$(if ($Since -and $v.New) { ' - new' })"
+        $item = @(
+            (New-Paragraph @head)
+            (New-BulletList @(
+                @($v.Packages | ForEach-Object { New-Paragraph (New-Text 'Package: ') (New-Text $_) })
+                @($v.Images | ForEach-Object { New-Paragraph (New-Text 'Image: ') (New-Text $_ @{ type = 'code' }) })
+            ))
+        )
+        $items.Add($item)
+        # Room is left for the "Details of N more" paragraph.
+        if ((Get-DescriptionLength ($content + (New-BulletList $items))) -gt $maxDescriptionLength - 200) {
+            $items.RemoveAt($items.Count - 1)
+            break
+        }
+    }
+    if ($items.Count -gt 0) { $content += New-BulletList $items }
+    if ($vulnerabilities.Count -gt $items.Count) {
+        $content += New-Paragraph (New-Text "Details of $($vulnerabilities.Count - $items.Count) more are in the scan run summary.")
+    }
+    @{ type = 'doc'; version = 1; content = $content }
+}
+
 if ($previous -and $newVulnerabilities.Count -eq 0) {
     $previousUrl = "$JiraBaseUrl/browse/$($previous.key)"
     $runRef = if ($runUrl) { New-Link 'Scan run' $runUrl } else { New-Text 'Scan run' }
+    # IDs no longer found after a run that scanned every image leave the ticket: it is rewritten to this run, keeping
+    # its "New since" paragraph and creation date, so they are reported once. After failed scans they may only be
+    # unchecked: removed, they would come back as new. A failed update is a warning; the comment still lists them.
+    $updated = $false
+    if ($goneIds.Count -and $scanComplete) {
+        try {
+            $since = @($previous.fields.description.content | Where-Object { $_.type -eq 'paragraph' -and "$(@($_.content)[0].text)" -eq 'New since ' })[0]
+            $ticketDate = if ("$($previous.fields.summary)" -match ', (\d{4}-\d{2}-\d{2})$') { $Matches[1] } else { Get-Date -Format 'yyyy-MM-dd' }
+            Invoke-Jira Put "/rest/api/3/issue/$($previous.key)" @{ fields = @{ summary = Get-TicketSummary $ticketDate; description = New-TicketDescription $since } } | Out-Null
+            $updated = $true
+            Write-Host "Removed from $($previous.key): $($goneIds -join ', ')."
+        }
+        catch { Write-Host "::warning::Could not update the description of $($previous.key): $($_.Exception.Message)" }
+    }
     $comment = @(New-Paragraph $runRef (New-Text ": $($vulnerabilities.Count) vulnerabilities in $($affectedImages.Count) image(s), scanned $scannedText, no new ones since this ticket."))
     if ($goneIds.Count) {
-        $comment += New-Paragraph (New-Text "No longer found: $($goneIds -join ', ')$(if (-not $scanComplete) { ' (not every image was scanned)' }).")
+        $note = if ($updated) { ', removed from the description' } elseif (-not $scanComplete) { ' (not every image was scanned)' }
+        $comment += New-Paragraph (New-Text "No longer found: $($goneIds -join ', ')$note.")
     }
     Add-JiraComment $previous.key $comment
     Close-OlderTickets @((New-Text 'Superseded by '), (New-Link $previous.key $previousUrl))
-    Write-Host "No new vulnerabilities: commented on $($previous.key)."
-    Publish-Summary "no new vulnerabilities, commented on [$($previous.key)]($previousUrl)"
+    $did = if ($updated) { 'updated and commented on' } else { 'commented on' }
+    Write-Host "No new vulnerabilities: $did $($previous.key)."
+    Publish-Summary "no new vulnerabilities, $did [$($previous.key)]($previousUrl)"
     Set-TicketOutput 'commented' $previous.key $previousUrl
     exit 0
 }
 
 # A new ticket: every vulnerability of the run, the new ones marked.
-function Get-DescriptionLength($Content) { (@{ type = 'doc'; version = 1; content = @($Content) } | ConvertTo-Json -Depth 100 -Compress).Length }
-
-$intro = @(New-Text '*** Automatic ticket from the scheduled Trivy image scan *** ')
-if ($runUrl) { $intro += New-Link 'Scan run' $runUrl }
-$content = @(
-    (New-Paragraph @intro)
-    (New-Paragraph (New-Text "Scanned images: $scannedText. Vulnerabilities: $($vulnerabilities.Count) in $($affectedImages.Count) image(s)."))
-)
-if ($previous) {
-    $content += New-Paragraph (New-Text "New since ") (New-Link $previous.key "$JiraBaseUrl/browse/$($previous.key)") (New-Text ": $(($newVulnerabilities.ID) -join ', ').")
+$since = if ($previous) {
+    New-Paragraph (New-Text "New since ") (New-Link $previous.key "$JiraBaseUrl/browse/$($previous.key)") (New-Text ": $(($newVulnerabilities.ID) -join ', ').")
 }
-# Every ID, whatever fits of the details below: the next run tells new vulnerabilities from this list.
-$content += New-Paragraph (New-Text "All vulnerabilities: $(($vulnerabilities.ID) -join ', ')")
-if ((Get-DescriptionLength $content) -gt $maxDescriptionLength) {
-    throw "$($vulnerabilities.Count) vulnerability IDs alone exceed the Jira description limit: narrow the scan."
-}
-
-$items = [System.Collections.Generic.List[object]]::new()
-foreach ($v in $vulnerabilities) {
-    $head = @(if ($v.Url) { New-Link $v.ID $v.Url } else { New-Text $v.ID @{ type = 'strong' } })
-    $head += New-Text " ($($v.Severity))$(if ($previous -and $v.New) { ' - new' })"
-    $item = @(
-        (New-Paragraph @head)
-        (New-BulletList @(
-            @($v.Packages | ForEach-Object { New-Paragraph (New-Text 'Package: ') (New-Text $_) })
-            @($v.Images | ForEach-Object { New-Paragraph (New-Text 'Image: ') (New-Text $_ @{ type = 'code' }) })
-        ))
-    )
-    $items.Add($item)
-    # Room is left for the "Details of N more" paragraph.
-    if ((Get-DescriptionLength ($content + (New-BulletList $items))) -gt $maxDescriptionLength - 200) {
-        $items.RemoveAt($items.Count - 1)
-        break
-    }
-}
-if ($items.Count -gt 0) { $content += New-BulletList $items }
-if ($vulnerabilities.Count -gt $items.Count) {
-    $content += New-Paragraph (New-Text "Details of $($vulnerabilities.Count - $items.Count) more are in the scan run summary.")
-}
-
 $fields = @{
     project     = @{ key = $JiraProject }
     issuetype   = @{ name = 'Task' }
-    summary     = "[Vulnerability scan] $($vulnerabilities.Count) vulnerabilities in $($affectedImages.Count) image(s), $(Get-Date -Format 'yyyy-MM-dd')"
+    summary     = Get-TicketSummary (Get-Date -Format 'yyyy-MM-dd')
     labels      = @('Vulnerability', $Label)
     assignee    = @{ accountId = $AssigneeAccountId }
-    description = @{ type = 'doc'; version = 1; content = $content }
+    description = New-TicketDescription $since
 }
 
 if ($DryRun) {
