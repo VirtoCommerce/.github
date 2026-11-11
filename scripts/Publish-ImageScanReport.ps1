@@ -12,8 +12,8 @@
         open one is cancelled and gets a comment linking it (stays open when some image scans failed);
       - otherwise: a comment on that ticket with a link to the run and the IDs it lists that the run no longer found.
         When there are such IDs and the run scanned every image, they leave the ticket's state, so they are reported
-        once, and its description and summary are rewritten to what the run found - unless another account edited
-        them, which the comment then says.
+        once, and its description is rewritten to what the run found - unless another account edited it, which the
+        comment then says - with the summary, unless that was edited.
     A run ticket's state (the IDs it covers, the IDs new since the previous ticket, the run that created it) is
     kept in the issue property named after the label; a ticket created before it gets it from its description.
     A run without vulnerabilities moves the open ticket to Done and comments on it; when some image scans
@@ -323,16 +323,23 @@ $runIds = @($vulnerabilities | ForEach-Object { $_.ID })
 # ticket and the IDs new since it; runUrl: the run that created the ticket; date: its creation date }.
 # $null when the ticket has none (404); any other failure throws.
 function Get-TicketState([string] $Key) {
-    try { return (Invoke-Jira Get "/rest/api/3/issue/$Key/properties/$Label").value }
+    try { return (Invoke-Jira Get "/rest/api/3/issue/$Key/properties/$([uri]::EscapeDataString($Label))").value }
     catch {
         if ($_.Exception.Response -and [int] $_.Exception.Response.StatusCode -eq 404) { return $null }
         throw
     }
 }
 function Set-TicketState([string] $Key, [string[]] $Ids, [string] $SinceKey, [string[]] $SinceIds, [string] $RunUrl, [string] $Date) {
-    Invoke-Jira Put "/rest/api/3/issue/$Key/properties/$Label" @{
-        ids = @($Ids); sinceKey = $SinceKey; sinceIds = @($SinceIds); runUrl = $RunUrl; date = $Date
-    } | Out-Null
+    $value = @{ ids = @($Ids | Where-Object { $_ }); sinceKey = $SinceKey; sinceIds = @($SinceIds | Where-Object { $_ }); runUrl = $RunUrl; date = $Date }
+    # Jira keeps up to 32 KB in a property: the IDs new since the previous ticket give way first (only the
+    # " - new" marks of a rewrite need them); IDs alone too long fail like any other write.
+    $size = { [Text.Encoding]::UTF8.GetByteCount(($value | ConvertTo-Json -Compress)) }
+    if ((& $size) -gt 32000 -and $value.sinceIds.Count) {
+        Write-Host "::warning::The state of $Key is too long for a Jira property: the IDs new since the previous ticket are not kept."
+        $value.sinceIds = @()
+    }
+    if ((& $size) -gt 32000) { throw "$($value.ids.Count) IDs are too many for the state property of $Key." }
+    Invoke-Jira Put "/rest/api/3/issue/$Key/properties/$([uri]::EscapeDataString($Label))" $value | Out-Null
 }
 
 # A paragraph's text, joined from its nodes (Jira may split or merge them), a hard break as a line break.
@@ -346,13 +353,18 @@ function Read-DescriptionState($Ticket) {
     $intro = @($paragraphs | Where-Object { $_.Text.StartsWith($introText) })[0].Node
     $since = @($paragraphs | Where-Object { $_.Text.StartsWith($sincePrefix) })[0].Text
     $sinceMatch = $since -match ('(?s)^' + [regex]::Escape($sincePrefix) + '(\S+?):(.*?)\.?\s*$')
+    if ($since -and -not $sinceMatch) { Write-Host "::warning::Could not read the '$sincePrefix' paragraph of $($Ticket.key), its IDs are not marked new: $since" }
     [pscustomobject]@{
         ids      = @(ConvertTo-IdList $list.Text.Substring($listPrefix.Length) | Select-Object -Unique)
         sinceKey = if ($sinceMatch) { $Matches[1] } else { '' }
         sinceIds = if ($sinceMatch) { @(ConvertTo-IdList $Matches[2]) } else { @() }
         runUrl   = "$(@($intro.content | ForEach-Object { @($_.marks) } | Where-Object { $_.type -eq 'link' })[0].attrs.href)"
-        # A summary renamed by hand has no date: the creation date.
-        date     = if ("$($Ticket.fields.summary)" -match ', (\d{4}-\d{2}-\d{2})$') { $Matches[1] } else { "$($Ticket.fields.created)".Substring(0, [Math]::Min(10, "$($Ticket.fields.created)".Length)) }
+        # A summary renamed by hand has no date: the creation date (a DateTime once the response is parsed, in the
+        # runner's time zone: back to UTC, or text).
+        date     = if ("$($Ticket.fields.summary)" -match ', (\d{4}-\d{2}-\d{2})$') { $Matches[1] }
+        elseif ($Ticket.fields.created -is [datetime]) { $Ticket.fields.created.ToUniversalTime().ToString('yyyy-MM-dd') }
+        elseif ("$($Ticket.fields.created)" -match '^\d{4}-\d{2}-\d{2}') { $Matches[0] }
+        else { '' }
     }
 }
 
@@ -361,24 +373,27 @@ $state = $null
 $stateWritable = $false
 if ($previous) {
     $previousText = $previous.fields.description | ConvertTo-Json -Depth 100 -Compress
+    $stored = $null
     try {
-        $state = Get-TicketState $previous.key
+        $stored = Get-TicketState $previous.key
         $stateWritable = $true
-        if ($null -eq $state) {
-            $state = Read-DescriptionState $previous
-            # Stored before anything changes: if this run fails later, the next one still has what the ticket listed.
-            if ($state) {
-                try { Set-TicketState $previous.key -Ids @($state.ids) -SinceKey "$($state.sinceKey)" -SinceIds @($state.sinceIds) -RunUrl "$($state.runUrl)" -Date "$($state.date)" }
-                catch {
-                    $stateWritable = $false
-                    Write-Host "::warning::Could not store the state of $($previous.key), the next run reads its description again: $($_.Exception.Message)"
-                }
-            }
-        }
     }
     catch {
-        Write-Host "::warning::Could not read the state of $($previous.key), using its description and storing nothing: $($_.Exception.Message)"
+        # Unknown, not guessed from a description that may have been edited since: new IDs are checked against the
+        # whole description, gone ones not reported, nothing stored.
+        Write-Host "::warning::Could not read the state of $($previous.key), so IDs no longer found are not reported: $($_.Exception.Message)"
+    }
+    if ($stored) { $state = $stored }
+    elseif ($stateWritable) {
         $state = Read-DescriptionState $previous
+        # Stored before anything changes: if this run fails later, the next one still has what the ticket listed.
+        if ($state) {
+            try { Set-TicketState $previous.key -Ids @($state.ids) -SinceKey "$($state.sinceKey)" -SinceIds @($state.sinceIds) -RunUrl "$($state.runUrl)" -Date "$($state.date)" }
+            catch {
+                $stateWritable = $false
+                Write-Host "::warning::Could not store the state of $($previous.key), the next run reads its description again: $($_.Exception.Message)"
+            }
+        }
     }
     # An ID can also go away with a failed image scan, a new exception or an image taken out of the scan, so they
     # are "no longer found", not "fixed".
@@ -515,9 +530,10 @@ if ($previous -and $newVulnerabilities.Count -eq 0) {
     # IDs no longer found after a run that scanned every image leave the ticket's state, so they are reported once,
     # and its description is rewritten to this run (keeping the creating run, the creation date and the "New since"
     # IDs still found). After failed scans they may only be unchecked: dropped, they would come back as new.
-    # The description and the summary are each rewritten only when no other account edited them, so nothing written
-    # there is lost; an edited description keeps listing the IDs, and the comment says so. When the rewrite fails or
-    # the ticket cannot be checked, the state is kept, so the next run tries again (and says so again).
+    # The description is rewritten only when no other account edited it, so nothing written there is lost, and the
+    # summary (its counts) only with it and when not edited either; an edited description keeps listing the IDs, and
+    # the comment says so. When the rewrite fails or the ticket cannot be checked, the state is kept, so the next run
+    # tries again (and says so again).
     $ticketDate = if ($state.date) { "$($state.date)" } else { Get-Date -Format 'yyyy-MM-dd' }
     $sinceIds = @($state.sinceIds | Where-Object { $runIds -contains $_ })
     $updated = $false
@@ -530,10 +546,16 @@ if ($previous -and $newVulnerabilities.Count -eq 0) {
             try {
                 $editedFields = Get-EditedFields $previous.key
                 $descriptionEdited = $editedFields -contains 'description'
+                # The summary gives the description's counts: rewritten only with it.
                 $fields = @{}
-                if ($editedFields -notcontains 'summary') { $fields.summary = Get-TicketSummary $ticketDate }
-                if (-not $descriptionEdited) { $fields.description = New-TicketDescription -CreatedBy "$($state.runUrl)" -SinceKey "$($state.sinceKey)" -NewIds $sinceIds -Updated }
-                if ($editedFields.Count) { Write-Host "::notice::$($previous.key): $($editedFields -join ' and ') edited by another account, not rewritten." }
+                if (-not $descriptionEdited) {
+                    $fields.description = New-TicketDescription -CreatedBy "$($state.runUrl)" -SinceKey "$($state.sinceKey)" -NewIds $sinceIds -Updated
+                    if ($editedFields -notcontains 'summary') { $fields.summary = Get-TicketSummary $ticketDate }
+                }
+                if ($editedFields.Count) {
+                    $kept = if ($descriptionEdited) { 'description and summary are' } else { 'summary is' }
+                    Write-Host "::notice::$($previous.key): $($editedFields -join ' and ') edited by another account, so its $kept not rewritten."
+                }
                 if ($fields.Count) { Invoke-Jira Put "/rest/api/3/issue/$($previous.key)" @{ fields = $fields } | Out-Null }
                 $updated = -not $descriptionEdited
                 $dropGone = $true
@@ -561,22 +583,28 @@ if ($previous -and $newVulnerabilities.Count -eq 0) {
         Set-TicketOutput $(if ($updated) { 'updated' } else { 'none' }) $previous.key $previousUrl
         throw
     }
+    # A failed write would report the same IDs again every night: the run fails, so the failure is notified.
+    $stateError = ''
     if ($dropGone) {
         try { Set-TicketState $previous.key -Ids $runIds -SinceKey "$($state.sinceKey)" -SinceIds $sinceIds -RunUrl "$($state.runUrl)" -Date $ticketDate }
-        catch { Write-Host "::warning::Could not store the state of $($previous.key), the next run reports the same IDs again: $($_.Exception.Message)" }
+        catch { $stateError = $_.Exception.Message }
     }
     Close-OlderTickets @((New-Text 'Superseded by '), (New-Link $previous.key $previousUrl))
     $did = if ($updated) { 'updated and commented on' } else { 'commented on' }
     Write-Host "No new vulnerabilities: $did $($previous.key)."
-    Publish-Summary "no new vulnerabilities, $did [$($previous.key)]($previousUrl)"
+    Publish-Summary "no new vulnerabilities, $did [$($previous.key)]($previousUrl)$(if ($stateError) { ', but could not store its state, see the log' })"
     Set-TicketOutput $(if ($updated) { 'updated' } else { 'commented' }) $previous.key $previousUrl
+    if ($stateError) {
+        Write-Host "::error::Could not store the state of $($previous.key), the next run reports the same IDs again: $stateError"
+        exit 1
+    }
     exit 0
 }
 
 # A new ticket: every vulnerability of the run, the new ones marked.
 # Without an open run ticket every ID is new, and none is marked.
 $sinceKey = if ($previous) { $previous.key }
-$sinceIds = if ($previous) { @($newVulnerabilities.ID) } else { @() }
+$sinceIds = @(if ($previous) { $newVulnerabilities.ID })
 $fields = @{
     project     = @{ key = $JiraProject }
     issuetype   = @{ name = 'Task' }
