@@ -23,23 +23,27 @@ function cleanMessages(messages) {
     const bodyTypeRegex = new RegExp("(?<![\\w-])" + typePattern, "g");
     const breakingPrefix = "BREAKING: ";
 
+    // Collapse whitespace, newlines included, into single spaces
+    const toOneLine = text => text.replace(/\s+/g, ' ').trim();
+
     // Collect messages in groups
     messages.split('HASH:')
         .forEach(commitMsg => {
-            const oneLineMsg = commitMsg.replaceAll("\n", " ") // Replace newlines
-                .replace(/\s+/g, ' ')       // Replace multiple spaces with a single space
-                .trim() // Trim any leading/trailing spaces
+            const oneLineMsg = toOneLine(commitMsg);
 
             // Skip empty lines
             if (oneLineMsg === "") { return; }
             core.info(`Raw -> ${oneLineMsg}`);
 
-            const msgAndBody = oneLineMsg.split('BODY:');
-            const msg = msgAndBody[0].split('MSG:')[1].trim();
-            const body = msgAndBody[1].trim()
-                .replace(/^\s*\(/, '') // Remove the "(%b)" wrapper: one paren each side,
-                .replace(/\)\s*$/, '') // so a body ending in "(#2876)" keeps its own
-                .replace(/\s*\b(Co-authored-by|Signed-off-by): .*$/, ''); // Remove git trailers at the end
+            const [header, rawBody = ''] = commitMsg.split('BODY:');
+            const msg = toOneLine(header.split('MSG:')[1]);
+            // Lines are cleaned before they are joined, so a trailer in the middle
+            // of a squash body removes only its own line
+            const body = toOneLine(rawBody.trim()
+                .replace(/^\(/, '') // Remove the "(%b)" wrapper first: one paren each side,
+                .replace(/\)$/, '') // so a body ending in "(#2876)" keeps its own
+                .replace(/^[ \t]*(?:co-authored-by|signed-off-by):.*$/gim, '') // Git trailers
+                .replace(/^[ \t]*-{3,}[ \t]*$/gm, '')); // GitHub's "---------" line before the squash co-authors
 
             // Example message (PT-3771: Provide option to show user-friendly errors) 
             if (jiraTasksRegex.test(msg)) {

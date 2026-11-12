@@ -170,6 +170,42 @@ describe('Jira-key subject', () => {
         assert.equal(notes('VCST-1: Subject', 'fix: A\n\nSigned-off-by: Dev <dev@example.com>'), section(BUG_FIXES, 'A'));
     });
 
+    test('a trailer in the middle of a squash body keeps the later items', () => {
+        assert.equal(notes('VCST-1: Subject', '* fix: A\n\nCo-authored-by: Dev <dev@example.com>\n\n* fix: B'),
+            section(BUG_FIXES, 'A', 'B'));
+    });
+
+    test('trailers match in any case', () => {
+        assert.equal(notes('VCST-1: Subject', 'fix: A\n\nCo-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>'),
+            section(BUG_FIXES, 'A'));
+        assert.equal(notes('VCST-1: Subject', 'fix: A\n\nSIGNED-OFF-BY: Dev <dev@example.com>'), section(BUG_FIXES, 'A'));
+    });
+
+    test('GitHub squash body: per-commit trailers, "---------" separator, co-authors (shape of #150)', () => {
+        const body = '* fix: Remove stale vulnerabilities\n\nCo-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>\n\n'
+            + '* feat: Keep the scan state in an issue property\n\nCo-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>\n\n'
+            + '---------\n\nCo-authored-by: Claude Opus 5.5 <noreply@anthropic.com>';
+        assert.equal(notes('VCST-6129: Remove vulnerabilities (#150)', body),
+            section(DEVELOPMENT, 'Keep the scan state in an issue property')
+            + section(BUG_FIXES, 'Remove stale vulnerabilities'));
+    });
+
+    test('a "-" bullet is not a separator', () => {
+        assert.equal(notes('VCST-1: Subject', '- fix: A\n---\n- fix: B'), section(BUG_FIXES, 'A', 'B'));
+    });
+
+    test('a trailing trailer does not cost the body its last paren', () => {
+        assert.equal(notes('VCST-1: Subject', 'fix: A (#123)\n\nCo-authored-by: Dev <dev@example.com>'),
+            section(BUG_FIXES, 'A (#123)'));
+        assert.equal(notes('VCST-1: Subject', 'fix: A (#123)\n\nCo-authored-by: Dev <dev@example.com>\n'),
+            section(BUG_FIXES, 'A (#123)'));
+    });
+
+    test('indented trailers and separators are removed', () => {
+        assert.equal(notes('VCST-1: Subject', '* fix: A\n\n    * fix: B\n\n    ---------\n\n    Co-authored-by: Dev <dev@example.com>'),
+            section(BUG_FIXES, 'A', 'B'));
+    });
+
     test('a body ending in "(#2876)" keeps its paren (VCST-2486)', () => {
         assert.equal(notes('VCST-2486: Add LocalizedString class (#2876)', 'feat: Introduce LocalizedString class.  (#2876)'),
             section(DEVELOPMENT, 'Introduce LocalizedString class. (#2876)'));
