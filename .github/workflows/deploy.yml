@@ -83,6 +83,7 @@ jobs:
         shell: bash
         env:
           STEPS_DEPLOYCONFIG_OUTPUTS_DEPLOYAPPNAME: ${{ steps.deployConfig.outputs.deployAppName }}
+          DOTNET_ROLL_FORWARD: Major # keep vc-build off .NET 11, see actions/setup-vcbuild
 
       - name: BUILD_STATE::successful
         if: success()

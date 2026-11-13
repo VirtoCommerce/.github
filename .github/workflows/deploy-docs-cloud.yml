@@ -21,6 +21,7 @@ jobs:
           IMAGE_TAG: ${{ github.event.client_payload.image_tag }}
           ENVIRONMENT: ${{ github.event.client_payload.environment }}
           CLOUD_TOKEN: ${{ secrets.VCPT_CLOUD_TOKEN }}
+          DOTNET_ROLL_FORWARD: Major # keep vc-build off .NET 11, see actions/setup-vcbuild
         run: |
           dotnet tool update --global VirtoCommerce.GlobalTool
 
