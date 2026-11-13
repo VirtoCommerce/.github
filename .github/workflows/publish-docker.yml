@@ -1,5 +1,5 @@
-# v3.1000.8
-# https://virtocommerce.atlassian.net/browse/VCST-6642
+# v3.1000.9
+# https://virtocommerce.atlassian.net/browse/VCST-6255
 name: VC Publish docker
 
 on:
@@ -75,19 +75,19 @@ jobs:
 
     - name: Load Docker image 
       id: load-docker
-      uses: VirtoCommerce/.github/actions/docker-load-image@v3.1000.8
+      uses: VirtoCommerce/.github/actions/docker-load-image@v3.1000.9
       with:
         dockerTar: ${{ env.DOCKER_TAR }}
 
     - name: Docker Login
-      uses: docker/login-action@81c6f93d4bc991e510b342a00b419b3bb4efc5c6 # v4.7.0
+      uses: docker/login-action@8aa5831fb8d48d8f76594c7ddde61ae58019f550 # v4.8.0
       with:
         registry: ${{ env.PACKAGE_SERVER }}
         username: $GITHUB_ACTOR
         password: ${{ env.GITHUB_TOKEN }}
 
     - name: Publish Docker Image
-      uses: VirtoCommerce/.github/actions/publish-docker-image@v3.1000.8
+      uses: VirtoCommerce/.github/actions/publish-docker-image@v3.1000.9
       with:
           image: ${{ steps.load-docker.outputs.image }}
           tag: ${{ steps.load-docker.outputs.tag }}

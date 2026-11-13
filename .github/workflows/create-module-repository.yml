@@ -454,7 +454,7 @@ jobs:
           EOF
 
       - name: Setup Git credentials
-        uses: VirtoCommerce/.github/actions/setup-git-credentials-github@v3.1000.8
+        uses: VirtoCommerce/.github/actions/setup-git-credentials-github@v3.1000.9
         with:
           githubToken: ${{ env.GH_TOKEN }}
 
