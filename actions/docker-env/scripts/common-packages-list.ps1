@@ -186,6 +186,9 @@ function ProcessCustomModule {
 
     # resolve dependencies for custom module
     $xmlDependency = $(Select-Xml -Content $content -XPath "//dependencies").Node.dependency
+    foreach ($dependency in $xmlDependency | Where-Object { $_.optional -ne 'true' }) {
+        $script:manifestDependencies += [PSCustomObject]@{ Id = "$($dependency.id)"; RequiredBy = "$CustomModuleId" }
+    }
 
     if ($recursive -eq $true) {
         foreach ($dependency in $xmlDependency) {
@@ -211,6 +214,9 @@ function ProcessCustomModule {
         foreach ($dependency in $xmlDependency) {
             $script:dependencyList["$($dependency.id)"] = "$($dependency.version)"
             Write-Verbose "Queued dependency: $($dependency.id) $($dependency.version)"
+        }
+        foreach ($incompatibility in $(Select-Xml -Content $content -XPath "/module/incompatibilities/module").Node) {
+            $script:incompatibleList["$($incompatibility.id)"] = "$($incompatibility.version)"
         }
         $script:packagesProcessed += "$CustomModuleId"
         $requiredPlatformVersion = $(Select-Xml -Content $content -XPath "/module/platformVersion").Node.InnerText
@@ -267,6 +273,8 @@ $packages = @{}
 $packageSources = @{}
 $packagesProcessed = @()
 $dependencyList = @{}
+$incompatibleList = @{}
+$manifestDependencies = @()
 $platformVersion = ''
 $platformVersionSource = ''
 $blobPackagesUrl = "https://vc3prerelease.blob.core.windows.net/packages"
@@ -434,6 +442,27 @@ while ($attempts -le 10) {
         }
     }
     $attempts += 1
+}
+
+# the platform won't load the custom module next to a module it declares incompatible
+foreach ($key in $incompatibleList.Keys) {
+    if ($packages["$key"] -notmatch '_(\d+\.\d+\.\d+)' -or [System.Version]$Matches[1] -lt [System.Version]$incompatibleList["$key"]) {
+        continue
+    }
+    $incompatibleVersion = $Matches[1]
+    # prerelease modules are skipped: their dependencies came from their manifests
+    $edgeModules = $packages.Keys | Where-Object { $_ -ne $customModuleId -and $($packages["$_"].split('.')[3]) -notmatch '[A-za-z-]' }
+    $requiredBy = @($manifestDependencies | Where-Object { $_.Id -eq $key } | ForEach-Object { $_.RequiredBy })
+    $requiredBy += @($edgeModules | Where-Object {
+            $moduleId = $_
+            $($edgePackages | Where-Object { $_.Id -eq $moduleId } | Select-Object -ExpandProperty Versions)[0].Dependencies | Where-Object { $_.Id -eq $key -and -not $_.Optional }
+        })
+    if ($requiredBy) {
+        throw "$customModuleId declares $key incompatible, but $(($requiredBy | Sort-Object -Unique) -join ', ') require it"
+    }
+    Write-Host "`e[33mLeaving out $key $($incompatibleVersion): $customModuleId declares it incompatible"
+    $packages.Remove($key)
+    $packageSources.Remove($key)
 }
 
 # compose a packages.json file
