@@ -444,14 +444,13 @@ while ($attempts -le 10) {
     $attempts += 1
 }
 
-# leave out modules the custom module declares incompatible: the platform refuses to load a module
-# while a module it declares incompatible is installed at the declared version or higher
+# the platform won't load the custom module next to a module it declares incompatible
 foreach ($key in $incompatibleList.Keys) {
     if ($packages["$key"] -notmatch '_(\d+\.\d+\.\d+)' -or [System.Version]$Matches[1] -lt [System.Version]$incompatibleList["$key"]) {
         continue
     }
     $incompatibleVersion = $Matches[1]
-    # modules from the edge list, except the custom module and prerelease modules, whose manifests were read above
+    # prerelease modules are skipped: their dependencies came from their manifests
     $edgeModules = $packages.Keys | Where-Object { $_ -ne $customModuleId -and $($packages["$_"].split('.')[3]) -notmatch '[A-za-z-]' }
     $requiredBy = @($manifestDependencies | Where-Object { $_.Id -eq $key } | ForEach-Object { $_.RequiredBy })
     $requiredBy += @($edgeModules | Where-Object {
