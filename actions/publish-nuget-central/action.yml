@@ -81,7 +81,41 @@ runs:
         echo "Publishing in $RUN_URL"
         echo "NuGet publish run: $RUN_URL" >> "$GITHUB_STEP_SUMMARY"
 
-        if ! gh run watch "$RUN_ID" --repo "$PUBLISHER_REPO" --exit-status --compact --interval 10; then
-          echo "::error::NuGet publish failed, see $RUN_URL"
+        # Poll the run here rather than with gh run watch, which exits on the first API error:
+        # the dispatch answers with the run id before the run is readable (404 for a few
+        # seconds), and a short API error later must not fail a publish that is still going.
+        # stderr goes to a file so a warning from gh cannot end up in the parsed status.
+        MAX_ERRORS=6
+        errors=0
+        LAST_STATUS=
+        ERR_FILE=$(mktemp)
+        trap 'rm -f "$ERR_FILE"' EXIT
+        while true; do
+          STATUS= CONCLUSION=
+          if RESPONSE=$(gh api "repos/$PUBLISHER_REPO/actions/runs/$RUN_ID" \
+              --jq '(.status // "") + " " + (.conclusion // "")' 2>"$ERR_FILE"); then
+            read -r STATUS CONCLUSION <<< "$RESPONSE"
+          fi
+          if [[ -n "$STATUS" ]]; then
+            errors=0
+            if [[ "$STATUS" != "$LAST_STATUS" ]]; then
+              echo "Publisher run is $STATUS"
+              LAST_STATUS=$STATUS
+            fi
+            [[ "$STATUS" == completed ]] && break
+          else
+            ERROR=$(tr '\n' ' ' < "$ERR_FILE")
+            ERROR=${ERROR:-no status in the response}
+            if (( ++errors >= MAX_ERRORS )); then
+              echo "::error::Cannot read $RUN_URL ($MAX_ERRORS errors in a row): $ERROR"
+              exit 1
+            fi
+            echo "Cannot read the publisher run yet ($errors/$MAX_ERRORS): $ERROR"
+          fi
+          sleep 10
+        done
+
+        if [[ "$CONCLUSION" != success ]]; then
+          echo "::error::NuGet publish ended with '${CONCLUSION:-no conclusion}', see $RUN_URL"
           exit 1
         fi
