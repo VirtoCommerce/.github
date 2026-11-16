@@ -1,5 +1,7 @@
 # update-virtocommerce-docs
 
+> **Retired** in [VCST-6856](https://virtocommerce.atlassian.net/browse/VCST-6856): no callers in the org (vc-docs uses [update-virtocommerce-docs-versioned](../../../actions/update-virtocommerce-docs-versioned/README.md)), and it installed vc-build without a version. Its `action.yml` is renamed to `action.yml.retired`, so it cannot be used. See [deprecated/README.md](../../README.md).
+
 Makes and updates documentation for docs.virtocommerce.org
 
 ## inputs:

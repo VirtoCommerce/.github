@@ -4,6 +4,11 @@ const fs = require('fs');
 const os = require('os');
 const path = require('path');
 
+// The vc-build version this release of the action installs. Bump it here, check it
+// with the "vc-build canary" workflow, and release a new tag of this repository:
+// the module repos get a new vc-build only through that tag.
+const VCBUILD_VERSION = '3.1002.0-alpha.301';
+
 // vc-build runs on .NET 10 and registers MSBuild from SDK 10 in its process.
 // The dotnet it starts (restore, build, test) must pick an SDK 10 too: on SDK 11
 // the restore fails. Pin SDK 10 with a global.json one level above the
@@ -43,12 +48,18 @@ async function run()
 
     // pinSdk10();
 
+    const version = core.getInput('version').trim() || VCBUILD_VERSION;
+    core.info(`vc-build version: ${version}`);
+    core.setOutput('version', version);
+
     await exec.exec("dotnet --list-sdks");
+    // update installs the tool when it is missing, and with --allow-downgrade
+    // also switches an already installed vc-build to this exact version.
     await exec.exec('dotnet',
-        ['tool', 'install', '--global', 'VirtoCommerce.GlobalTool', '--version', '3.1002.0-alpha.301',
+        ['tool', 'update', '--global', 'VirtoCommerce.GlobalTool', '--version', version, '--allow-downgrade',
          '--add-source', 'https://api.nuget.org/v3/index.json', '--ignore-failed-sources'],
         { cwd });
-    core.addPath('/home/runner/.dotnet/tools/');
+    core.addPath(path.join(os.homedir(), '.dotnet', 'tools'));
 }
 
 run().catch(err => core.setFailed(err.message));

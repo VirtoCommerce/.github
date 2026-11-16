@@ -3,8 +3,8 @@ name: release
 description: >
   Cut a release of this repo's reusable workflows, templates and actions: pin every
   internal VirtoCommerce/.github ref in the workflows and templates to the new vX.Y.Z tag,
-  bump the version headers and the deploy default, tag the merge commit, and deploy to the
-  module repos.
+  bump the version headers and the deploy default, tag the merge commit, move the floating
+  v3 tag, and deploy to the module repos.
   Use when the user says "release", "cut a release", "pin to v3.x", "tag the release",
   or invokes /release with an optional version.
 ---
@@ -55,6 +55,16 @@ git push origin <new>                    # the tag only
 
 The tag is annotated (as `v3.1000.1` is), on the PR's merge commit on `main`. Until it exists, every `@<new>` ref fails with "unable to resolve action", so push it right after the merge.
 
+Then move the floating `v3` tag to the same commit, in the same OK. The deployment repositories (the vc-deploy-dev branches) use `setup-vcbuild@v3`, so moving it is what gives them the release, with the vc-build version pinned in it. The module repos are not affected: they use the exact tag.
+
+```bash
+git tag -f -a -m "<new> (<TICKET>)" v3 <merge commit sha>
+git push -f origin v3                   # the floating tag only
+git ls-remote --tags origin 'v3^{}' '<new>^{}'   # both name the merge commit
+```
+
+Rollback for the deployment repositories: move `v3` back to the previous release's commit the same way.
+
 ## 3. Deploy
 
 Ask whether to deploy now when the templates changed only by the pin: the module repos keep working on the older tag. Per the root README's "Update workflow templates":
@@ -64,4 +74,4 @@ Ask whether to deploy now when the templates changed only by the pin: the module
 
 ## Report
 
-What was pinned (file count), the tag and its commit, which deploy ran and its run link, and anything skipped.
+What was pinned (file count), the tag and its commit, where `v3` points now, which deploy ran and its run link, and anything skipped.

@@ -1,5 +1,13 @@
 name: 'setup-vcbuild'
-description: 'Setups vc-build'
+description: 'Installs vc-build (VirtoCommerce.GlobalTool) of a pinned version'
+inputs:
+  version:
+    description: 'vc-build version to install instead of the one pinned in the action. For testing a new vc-build, for example a prerelease, before it is pinned.'
+    required: false
+    default: ''
+outputs:
+  version:
+    description: 'The vc-build version that was installed'
 runs:
   using: 'node24'
   main: 'index.js'
