@@ -37,14 +37,15 @@ async function run()
     // initializer. Major keeps it on the .NET 10 runtime it targets, and still
     // rolls an app forward when its own major version is not installed.
     // The environment variable overrides the tool's runtimeconfig.json.
-    core.exportVariable('DOTNET_ROLL_FORWARD', 'Major');
-    process.env.DOTNET_ROLL_FORWARD = 'Major';
+    
+    // core.exportVariable('DOTNET_ROLL_FORWARD', 'Major');
+    // process.env.DOTNET_ROLL_FORWARD = 'Major';
 
-    pinSdk10();
+    // pinSdk10();
 
     await exec.exec("dotnet --list-sdks");
     await exec.exec('dotnet',
-        ['tool', 'install', '--global', 'VirtoCommerce.GlobalTool', '--version', '3.1001.0',
+        ['tool', 'install', '--global', 'VirtoCommerce.GlobalTool', '--version', '3.1002.0-alpha.301',
          '--add-source', 'https://api.nuget.org/v3/index.json', '--ignore-failed-sources'],
         { cwd });
     core.addPath('/home/runner/.dotnet/tools/');
