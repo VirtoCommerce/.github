@@ -73,11 +73,13 @@ jobs:
           persist-credentials: false
           path: canary
 
+      # The release branch, not dev: code that was already released and built green, so a
+      # broken commit on dev does not turn the canary red. Both repositories release from master.
       - name: Check out ${{ matrix.repo }}
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           repository: VirtoCommerce/${{ matrix.repo }}
-          ref: dev
+          ref: master
           fetch-depth: 0
           persist-credentials: false
           path: target
@@ -253,16 +255,13 @@ jobs:
 
       # Read-only: no HealthStatus/SyncStatus to wait for, a single request that
       # reads the environment, as deploy.yml and deploy-cloud.yml do after a deployment.
-      # A Dependabot pull request (it bumps the actions in this file) gets no organization
-      # secrets: the step is skipped with a warning instead of failing the PR.
+      # Not on pull requests: there setup-vcbuild is the branch's own code, and the cloud key
+      # would be in reach of any pushed branch. The nightly and dispatched runs (main) check it.
       - name: CloudEnvStatus
+        if: ${{ github.event_name != 'pull_request' }}
         env:
           CLOUD_TOKEN: ${{ secrets.VIRTOCLOUD_KEY_VCPT_VCST }}
         run: |
-          if [ -z "$CLOUD_TOKEN" ]; then
-            echo "::warning title=CloudEnvStatus::VIRTOCLOUD_KEY_VCPT_VCST is not available to this run (e.g. a Dependabot pull request), CloudEnvStatus is skipped."
-            exit 0
-          fi
           vc-build CloudEnvStatus \
             -CloudUrl https://portal.virtocommerce.cloud \
             -CloudToken "$CLOUD_TOKEN" \

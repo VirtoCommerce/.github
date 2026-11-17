@@ -13,10 +13,12 @@ To try another vc-build version, for example a prerelease, in a pilot repository
 
 ```yaml
 - name: Setup vc-build
-  uses: VirtoCommerce/.github/actions/setup-vcbuild@v3.1000.1
+  uses: VirtoCommerce/.github/actions/setup-vcbuild@v3
   with:
     version: 3.1002.0-alpha.301
 ```
+
+The `version` input exists from the release that adds it (VCST-6856): an older tag ignores it with an "Unexpected input" warning and installs its own pinned version.
 
 | Input | Default | Description |
 | --- | --- | --- |
@@ -31,7 +33,7 @@ To try another vc-build version, for example a prerelease, in a pilot repository
 Every workflow and action in this repository installs vc-build through this action, so the version is pinned in one place, and the module repos get a new vc-build only with a new tag of this repository. A stable vc-build release on NuGet changes nothing by itself.
 
 1. vc-build publishes a prerelease (`3.x.y-alpha.n`).
-2. Run the [vc-build canary](../../.github/workflows/vcbuild-canary.yml) workflow with `version` = that prerelease. On ubuntu-22.04, ubuntu-24.04 and ubuntu-latest it builds vc-module-task-management (a module with an AngularJS admin UI and a custom app) and vc-platform (`ChangeVersion`, `Compile`, `Test` (task-management only), `Compress`, `Pack`, `IncrementPatch`) and installs modules and a platform the way vc-deploy-dev and docker-env do (`InstallModules`, `install -Edge`, `install` from a package manifest). It also checks that every target the workflows call still exists, including the ones that publish and so cannot run here, and reads the `vcptcore-dev` cloud environment with `CloudEnvStatus`. Nothing is published or deployed.
+2. Run the [vc-build canary](../../.github/workflows/vcbuild-canary.yml) workflow with `version` = that prerelease. On ubuntu-22.04, ubuntu-24.04 and ubuntu-latest it builds the release branch (`master`) of vc-module-task-management (a module with an AngularJS admin UI and a custom app) and vc-platform (`ChangeVersion`, `Compile`, `Test` (task-management only), `Compress`, `Pack`, `IncrementPatch`) and installs modules and a platform the way vc-deploy-dev and docker-env do (`InstallModules`, `install -Edge`, `install` from a package manifest). It also checks that every target the workflows call still exists, including the ones that publish and so cannot run here, and, except on pull requests, reads the `vcptcore-dev` cloud environment with `CloudEnvStatus`. Nothing is published or deployed.
 3. Optional, for bigger changes: pilot PRs in vc-module-task-management and vc-platform with `version:` set as above, to run their full CI (auto-tests, swagger validation). Close them after the run.
 4. vc-build publishes the stable version.
 5. Bump `VCBUILD_VERSION` in [index.js](index.js) to it. The pull request runs the canary on the new version.
