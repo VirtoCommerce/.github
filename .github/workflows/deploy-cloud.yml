@@ -118,16 +118,18 @@ jobs:
             sleep ${{ env.SLEEP_TIME }}
         shell: bash
 
+      - name: Install vc-build
+        if: ${{ steps.forceCommit.outputs.value == 'true' }}
+        uses: VirtoCommerce/.github/actions/setup-vcbuild@v3.1000.9
+
       - name: Check deployment status
         if: ${{ steps.forceCommit.outputs.value == 'true' }}
         timeout-minutes: 5
         run: |
-          dotnet tool install --global VirtoCommerce.GlobalTool || true
           vc-build CloudEnvStatus -CloudUrl ${CLOUD_URL} -CloudToken ${{ secrets.VIRTOCLOUD_KEY_VCPT_VCST }} -EnvironmentName ${STEPS_DEPLOYCONFIG_OUTPUTS_DEPLOYAPPNAME} -HealthStatus Healthy -SyncStatus Synced
         shell: bash
         env:
           STEPS_DEPLOYCONFIG_OUTPUTS_DEPLOYAPPNAME: ${{ steps.deployConfig.outputs.deployAppName }}
-          DOTNET_ROLL_FORWARD: Major # keep vc-build off .NET 11, see actions/setup-vcbuild
 
       - name: DEPLOY_STATE::successful
         if: success()

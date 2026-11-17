@@ -1,0 +1,302 @@
+# v3.1000.9
+# https://virtocommerce.atlassian.net/browse/VCST-6856
+name: vc-build canary
+
+# Builds real repositories with vc-build on several runner images, so a vc-build
+# version is tested before the module repos get it, and a runner image that breaks
+# the pinned vc-build is caught here, not in a module build or a deployment.
+#   - workflow_dispatch: test any vc-build version from NuGet (a prerelease too);
+#     empty = the version pinned in actions/setup-vcbuild.
+#   - schedule: nightly check of the pinned version on the current runner images;
+#     a failure is posted to Teams.
+#   - pull_request: a change to setup-vcbuild or to this canary tests itself.
+# Nothing is published: no NuGet push, no blob, no image, no deployment. The only
+# outside call is a read of the vcptcore-dev cloud environment (CloudEnvStatus).
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'vc-build version to test (e.g. 3.1002.0-alpha.301). Empty = the version pinned in setup-vcbuild'
+        required: false
+        type: string
+        default: ''
+  schedule:
+    - cron: '0 4 * * *'
+  pull_request:
+    paths:
+      - 'actions/setup-vcbuild/**'
+      - '.github/workflows/vcbuild-canary.yml'
+      - '.github/vcbuild-canary-packages.json'
+
+permissions:
+  contents: read
+
+# A new push to a pull request cancels its previous run. A dispatched and the nightly run
+# never cancel each other (both run on main): a cancelled run is not a failure, so the
+# nightly would be lost without a notification.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event_name == 'pull_request' && github.ref || github.run_id }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+env:
+  VCBUILD_VERSION: ${{ inputs.version }}
+  # Who the Teams notification mentions, as in scheduled-image-vulnerability-scan.yml.
+  TEAMS_MENTIONS: ${{ vars.TEAMS_MENTIONS || '@()' }}
+
+jobs:
+  build:
+    name: ${{ matrix.repo }} on ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        # vc-module-task-management: a module with both kinds of frontend that Compress builds:
+        #   the AngularJS admin UI (WebPackBuild) and a custom app (App/, BuildCustomApp).
+        # vc-platform: the platform solution and its frontend.
+        repo: [vc-module-task-management, vc-platform]
+        os: [ubuntu-22.04, ubuntu-24.04, ubuntu-latest]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 60
+    env:
+      MSBuildEnableWorkloadResolver: 'false'
+      # The canary tests vc-build, not the packages of the repos it builds: a newly published
+      # advisory (NU1901-NU1904, an error under TreatWarningsAsErrors) must not turn it red.
+      # MSBuild takes the property from the environment.
+      NuGetAudit: 'false'
+    steps:
+      - name: Set up Node 24
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: '24'
+
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          path: canary
+
+      # The release branch, not dev: code that was already released and built green, so a
+      # broken commit on dev does not turn the canary red. Both repositories release from master.
+      - name: Check out ${{ matrix.repo }}
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          repository: VirtoCommerce/${{ matrix.repo }}
+          ref: master
+          fetch-depth: 0
+          persist-credentials: false
+          path: target
+
+      # The action of this commit, so a pull request tests its own change.
+      - name: Install vc-build
+        id: vcbuild
+        uses: ./canary/actions/setup-vcbuild
+        with:
+          version: ${{ env.VCBUILD_VERSION }}
+
+      # As add-version-suffix does on every pull request build of a module.
+      - name: ChangeVersion
+        working-directory: target
+        run: vc-build ChangeVersion -CustomVersionSuffix "canary"
+
+      - name: Compile
+        working-directory: target
+        run: vc-build Compile
+
+      # The Test target is covered by vc-module-task-management. vc-platform's tests are left out:
+      # DistributedLockTelemetryTests.DurationHistograms_UseSecondsBuckets fails on the ubuntu-24.04
+      # images regardless of vc-build, and would turn the nightly red.
+      - name: Test
+        if: ${{ matrix.repo != 'vc-platform' }}
+        working-directory: target
+        run: vc-build Test -skip
+
+      - name: Compress
+        working-directory: target
+        run: vc-build Compress -skip Clean+Restore+Compile+Test
+
+      - name: Pack
+        working-directory: target
+        run: vc-build Pack -skip Clean+Restore+Compile+Test
+
+      # As the release and hotfix workflows do; only the working copy changes, nothing is pushed.
+      - name: IncrementPatch
+        working-directory: target
+        run: |
+          vc-build IncrementPatch
+          git diff --stat
+
+      - name: Summary
+        if: always()
+        env:
+          INSTALLED: ${{ steps.vcbuild.outputs.version }}
+          REPO: ${{ matrix.repo }}
+          OS: ${{ matrix.os }}
+          STATUS: ${{ job.status }}
+        run: |
+          echo "vc-build \`${INSTALLED:-not installed}\`, ${REPO} on ${OS}: ${STATUS}" >> "$GITHUB_STEP_SUMMARY"
+
+  install:
+    name: Install on ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-22.04, ubuntu-24.04, ubuntu-latest]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Install vc-build
+        id: vcbuild
+        uses: ./actions/setup-vcbuild
+        with:
+          version: ${{ env.VCBUILD_VERSION }}
+
+      # The way the deployment repositories (vc-deploy-dev) build a platform from packages.json,
+      # with both module sources they use: GitHub releases and Azure blob.
+      - name: InstallModules
+        run: |
+          root="$RUNNER_TEMP/platform"
+          # vc-deploy-dev installs into an existing tree; without it vc-build annotates
+          # "Discovery path not found" / "Probing path not found".
+          mkdir -p "$root/modules" "$root/app_data/modules"
+          vc-build InstallModules \
+            -PackageManifestPath ./.github/vcbuild-canary-packages.json \
+            -ProbingPath "$root/app_data/modules" \
+            -DiscoveryPath "$root/modules" \
+            --root "$root" \
+            -SkipDependencySolving
+          ls "$root/modules"
+
+      # The way docker-env (Playwright tests, swagger validation) installs the commerce bundle:
+      # the latest stable modules, without the platform.
+      # Both install steps read platform releases through the GitHub API (vc-build takes the
+      # GitHubToken parameter from GITHUB_TOKEN), as docker-env's callers set it: without a
+      # token they share the anonymous rate limit of the hosted runners.
+      - name: Install -Edge
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: |
+          dir="$RUNNER_TEMP/edge"
+          # docker-env pre-creates the default DiscoveryPath, see actions/docker-env
+          mkdir -p "$dir/modules"
+          cd "$dir"
+          vc-build install -Edge -skip InstallPlatform
+          ls "$dir/modules"
+
+      # The way docker-env-full installs a platform with its modules from a package manifest.
+      - name: Install from a package manifest
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: |
+          root="$RUNNER_TEMP/full"
+          vc-build install \
+            --package-manifest-path "$GITHUB_WORKSPACE/.github/vcbuild-canary-packages.json" \
+            --root "$root" \
+            --skip-dependency-solving
+          ls "$root" "$root/modules"
+
+      - name: Summary
+        if: always()
+        env:
+          INSTALLED: ${{ steps.vcbuild.outputs.version }}
+          OS: ${{ matrix.os }}
+          STATUS: ${{ job.status }}
+        run: |
+          echo "vc-build \`${INSTALLED:-not installed}\`, install targets on ${OS}: ${STATUS}" >> "$GITHUB_STEP_SUMMARY"
+
+  targets:
+    name: Targets and cloud
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Install vc-build
+        id: vcbuild
+        uses: ./actions/setup-vcbuild
+        with:
+          version: ${{ env.VCBUILD_VERSION }}
+
+      # Every target the workflows and actions of this repository and the deployment
+      # repositories call must still exist. Catches a renamed or removed target, also of
+      # the targets that publish or deploy and so cannot run here. Keep the list in sync
+      # with the vc-build calls (git grep -n "vc-build " -- .github/workflows workflow-templates actions).
+      - name: Check the used targets exist
+        env:
+          USED_TARGETS: >-
+            ChangeVersion Compile Test Compress Pack IncrementPatch
+            Install InstallModules ValidateSwaggerSchema
+            SonarQubeStart SonarQubeEnd
+            PublishPackages PublishModuleManifest Release QuickRelease
+            CloudEnvStatus CloudEnvSetParameter CloudEnvUpdate
+        run: |
+          # The help lists the targets, indented by two spaces, as "  Name  -> dependencies".
+          # Depending on the version and the directory it may exit non-zero after printing
+          # the list, so the exit code is ignored and the list is what is checked.
+          help=$(vc-build --help 2>&1 || true)
+          available=$(sed -E 's/\x1b\[[0-9;]*m//g' <<< "$help" | grep -oE '^  [A-Za-z]+' | tr -d ' ' || true)
+          if [ -z "$available" ]; then
+            echo "$help"
+            echo "::error title=vc-build target::vc-build --help listed no targets"
+            exit 1
+          fi
+          missing=0
+          for target in $USED_TARGETS; do
+            if ! grep -qx "$target" <<< "$available"; then
+              echo "::error title=vc-build target::$target is not a target of this vc-build version"
+              missing=1
+            fi
+          done
+          [ "$missing" = 0 ] && echo "All $(wc -w <<< "$USED_TARGETS") used targets exist."
+          exit "$missing"
+
+      # Read-only: no HealthStatus/SyncStatus to wait for, a single request that
+      # reads the environment, as deploy.yml and deploy-cloud.yml do after a deployment.
+      # Not on pull requests: there setup-vcbuild is the branch's own code, and the cloud key
+      # would be in reach of any pushed branch. The nightly and dispatched runs (main) check it.
+      - name: CloudEnvStatus
+        if: ${{ github.event_name != 'pull_request' }}
+        env:
+          CLOUD_TOKEN: ${{ secrets.VIRTOCLOUD_KEY_VCPT_VCST }}
+        run: |
+          vc-build CloudEnvStatus \
+            -CloudUrl https://portal.virtocommerce.cloud \
+            -CloudToken "$CLOUD_TOKEN" \
+            -EnvironmentName vcptcore-dev \
+            -AttemptsNumber 1
+
+      - name: Summary
+        if: always()
+        env:
+          INSTALLED: ${{ steps.vcbuild.outputs.version }}
+          STATUS: ${{ job.status }}
+        run: |
+          echo "vc-build \`${INSTALLED:-not installed}\`, targets and CloudEnvStatus: ${STATUS}" >> "$GITHUB_STEP_SUMMARY"
+
+  notify:
+    needs: [build, install, targets]
+    # Only the nightly run notifies: a dispatched or pull request run is watched by whoever started it.
+    if: ${{ always() && github.event_name == 'schedule' && contains(needs.*.result, 'failure') }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    env:
+      # The Teams channel webhook, shared with scheduled-image-vulnerability-scan.yml.
+      TEAMS_WEBHOOK_URL: ${{ secrets.TEAMS_WEBHOOK_URL }}
+    steps:
+      - name: Teams webhook not configured
+        if: ${{ env.TEAMS_WEBHOOK_URL == '' }}
+        run: echo "::warning::TEAMS_WEBHOOK_URL is not set, no Teams notification sent."
+
+      - name: Notify about the failed run
+        if: ${{ env.TEAMS_WEBHOOK_URL != '' }}
+        uses: VirtoCommerce/.github/actions/publish-teams-webhook-notification@v3.1000.9
+        with:
+          teamsWebhookUrl: ${{ env.TEAMS_WEBHOOK_URL }}
+          mentions: ${{ env.TEAMS_MENTIONS }}
+          title: 'vc-build canary failed: the pinned vc-build does not build on a runner image'
+          workflowName: ${{ github.workflow }}
+          buildId: ${{ github.run_id }}
+          githubRepo: ${{ github.repository }}

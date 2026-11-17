@@ -15,16 +15,24 @@ jobs:
   deploy:
     runs-on: ubuntu-latest
     timeout-minutes: 15
+    permissions:
+      contents: read # checkout of this repository for setup-vcbuild
     steps:
+      # This workflow runs from main, so it takes setup-vcbuild (and the vc-build version
+      # pinned in it) from the same commit instead of a release tag.
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Install vc-build
+        uses: ./actions/setup-vcbuild
+
       - name: Deploy to VC Cloud
         env:
           IMAGE_TAG: ${{ github.event.client_payload.image_tag }}
           ENVIRONMENT: ${{ github.event.client_payload.environment }}
           CLOUD_TOKEN: ${{ secrets.VCPT_CLOUD_TOKEN }}
-          DOTNET_ROLL_FORWARD: Major # keep vc-build off .NET 11, see actions/setup-vcbuild
         run: |
-          dotnet tool update --global VirtoCommerce.GlobalTool
-
           if [ -z "$IMAGE_TAG" ] || [ -z "$ENVIRONMENT" ]; then
             echo "❌ Missing required payload: image_tag='$IMAGE_TAG', environment='$ENVIRONMENT'"
             exit 1
