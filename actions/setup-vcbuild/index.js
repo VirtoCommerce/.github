@@ -50,7 +50,11 @@ async function run()
 
     const version = core.getInput('version').trim() || VCBUILD_VERSION;
     core.info(`vc-build version: ${version}`);
-    core.setOutput('version', version);
+    // Written to GITHUB_OUTPUT directly: the @actions/core committed in node_modules
+    // predates file commands, and its setOutput prints the deprecated set-output command.
+    if (process.env.GITHUB_OUTPUT) {
+        fs.appendFileSync(process.env.GITHUB_OUTPUT, `version=${version}${os.EOL}`);
+    }
 
     await exec.exec("dotnet --list-sdks");
     // update installs the tool when it is missing, and with --allow-downgrade

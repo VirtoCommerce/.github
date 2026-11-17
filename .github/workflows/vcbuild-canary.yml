@@ -58,6 +58,10 @@ jobs:
     timeout-minutes: 60
     env:
       MSBuildEnableWorkloadResolver: 'false'
+      # The canary tests vc-build, not the packages of the repos it builds: a newly published
+      # advisory (NU1901-NU1904, an error under TreatWarningsAsErrors) must not turn it red.
+      # MSBuild takes the property from the environment.
+      NuGetAudit: 'false'
     steps:
       - name: Set up Node 24
         uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
