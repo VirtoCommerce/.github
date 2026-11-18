@@ -9,7 +9,8 @@ name: vc-build canary
 #     empty = the version pinned in actions/setup-vcbuild.
 #   - schedule: nightly check of the pinned version on the current runner images;
 #     a failure is posted to Teams.
-#   - pull_request: a change to setup-vcbuild or to this canary tests itself.
+#   - pull_request: a change to setup-vcbuild (a vc-build bump) is tested on the PR;
+#     a change to this canary alone is checked with workflow_dispatch on its branch.
 # Nothing is published: no NuGet push, no blob, no image, no deployment. The only
 # outside call is a read of the vcptcore-dev cloud environment (CloudEnvStatus).
 on:
@@ -25,8 +26,6 @@ on:
   pull_request:
     paths:
       - 'actions/setup-vcbuild/**'
-      - '.github/workflows/vcbuild-canary.yml'
-      - '.github/vcbuild-canary-packages.json'
 
 permissions:
   contents: read
