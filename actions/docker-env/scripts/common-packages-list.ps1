@@ -446,7 +446,11 @@ while ($attempts -le 10) {
 
 # the platform won't load the custom module next to a module it declares incompatible
 foreach ($key in $incompatibleList.Keys) {
-    if ($packages["$key"] -notmatch '_(\d+\.\d+\.\d+)' -or [System.Version]$Matches[1] -lt [System.Version]$incompatibleList["$key"]) {
+    if ($incompatibleList["$key"] -notmatch '^(\d+\.\d+\.\d+)') {
+        throw "$customModuleId declares $key incompatible with version '$($incompatibleList["$key"])', expected x.y.z"
+    }
+    $declaredVersion = [System.Version]$Matches[1]
+    if ($packages["$key"] -notmatch '_(\d+\.\d+\.\d+)' -or [System.Version]$Matches[1] -lt $declaredVersion) {
         continue
     }
     $incompatibleVersion = $Matches[1]
