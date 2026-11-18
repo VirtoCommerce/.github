@@ -1,4 +1,4 @@
-# v3.1000.9
+# v3.1000.10
 # https://virtocommerce.atlassian.net/browse/VCST-6856
 name: vc-build canary
 
@@ -292,7 +292,7 @@ jobs:
 
       - name: Notify about the failed run
         if: ${{ env.TEAMS_WEBHOOK_URL != '' }}
-        uses: VirtoCommerce/.github/actions/publish-teams-webhook-notification@v3.1000.9
+        uses: VirtoCommerce/.github/actions/publish-teams-webhook-notification@v3.1000.10
         with:
           teamsWebhookUrl: ${{ env.TEAMS_WEBHOOK_URL }}
           mentions: ${{ env.TEAMS_MENTIONS }}
