@@ -49,8 +49,11 @@ The scenario decides the target repo (step 3) and the repro (step 5).
 - Point every internal ref at the branch, in `.github/workflows/` **and** `actions/`
   (composite actions call each other, so a workflow pointed at the branch would still
   run tagged copies of nested actions):
-  `VirtoCommerce/.github/<path>@<tag>` → `@<branch>`.
-- Verify: `git grep -nE 'VirtoCommerce/\.github/[^@ ]+@v[0-9]' -- .github/workflows actions`
+  `VirtoCommerce/.github/<path>@<tag>` → `@<branch>`, and the floating
+  `setup-vcbuild@stable` → `@<branch>` too: it does not look like a tag, but left as is
+  it installs the vc-build of the `stable` tag, not the `VCBUILD_VERSION` of the branch,
+  and the run tests nothing new.
+- Verify: `git grep -nE 'VirtoCommerce/\.github/[^@ ]+@(v[0-9]|stable)' -- .github/workflows actions`
   prints only docs (`actions/*/README.md`).
 - Line ends: several workflow files are stored with CRLF. Git Bash `sed -i` writes LF,
   and with `core.autocrlf=true` a plain `git add` normalizes too — the diff becomes
@@ -86,7 +89,9 @@ Before running anything there, read the target's workflow:
 
 - Clone into the scratchpad (`--depth 5 -b <base>`), branch `<same name as step 2>` from
   the failing commit or the default branch.
-- In its workflow files, `VirtoCommerce/.github/...@<tag>` → `@<branch of step 2>`.
+- In its workflow files, `VirtoCommerce/.github/...@<tag>` and `setup-vcbuild@stable`
+  → `@<branch of step 2>`; the target's own direct `setup-vcbuild` calls (module-ci,
+  vc-platform CI) count too. Verify with the grep of step 2 on `.github/workflows`.
   Same line-end check as in step 2.
 - Commit (`temporary branch, not for merge`), push and dispatch on OK:
   `gh workflow run <workflow> -R <repo> --ref <branch>`.
