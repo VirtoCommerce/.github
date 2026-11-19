@@ -16,18 +16,27 @@ Generates changelog
   uses: VirtoCommerce/.github/actions/changelog-generator@v3.1000.1
 ```
 
-## Compile action
+## Commit formats
 
-Use @vercel/ncc tool to compile your code and modules into one file used for distribution.
+Commits since the latest release are read with `git log` and grouped by [Conventional Commits](https://www.conventionalcommits.org) type:
 
-- Install vercel/ncc by running this command in your terminal.
+| Type | Section |
+|------|---------|
+| `feat` | 🎯 Development |
+| `perf`, `refactor`, `test` | 📈 Improvements |
+| `fix` | 🐞 Bug fixes |
+| `style`, `chore`, `build` | 🗿 Chore |
+| `docs` | 📝 Documentation |
+| `ci` | not printed |
+
+- **Conventional subject** — `type: text`, `type(scope): text`, `type!: text`, `type(scope)!: text`. The scope is dropped; `!` or a `BREAKING CHANGE:` footer prefixes the line with `BREAKING: `.
+- **Jira-key subject** — `ABC-123: text`. Every `type: ` marker in the body (same forms as above) becomes a line in its type's section; `Co-authored-by:` and `Signed-off-by:` trailers are ignored. A body without markers, or one starting with a Jira key, puts the subject (without the key) under 🎯 Development.
+- **Skipped** — anything else: merge commits, `revert:` / `Revert "…"`, free-text subjects, unknown or capitalized types.
+
+## Development
 
 ```bash
-npm i -g @vercel/ncc
-```
-
-- Compile your index.ts file.
-
-```bash
-ncc build ./src/index.ts --license licenses.txt
+npm ci
+npm test        # node:test unit tests in src/
+npm run build   # rebuild dist/ with @vercel/ncc; commit the result
 ```
