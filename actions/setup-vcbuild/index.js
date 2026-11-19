@@ -4,9 +4,9 @@ const fs = require('fs');
 const os = require('os');
 const path = require('path');
 
-// The vc-build version this release of the action installs. Bump it here, check it
-// with the "vc-build canary" workflow, and release a new tag of this repository:
-// the module repos get a new vc-build only through that tag.
+// The vc-build version this action installs. Bump it here, check it with the
+// "vc-build canary" workflow, and after the merge move the floating `stable` tag to
+// the merge commit: everything that calls setup-vcbuild@stable gets it from then on.
 const VCBUILD_VERSION = '3.1002.0';
 
 async function run()
