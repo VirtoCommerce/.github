@@ -74,7 +74,7 @@ The tag is annotated (as `v3.1000.1` is), on the PR's merge commit on `main`. Un
 Ask whether to deploy now when the templates changed only by the pin: the module repos keep working on the older tag. Per the root README's "Update workflow templates":
 
 - Run `Deploy Module workflows` (and `Deploy Platform workflows` if platform templates changed) with `Version to deploy` = `<new>`. It has `repos` and `dryRun` inputs: offer a dry run, or 2–3 sample repos, before the full list.
-- Update the composable workflow versions in vc-modules, vc-platform, vc-frontend and vc-test-automation-framework.
+- Update the composable workflow versions in vc-modules, vc-platform, vc-frontend and vc-test-automation-framework: a PR to each default branch with every `VirtoCommerce/.github/...@<ref>` → `@<new>`, except `setup-vcbuild`, which goes to `@stable` (from any tag, so the repo follows the vc-build rollouts from then on). Search all their workflow files, not only the ones that call the reusable workflows: vc-platform calls setup-vcbuild directly in its CI, hotfix, NuGet, CodeQL and OWASP workflows. Report a workflow that installs vc-build with `dotnet tool install ... VirtoCommerce.GlobalTool` instead (an unpinned latest from NuGet): it should move to `setup-vcbuild@stable`, but ask first.
 
 ## 4. A new vc-build: move `stable`
 
