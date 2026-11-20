@@ -62,8 +62,10 @@ runs:
     - name: Install Commerce Bundle Modules
       if: ${{ inputs.installModules  == 'true' }}
       working-directory: ${{ github.action_path }}
-      env: 
+      env:
         INSTALL_FOLDER: 'modules'
+        # vc-build reads it as -GitHubToken; anonymous GitHub API calls hit the per-IP rate limit.
+        GITHUB_TOKEN: ${{ inputs.githubToken }}
       shell: pwsh
       run: |
         Write-Host "`e[33mInstall Modules step started."
@@ -83,9 +85,12 @@ runs:
         REQUIRED_MODULES_LIST_URL_INPUT: ${{ inputs.requiredModulesListUrl }}
         PLATFORM_IMAGE_INPUT: ${{ inputs.platformImage }}
         PLATFORM_DOCKER_TAG_INPUT: ${{ inputs.platformDockerTag }}
+        # vc-build reads it as -GitHubToken; anonymous GitHub API calls hit the per-IP rate limit.
+        GITHUB_TOKEN: ${{ inputs.githubToken }}
       run: |
         Write-Host "::group::Start Custom Module step started."
         ./scripts/common-packages-list.ps1 -customModuleId $env:CUSTOM_MODULE_ID_INPUT -customModuleUrl $env:CUSTOM_MODULE_URL_INPUT -requiredModulesListUrl "$env:REQUIRED_MODULES_LIST_URL_INPUT"
+        if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
         Write-Host "::endgroup::"
         $dockerFiles = "https://raw.githubusercontent.com/VirtoCommerce/vc-docker/feat/net10/linux/platform/Dockerfile;https://raw.githubusercontent.com/VirtoCommerce/vc-docker/master/linux/platform/wait-for-it.sh"
         Write-Host "`e[32mDownload Dockerfile and build image"

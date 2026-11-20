@@ -281,6 +281,8 @@ runs:
         PLATFORM_BASE_IMAGE: ${{ inputs.platformBaseImage }}
         PLATFORM_IMAGE: ${{ inputs.platformImage }}
         PLATFORM_DOCKER_TAG: ${{ inputs.platformDockerTag }}
+        # vc-build reads it as -GitHubToken; anonymous GitHub API calls hit the per-IP rate limit.
+        GITHUB_TOKEN: ${{ github.token }}
       run: |
         if ($env:CACHE_HIT -eq 'true' -and (Test-Path ./publish/VirtoCommerce.Platform.Web.dll)) {
           Write-Host "`e[32mCache hit: reusing ./publish, skipping vc-build install."
@@ -289,6 +291,7 @@ runs:
             Write-Host "Cached ./publish failed sanity check — falling back to a full install."
           }
           vc-build install --package-manifest-path ./packages.json --root ./publish --skip-dependency-solving
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
         }
         Write-Host "::group::Build platform docker image"
         docker build -f ./Dockerfile.platform --build-arg "BASE_IMAGE=$env:PLATFORM_BASE_IMAGE" -t "$($env:PLATFORM_IMAGE):$($env:PLATFORM_DOCKER_TAG)" .
@@ -301,6 +304,8 @@ runs:
         INSTALL_FOLDER: 'modules'
         PLATFORM_IMAGE: ${{ inputs.platformImage }}
         PLATFORM_DOCKER_TAG: ${{ inputs.platformDockerTag }}
+        # vc-build reads it as -GitHubToken; anonymous GitHub API calls hit the per-IP rate limit.
+        GITHUB_TOKEN: ${{ github.token }}
       shell: pwsh
       run: |
         Write-Host "`e[33mInstall Modules step started."
@@ -316,7 +321,9 @@ runs:
         New-Item -Path "./$env:INSTALL_FOLDER/modules" -ItemType "directory" -Force | Out-Null
         Push-Location ./$env:INSTALL_FOLDER
         vc-build install -Edge -skip InstallPlatform
+        if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
         vc-build install -module VirtoCommerce.Quote VirtoCommerce.XPickup VirtoCommerce.MarketingExperienceApi VirtoCommerce.Pages VirtoCommerce.WhiteLabeling
+        if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
         Write-Host "`e[32mWaiting for platform docker image pull (started earlier, in the background)"
         Receive-Job -Job $pullJob -Wait | Write-Host
         if ($pullJob.State -ne 'Completed') {
@@ -374,6 +381,8 @@ runs:
         PLATFORM_BASE_IMAGE: ${{ inputs.platformBaseImage }}
         PLATFORM_IMAGE: ${{ inputs.platformImage }}
         PLATFORM_DOCKER_TAG: ${{ inputs.platformDockerTag }}
+        # vc-build reads it as -GitHubToken; anonymous GitHub API calls hit the per-IP rate limit.
+        GITHUB_TOKEN: ${{ github.token }}
       run: |
         if ($env:CACHE_HIT -eq 'true' -and (Test-Path ./publish/VirtoCommerce.Platform.Web.dll)) {
           Write-Host "`e[32mCache hit: reusing ./publish, skipping vc-build install."
@@ -384,6 +393,7 @@ runs:
           New-Item -Path ./publish/app_data/modules -ItemType Directory -Force | Out-Null
           New-Item -Path ./publish/modules -ItemType Directory -Force | Out-Null
           vc-build install --package-manifest-path ./new-packages.json --probing-path ./publish/app_data/modules --discovery-path ./publish/modules --root ./publish --skip-dependency-solving
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
         }
         Write-Host "::group::Build platform docker image"
         docker build -f ./Dockerfile.platform --build-arg "BASE_IMAGE=$env:PLATFORM_BASE_IMAGE" -t "$($env:PLATFORM_IMAGE):$($env:PLATFORM_DOCKER_TAG)" .
