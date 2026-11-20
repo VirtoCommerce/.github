@@ -39,12 +39,14 @@ function Watch-Url-Up {
             if ($attempt % $printLogAttempt -eq 0)
             {
                 Write-Host "Current $ContainerId container log is:"
-                docker logs $ContainerId
+                # To the host, not the pipeline: anything left in the pipeline becomes part of
+                # the return value, and a non-empty array reads as $true in the caller.
+                docker logs $ContainerId 2>&1 | Write-Host
             }
             if ($attempt % $restartContainerAttempt -eq 0)
             {
                 Write-Host "`e[31mForce to restart container $ContainerId"
-                docker restart $ContainerId
+                docker restart $ContainerId 2>&1 | Write-Host
             }
             if ($maxRepeat -gt $attempt) {
                 Start-Sleep -s $RetrySeconds

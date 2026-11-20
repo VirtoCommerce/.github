@@ -289,6 +289,7 @@ runs:
             Write-Host "Cached ./publish failed sanity check — falling back to a full install."
           }
           vc-build install --package-manifest-path ./packages.json --root ./publish --skip-dependency-solving
+          if ($LASTEXITCODE -ne 0) { Write-Host "::error::vc-build install failed (exit code $LASTEXITCODE)"; exit $LASTEXITCODE }
         }
         Write-Host "::group::Build platform docker image"
         docker build -f ./Dockerfile.platform --build-arg "BASE_IMAGE=$env:PLATFORM_BASE_IMAGE" -t "$($env:PLATFORM_IMAGE):$($env:PLATFORM_DOCKER_TAG)" .
@@ -316,11 +317,15 @@ runs:
         New-Item -Path "./$env:INSTALL_FOLDER/modules" -ItemType "directory" -Force | Out-Null
         Push-Location ./$env:INSTALL_FOLDER
         vc-build install -Edge -skip InstallPlatform
+        if ($LASTEXITCODE -ne 0) { Write-Host "::error::vc-build install failed (exit code $LASTEXITCODE)"; exit $LASTEXITCODE }
         vc-build install -module VirtoCommerce.Quote VirtoCommerce.XPickup VirtoCommerce.MarketingExperienceApi VirtoCommerce.Pages VirtoCommerce.WhiteLabeling
+        if ($LASTEXITCODE -ne 0) { Write-Host "::error::vc-build install failed (exit code $LASTEXITCODE)"; exit $LASTEXITCODE }
         Write-Host "`e[32mWaiting for platform docker image pull (started earlier, in the background)"
-        Receive-Job -Job $pullJob -Wait | Write-Host
+        # -ErrorAction Continue: print the job's error and fall through to the annotated check below.
+        Receive-Job -Job $pullJob -Wait -ErrorAction Continue | Write-Host
         if ($pullJob.State -ne 'Completed') {
-          throw "docker pull ghcr.io/virtocommerce/platform:$env:PLATFORM_DOCKER_TAG failed (job state: $($pullJob.State))"
+          Write-Host "::error::docker pull ghcr.io/virtocommerce/platform:$env:PLATFORM_DOCKER_TAG failed (job state: $($pullJob.State))"
+          exit 1
         }
         docker tag "ghcr.io/virtocommerce/platform:$env:PLATFORM_DOCKER_TAG" "$($env:PLATFORM_IMAGE):local-latest"
         Write-Host "`e[32mPlatform docker image ghcr.io/virtocommerce/platform:$env:PLATFORM_DOCKER_TAG tagged as $($env:PLATFORM_IMAGE):local-latest"
@@ -384,6 +389,7 @@ runs:
           New-Item -Path ./publish/app_data/modules -ItemType Directory -Force | Out-Null
           New-Item -Path ./publish/modules -ItemType Directory -Force | Out-Null
           vc-build install --package-manifest-path ./new-packages.json --probing-path ./publish/app_data/modules --discovery-path ./publish/modules --root ./publish --skip-dependency-solving
+          if ($LASTEXITCODE -ne 0) { Write-Host "::error::vc-build install failed (exit code $LASTEXITCODE)"; exit $LASTEXITCODE }
         }
         Write-Host "::group::Build platform docker image"
         docker build -f ./Dockerfile.platform --build-arg "BASE_IMAGE=$env:PLATFORM_BASE_IMAGE" -t "$($env:PLATFORM_IMAGE):$($env:PLATFORM_DOCKER_TAG)" .
@@ -418,13 +424,20 @@ runs:
                 Write-Host "Downloaded '$fileName' successfully"
             }
             catch {
-                Write-Error "Failed to download $file. Error: $_"
+                Write-Host "::error::Failed to download $frontendZipUrl. Error: $_"
                 exit 1
             }
         mkdir -p ./frontend
         Write-Host "::group::Unzip frontend zip"
         unzip -o $fileName -d ./frontend
+        $unzipExitCode = $LASTEXITCODE
         Write-Host "::endgroup::"
+        # Otherwise docker build below packs an empty or partial ./frontend and succeeds.
+        # unzip exits 1 on warnings with all files extracted; 2 and above are errors.
+        if ($unzipExitCode -gt 1) {
+          Write-Host "::error::Failed to unzip the frontend archive $fileName (exit code $unzipExitCode)"
+          exit $unzipExitCode
+        }
         Write-Host "::group::Build frontend docker image"
         docker build -f ./nginx/Dockerfile -t "$($env:FRONTEND_IMAGE_INPUT):$($env:FRONTEND_DOCKER_TAG_INPUT)" .
         Write-Host "::endgroup::"

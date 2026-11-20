@@ -547,5 +547,11 @@ vc-build install --package-manifest-path ./new-packages.json `
     --discovery-path ./publish/modules `
     --root ./publish `
     --skip-dependency-solving
+# Fail here: the caller runs docker build next, which resets $LASTEXITCODE, so a failed
+# install would otherwise go on to an image without the platform and a 15-minute wait.
+if ($LASTEXITCODE -ne 0) {
+    Write-Host "::error::vc-build install failed (exit code $LASTEXITCODE)"
+    exit $LASTEXITCODE
+}
 
 Get-ChildItem * -Include *packages.json -Recurse | Remove-Item -Verbose
