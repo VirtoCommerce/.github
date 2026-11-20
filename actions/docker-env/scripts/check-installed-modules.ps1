@@ -31,6 +31,10 @@ function Get-AuthToken {
 # WaitSeconds 0: the caller already confirmed vc-platform-web is running via
 # InspectContainerStatus, so no need to blind-sleep before the first HTTP check.
 $platformIsUp = (Watch-Url-Up -ApiUrl $ApiUrl -TimeoutMinutes 15 -RetrySeconds 5 -WaitSeconds 0 -ContainerId $ContainerId)
+if (-not $platformIsUp) {
+    Write-Host "::error::Platform $ApiUrl did not respond in 15 min"
+    exit 1
+}
 
 if ($platformIsUp) {
     $authToken = (Get-AuthToken $appAuthUrl $Username $Password)[1]

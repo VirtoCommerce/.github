@@ -550,7 +550,7 @@ vc-build install --package-manifest-path ./new-packages.json `
 # Fail here: the caller runs docker build next, which resets $LASTEXITCODE, so a failed
 # install would otherwise go on to an image without the platform and a 15-minute wait.
 if ($LASTEXITCODE -ne 0) {
-    Write-Error "vc-build install failed with exit code $LASTEXITCODE" -ErrorAction Continue
+    Write-Host "::error::vc-build install failed (exit code $LASTEXITCODE)"
     exit $LASTEXITCODE
 }
 

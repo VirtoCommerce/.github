@@ -33,4 +33,10 @@ function InspectContainerStatus {
         $attempt ++
 
     } until ($status -eq "running" -or $maxRepeat -lt $attempt)
+
+    # Without this the caller goes on to wait for the platform URL for another 15 minutes.
+    if ($status -ne "running") {
+        Write-Host "::error::Container $ContainerId is not running after $TimeoutMinutes min (status: $(if ($status) { $status } else { 'not found' }))"
+        exit 1
+    }
 }

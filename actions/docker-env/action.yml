@@ -74,6 +74,7 @@ runs:
         New-Item -Path "./${{ env.INSTALL_FOLDER}}/modules" -ItemType "directory" -Force | Out-Null
         Push-Location ./${{ env.INSTALL_FOLDER}}
         vc-build install -Edge -skip InstallPlatform
+        if ($LASTEXITCODE -ne 0) { Write-Host "::error::vc-build install failed (exit code $LASTEXITCODE)"; exit $LASTEXITCODE }
 
     - name: Install Custom Module
       if: ${{ inputs.installCustomModule == 'true' }}
@@ -90,6 +91,7 @@ runs:
       run: |
         Write-Host "::group::Start Custom Module step started."
         ./scripts/common-packages-list.ps1 -customModuleId $env:CUSTOM_MODULE_ID_INPUT -customModuleUrl $env:CUSTOM_MODULE_URL_INPUT -requiredModulesListUrl "$env:REQUIRED_MODULES_LIST_URL_INPUT"
+        # The script has already written the ::error:: annotation.
         if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
         Write-Host "::endgroup::"
         $dockerFiles = "https://raw.githubusercontent.com/VirtoCommerce/vc-docker/feat/net10/linux/platform/Dockerfile;https://raw.githubusercontent.com/VirtoCommerce/vc-docker/master/linux/platform/wait-for-it.sh"
@@ -102,7 +104,7 @@ runs:
                 Write-Host "Downloaded '$fileName' successfully"
             }
             catch {
-                Write-Error "Failed to download $file. Error: $_"
+                Write-Host "::error::Failed to download $file. Error: $_"
                 exit 1
             }
         }
@@ -167,11 +169,21 @@ runs:
         if ( $env:VALIDATE_SWAGGER_INPUT -eq 'true' ){
           Write-Host "::group::Start swagger validator"
           docker run -d -p 85:8080 swaggerapi/swagger-validator-v2
+          $runExitCode = $LASTEXITCODE
           Write-Host "::endgroup::"
+          if ($runExitCode -ne 0) {
+            Write-Host "::error::Failed to start the swagger validator container (exit code $runExitCode)"
+            exit $runExitCode
+          }
         }
         Write-Host "::group::Start containers"
         docker compose --project-name virtocommerce $composeFiles up -d
+        $upExitCode = $LASTEXITCODE
         Write-Host "::endgroup::"
+        if ($upExitCode -ne 0) {
+          Write-Host "::error::docker compose up failed (exit code $upExitCode)"
+          exit $upExitCode
+        }
         InspectContainerStatus -ContainerId $platformContainer -TimeoutMinutes 5 -RetrySeconds 5 -WaitSeconds 0
         Write-Host "`e[32mContainers started."
         
@@ -203,6 +215,10 @@ runs:
         $platformContainer = "virtocommerce-vc-platform-web-1"
         . "${{ github.action_path }}/scripts/watch-url-up.ps1"
         $platformIsUp = (Watch-Url-Up -ApiUrl http://localhost:8090 -TimeoutMinutes 15 -RetrySeconds 5 -WaitSeconds 0 -ContainerId $platformContainer)
+        if (-not $platformIsUp) {
+          Write-Host "::error::Platform http://localhost:8090 did not respond in 15 min"
+          exit 1
+        }
         if ($platformIsUp) {
           # Validator was started during "Start containers"; poll briefly instead of a
           # fixed sleep. -SkipHttpErrorCheck: any HTTP response (even an error) = listening.
