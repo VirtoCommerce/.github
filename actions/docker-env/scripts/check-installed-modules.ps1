@@ -43,7 +43,7 @@ if ($platformIsUp) {
     $modules = Invoke-RestMethod $checkModulesUrl -Method Get -Headers $headers -SkipCertificateCheck -MaximumRetryCount 5 -RetryIntervalSec 5
     $installedModules = 0
     if ($modules.Length -le 0) {
-        Write-Output "No module's info returned"
+        Write-Host "::error::No module info returned by $checkModulesUrl"
         exit 1
     }
     Foreach ($module in $modules) {
@@ -52,13 +52,13 @@ if ($platformIsUp) {
             $installedModules++
         }
         if ($module.validationErrors.Length -gt 0) {
-            Write-Output $module.id
-            Write-Output $module.validationErrors
+            Write-Host "::error::Module $($module.id) has validation errors: $($module.validationErrors -join '; ')"
             exit 1
         }
     }
     Write-Output "Modules installed: $installedModules"
     if ($installedModules -lt 23) {
+        Write-Host "::error::Only $installedModules modules installed, expected at least 23"
         exit 1
     }
 }

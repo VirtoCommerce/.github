@@ -321,9 +321,11 @@ runs:
         vc-build install -module VirtoCommerce.Quote VirtoCommerce.XPickup VirtoCommerce.MarketingExperienceApi VirtoCommerce.Pages VirtoCommerce.WhiteLabeling
         if ($LASTEXITCODE -ne 0) { Write-Host "::error::vc-build install failed (exit code $LASTEXITCODE)"; exit $LASTEXITCODE }
         Write-Host "`e[32mWaiting for platform docker image pull (started earlier, in the background)"
-        Receive-Job -Job $pullJob -Wait | Write-Host
+        # -ErrorAction Continue: print the job's error and fall through to the annotated check below.
+        Receive-Job -Job $pullJob -Wait -ErrorAction Continue | Write-Host
         if ($pullJob.State -ne 'Completed') {
-          throw "docker pull ghcr.io/virtocommerce/platform:$env:PLATFORM_DOCKER_TAG failed (job state: $($pullJob.State))"
+          Write-Host "::error::docker pull ghcr.io/virtocommerce/platform:$env:PLATFORM_DOCKER_TAG failed (job state: $($pullJob.State))"
+          exit 1
         }
         docker tag "ghcr.io/virtocommerce/platform:$env:PLATFORM_DOCKER_TAG" "$($env:PLATFORM_IMAGE):local-latest"
         Write-Host "`e[32mPlatform docker image ghcr.io/virtocommerce/platform:$env:PLATFORM_DOCKER_TAG tagged as $($env:PLATFORM_IMAGE):local-latest"
