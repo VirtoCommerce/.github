@@ -1,4 +1,5 @@
-# Pre-baked base for docker-env-full's Dockerfile-build branches. Mirrors vc-docker's
+# Pre-baked base for the platform image that docker-env-full's Dockerfile-build branches and
+# docker-env's custom-module branch build with Dockerfile.platform. Mirrors vc-docker's
 # platform Dockerfile static prefix (FROM image, wait-for-it.sh, wkhtmltopdf apt-get) so
 # per-run builds only do `COPY publish` + find/cp, skipping the ~20s apt-get every time.
 #
