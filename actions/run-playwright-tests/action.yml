@@ -26,6 +26,10 @@ inputs:
     description: "Node.js version"
     required: false
     default: "22"
+  skipPlatformDefects:
+    description: "Leave out the tests tagged @platform-defect, which fail because of a platform defect that a ticket already tracks, by writing SKIP_PLATFORM_DEFECTS=true into the test repo's .env. The test repository's own CI sets it to false to keep the defects visible"
+    required: false
+    default: "true"
   skipDocCountVerification:
     description: "Comma-separated document types whose post-reindex count check should be skipped (reindex still runs). Use when the seed dataset has 0 records for a type. Any of: Member, Product, Category, CustomerOrder, PickupLocation. Example: 'PickupLocation'."
     required: false
@@ -109,6 +113,7 @@ runs:
         ADMIN_USERNAME: ${{ inputs.adminUsername }}
         ADMIN_PASSWORD_INPUT: ${{ inputs.adminPassword }}
         ENV_FILE: ${{ steps.suite.outputs.envFile }}
+        SKIP_PLATFORM_DEFECTS: ${{ inputs.skipPlatformDefects }}
       # ADMIN_PASSWORD goes to GITHUB_ENV (masked) for the later seed/test steps.
       run: | # zizmor: ignore[github-env]
         echo "$SECRET_ENV_FILE" > "$ENV_FILE"
@@ -127,6 +132,7 @@ runs:
         set_env_var BACKEND_BASE_URL "$BACKEND_BASE_URL"
         set_env_var FRONTEND_BASE_URL "$FRONTEND_BASE_URL"
         set_env_var ADMIN_USERNAME "$ADMIN_USERNAME"
+        set_env_var SKIP_PLATFORM_DEFECTS "$SKIP_PLATFORM_DEFECTS"
         # Resolve ADMIN_PASSWORD precedence: input > value in .env (from SECRET_ENV_FILE) > default
         pw="$ADMIN_PASSWORD_INPUT"
         # || true: under pipefail a grep with no match would fail the step before the default below

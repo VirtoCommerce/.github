@@ -89,6 +89,11 @@ on:
         required: false
         type: string
         default: '[]'
+      skipPlatformDefects:
+        description: 'Leave out the tests tagged @platform-defect, which fail because of a platform defect that a ticket already tracks, by writing SKIP_PLATFORM_DEFECTS=true into the test repo''s .env. The test repository''s own CI sets it to false to keep the defects visible'
+        required: false
+        type: string
+        default: 'true'
       skipDocCountVerification:
         description: 'Comma-separated document types whose post-reindex count check should be skipped (reindex still runs). Use when the seed dataset has 0 records for a type. Any of: Member, Product, Category, CustomerOrder, PickupLocation. Example: ''PickupLocation''.'
         required: false
@@ -342,6 +347,7 @@ jobs:
         workers: ${{ inputs.workers }}
         artifactSuffix: -${{ matrix.databaseProvider }}-${{ matrix.searchProvider }}
         skipDocCountVerification: ${{ inputs.skipDocCountVerification }}
+        skipPlatformDefects: ${{ inputs.skipPlatformDefects }}
 
   # Branch protection needs one check name, and the matrix job's own name carries the database
   # and the engine, both of which now vary per caller. always() is required: without it a

@@ -70,6 +70,12 @@ The report must be served over HTTP: unzip the artifact and run `npx allure open
     description: 'Test secret environment file content'
     required: true
 
+### skipPlatformDefects:
+
+    description: 'Leave out the tests tagged @platform-defect, which fail because of a platform defect that a ticket already tracks, by writing SKIP_PLATFORM_DEFECTS=true into the test repo''s .env. The test repository''s own CI sets it to false to keep the defects visible'
+    required: false
+    default: 'true'
+
 ### testSuites:
 
     description: 'Comma-separated list of suites to run, in order. Any subset of: graphql, restapi, e2e (= e2e-frontend + e2e-backend), e2e-frontend, e2e-backend'
