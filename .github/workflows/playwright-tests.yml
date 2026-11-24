@@ -323,7 +323,7 @@ jobs:
         appInsightsInstrumentationKey: ${{ secrets.appInsightsInstrumentationKey }}
 
     - name: Run Playwright Auto Tests
-      uses: VirtoCommerce/.github/actions/run-playwright-tests@v3.1000.11
+      uses: VirtoCommerce/.github/actions/run-playwright-tests@vcst-6748-suite-dir
       with:
         # docker-env-full sets the admin password from testSecretEnvFile only, and the action
         # reads it from there too, so the password is not an input of this workflow.
