@@ -67,6 +67,7 @@ services:
       - VirtoCommerce:ApplicationInsights:RoleName=${ROLE_NAME}
       - Assets:FileSystem:PublicUrl=http://localhost:${DOCKER_PLATFORM_PORT:-8090}/assets/
       - Content:FileSystem:PublicUrl=http://localhost:${DOCKER_PLATFORM_PORT:-8090}/cms-content/
+      - Content:StatisticEnabled=true
       - Search:PickupLocationFullTextSearchEnabled=true
       - IdentityOptions:User:MaxPasswordAge=0
       - Notifications:DefaultSender=virto.start@virtoway.com
