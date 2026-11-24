@@ -114,6 +114,11 @@ on:
         required: false
         type: string
         default: 'dev'
+      vctestingSuiteDir:
+        description: 'Directory of the test suite in the test repository, with its own playwright.config.ts and .env. Used when that config exists; otherwise the suite is the repository root (the layout before the framework split)'
+        required: false
+        type: string
+        default: 'virtocommerce'
       workers:
         description: 'Optional Playwright --workers value (number or percentage, e.g. ''4'' or ''50%''). Leave empty for the test repo''s default.'
         required: false
@@ -333,6 +338,7 @@ jobs:
         vctestingPath: ${{ inputs.vctestingPath }}
         vctestingRepo: ${{ inputs.vctestingRepo }}
         vctestingRepoBranch: ${{ inputs.vctestingRepoBranch }}
+        vctestingSuiteDir: ${{ inputs.vctestingSuiteDir }}
         workers: ${{ inputs.workers }}
         artifactSuffix: -${{ matrix.databaseProvider }}-${{ matrix.searchProvider }}
         skipDocCountVerification: ${{ inputs.skipDocCountVerification }}
