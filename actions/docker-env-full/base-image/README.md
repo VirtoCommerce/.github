@@ -20,37 +20,44 @@ robust to own a copy of it than to regex-patch someone else's file on every buil
 
 ## When to rebuild
 
-Only when the `.NET` base image version (`mcr.microsoft.com/dotnet/aspnet:<version>`) or
-the `wkhtmltopdf` version needs to change — both rare. Keep this in sync with whatever
-`vc-docker`'s platform Dockerfile currently uses for those two things. If `vc-docker` ever
-changes the boilerplate part (the `find`/`cp` logic, `WORKDIR`, etc.), update
-`docker-env-full/Dockerfile.platform` to match — it's not automatically synced.
+`.github/workflows/platform-base-image.yml` rebuilds and publishes the image:
 
-## Build and publish
+- on the 1st of every month, to pick up the current `aspnet:10.0` patch and Ubuntu security
+  updates (`apt-get upgrade`);
+- on every push to `main` that changes this directory;
+- by hand (`workflow_dispatch`); with `publish` off it only builds and smoke-tests.
+
+Each publish pushes `10.0-wkhtmltopdf` and a dated tag (`10.0-wkhtmltopdf-<yyyymmdd>-<run>`),
+then opens a pull request that points both `platformBaseImage` defaults
+(`docker-env/action.yml`, `docker-env-full/action.yml`, and the `docker-env` README) at the
+new digest. The defaults are pinned by digest, so a push to the floating tag does not change
+any module's CI: a new base image reaches modules only through that PR and the next release.
+Run module CI on a module with the PR branch before merging it.
+
+The image records what it was built from: `org.opencontainers.image.base.name` (the
+`aspnet:10.0` digest), `org.opencontainers.image.revision` (this repo's commit) and
+`com.virtocommerce.vc-docker.revision` (the vc-docker commit `wait-for-it.sh` came from).
+
+If `vc-docker` changes the boilerplate part of its platform Dockerfile (the `find`/`cp`
+logic, `WORKDIR`, etc.), update `docker-env-full/Dockerfile.platform` to match — it's not
+automatically synced.
+
+Publishing needs the `platform-base` package to grant this repository Write access
+(package settings > Manage Actions access): the package was first pushed by hand and is not
+linked to a repository.
+
+## Manual build
 
 `wait-for-it.sh` is not committed here (see `actions/.gitignore`): fetch it from
-`vc-docker`'s `feat/net10` branch right before the build, so the image gets the copy
-`vc-docker` currently ships. Fetch it by commit, not by branch name, and record that commit
-in the image label, so `docker inspect` shows which copy is inside.
+`vc-docker`'s `feat/net10` branch by commit, and record that commit in the image label.
+Without `--build-arg ASPNET_IMAGE=...` the build uses the `aspnet:10.0` digest pinned in the
+Dockerfile.
 
 ```sh
 cd docker-env-full/base-image
 VC_DOCKER_SHA=$(gh api repos/VirtoCommerce/vc-docker/commits/feat/net10 --jq .sha)
 curl -fsSLo wait-for-it.sh "https://raw.githubusercontent.com/VirtoCommerce/vc-docker/$VC_DOCKER_SHA/linux/platform/wait-for-it.sh"
 docker build --label "com.virtocommerce.vc-docker.revision=$VC_DOCKER_SHA" -t ghcr.io/virtocommerce/platform-base:10.0-wkhtmltopdf .
-docker push ghcr.io/virtocommerce/platform-base:10.0-wkhtmltopdf
-docker inspect --format='{{index .RepoDigests 0}}' ghcr.io/virtocommerce/platform-base:10.0-wkhtmltopdf
 ```
 
-Requires push access to the `VirtoCommerce` GitHub Container Registry namespace. This is a
-manual/occasional step for now, not wired into any CI workflow — automating it (e.g. a
-scheduled or manually-triggered `workflow_dispatch` in this repo) is a reasonable follow-up
-once this approach is confirmed to actually help on a real run.
-Local push from developer's machine can use gh token: `echo $(gh auth token) | docker login ghcr.io -u <your-github-username> --password-stdin`, then change package visibility to `public` at https://github.com/orgs/VirtoCommerce/packages/container/package/platform-base.
-
-After pushing, update both `platformBaseImage` defaults (`docker-env/action.yml`,
-`docker-env-full/action.yml`, and the `docker-env` README) to the digest printed above
-(`ghcr.io/virtocommerce/platform-base:10.0-wkhtmltopdf@sha256:...`) in a pull request. The
-floating tag alone can be overwritten by a later push, which would change every module's CI
-at once without review or release; with the digest, a new base image reaches modules only
-through that PR and the next release.
+Prefer the workflow for publishing: it smoke-tests the image and opens the digest PR.

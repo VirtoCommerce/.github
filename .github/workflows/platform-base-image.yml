@@ -1,0 +1,201 @@
+# https://virtocommerce.atlassian.net/browse/VCST-6969
+name: Platform base image
+
+# Rebuilds ghcr.io/virtocommerce/platform-base (actions/docker-env-full/base-image/), the base
+# of the platform image that docker-env and docker-env-full build for module CI. The rebuild
+# picks up the current aspnet:10.0 patch and Ubuntu security updates. Both actions pin the
+# image by digest, so a new build reaches modules only through the PR this workflow opens
+# and the next release of this repo.
+#
+# Prerequisite for publishing: the platform-base package must grant this repository Write
+# access (package settings > Manage Actions access); it was first pushed by hand and is not
+# linked to a repository.
+
+on:
+  schedule:
+    - cron: '0 6 1 * *' # 1st of the month, 06:00 UTC
+  push:
+    branches: [main]
+    paths:
+      - 'actions/docker-env-full/base-image/**'
+  workflow_dispatch:
+    inputs:
+      publish:
+        description: 'Push the image and open the digest PR (off: build and smoke-test only)'
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+concurrency:
+  group: platform-base-image
+  cancel-in-progress: false
+
+env:
+  IMAGE: ghcr.io/virtocommerce/platform-base
+  TAG: 10.0-wkhtmltopdf
+  ASPNET: mcr.microsoft.com/dotnet/aspnet:10.0
+  # vc-docker's platform image is built from this branch; wait-for-it.sh comes from it.
+  VC_DOCKER_BRANCH: feat/net10
+
+jobs:
+  build:
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+      packages: write
+    outputs:
+      digest: ${{ steps.push.outputs.digest }}
+      dated-tag: ${{ steps.src.outputs.dated-tag }}
+      aspnet: ${{ steps.src.outputs.aspnet }}
+      vc-docker-sha: ${{ steps.src.outputs.vc-docker-sha }}
+      runtime: ${{ steps.smoke.outputs.runtime }}
+    env:
+      PUBLISH: ${{ github.event_name != 'workflow_dispatch' || inputs.publish }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Resolve sources
+        id: src
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          # wait-for-it.sh is gitignored here: take vc-docker's copy, by commit, so the label
+          # below says exactly which one is inside.
+          vc_docker_sha=$(gh api "repos/VirtoCommerce/vc-docker/commits/$VC_DOCKER_BRANCH" --jq .sha)
+          curl -fsSL -o actions/docker-env-full/base-image/wait-for-it.sh \
+            "https://raw.githubusercontent.com/VirtoCommerce/vc-docker/$vc_docker_sha/linux/platform/wait-for-it.sh"
+          # Current patch of aspnet:10.0, recorded by digest so the build is reproducible.
+          docker pull --quiet "$ASPNET"
+          aspnet=$(docker inspect --format '{{index .RepoDigests 0}}' "$ASPNET")
+          dated_tag="$TAG-$(date -u +%Y%m%d)-$GITHUB_RUN_NUMBER"
+          {
+            echo "vc-docker-sha=$vc_docker_sha"
+            echo "aspnet=$aspnet"
+            echo "dated-tag=$dated_tag"
+          } >> "$GITHUB_OUTPUT"
+          echo "vc-docker $VC_DOCKER_BRANCH: $vc_docker_sha"
+          echo "aspnet: $aspnet"
+
+      - name: Build
+        env:
+          ASPNET_IMAGE: ${{ steps.src.outputs.aspnet }}
+          VC_DOCKER_SHA: ${{ steps.src.outputs.vc-docker-sha }}
+          DATED_TAG: ${{ steps.src.outputs.dated-tag }}
+        run: |
+          docker build \
+            --build-arg "ASPNET_IMAGE=$ASPNET_IMAGE" \
+            --label "org.opencontainers.image.source=https://github.com/$GITHUB_REPOSITORY" \
+            --label "org.opencontainers.image.revision=$GITHUB_SHA" \
+            --label "org.opencontainers.image.base.name=$ASPNET_IMAGE" \
+            --label "com.virtocommerce.vc-docker.revision=$VC_DOCKER_SHA" \
+            --tag "$IMAGE:$TAG" \
+            --tag "$IMAGE:$DATED_TAG" \
+            actions/docker-env-full/base-image
+
+      - name: Smoke test
+        id: smoke
+        run: |
+          # What Dockerfile.platform and the compose files rely on: wkhtmltopdf for PDF
+          # generation, an executable /wait-for-it.sh as the entrypoint, the ASP.NET runtime.
+          docker run --rm --entrypoint sh "$IMAGE:$TAG" -c \
+            'wkhtmltopdf --version && test -x /wait-for-it.sh && dotnet --list-runtimes'
+          runtime=$(docker run --rm --entrypoint sh "$IMAGE:$TAG" -c \
+            'dotnet --list-runtimes | grep Microsoft.AspNetCore.App | cut -d" " -f2')
+          echo "runtime=$runtime" >> "$GITHUB_OUTPUT"
+          echo "ASP.NET Core runtime: $runtime"
+
+      - name: Log in to ghcr.io
+        if: env.PUBLISH == 'true'
+        uses: docker/login-action@8aa5831fb8d48d8f76594c7ddde61ae58019f550 # v4.8.0
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ github.token }}
+
+      - name: Push
+        id: push
+        if: env.PUBLISH == 'true'
+        env:
+          DATED_TAG: ${{ steps.src.outputs.dated-tag }}
+        run: |
+          docker push --quiet "$IMAGE:$DATED_TAG"
+          docker push --quiet "$IMAGE:$TAG"
+          digest=$(docker inspect --format '{{index .RepoDigests 0}}' "$IMAGE:$DATED_TAG" | cut -d@ -f2)
+          echo "digest=$digest" >> "$GITHUB_OUTPUT"
+          echo "Pushed $IMAGE:$DATED_TAG and :$TAG, digest $digest"
+
+      - name: Summary
+        if: always()
+        env:
+          ASPNET_IMAGE: ${{ steps.src.outputs.aspnet }}
+          VC_DOCKER_SHA: ${{ steps.src.outputs.vc-docker-sha }}
+          DATED_TAG: ${{ steps.src.outputs.dated-tag }}
+          RUNTIME: ${{ steps.smoke.outputs.runtime }}
+          DIGEST: ${{ steps.push.outputs.digest }}
+        run: |
+          {
+            echo "### Platform base image"
+            echo "- Base: \`$ASPNET_IMAGE\`"
+            echo "- ASP.NET Core runtime: \`$RUNTIME\`"
+            echo "- wait-for-it.sh from vc-docker \`$VC_DOCKER_SHA\`"
+            if [ -n "$DIGEST" ]; then
+              echo "- Pushed \`$IMAGE:$DATED_TAG\` and \`:$TAG\`: \`$DIGEST\`"
+            else
+              echo "- Not pushed (publish is off)"
+            fi
+          } >> "$GITHUB_STEP_SUMMARY"
+
+  digest-pr:
+    needs: build
+    if: needs.build.outputs.digest != ''
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Point platformBaseImage defaults at the new digest
+        env:
+          DIGEST: ${{ needs.build.outputs.digest }}
+        run: |
+          pattern="platform-base:$TAG@sha256:[0-9a-f]{64}"
+          files=$(git grep -lE "$pattern" -- actions)
+          if [ -z "$files" ]; then
+            echo "::error::No platformBaseImage default pinned to platform-base:$TAG@sha256 found under actions/"
+            exit 1
+          fi
+          for f in $files; do
+            sed -i -E "s#$pattern#platform-base:$TAG@$DIGEST#g" "$f"
+          done
+          git diff --stat
+
+      - name: Open PR
+        uses: peter-evans/create-pull-request@3ffccacd46053766916f087ce41d627c0b8cf2d1 # v8.1.3
+        with:
+          # REPO_TOKEN, not GITHUB_TOKEN: a PR opened with GITHUB_TOKEN does not run this
+          # repo's checks.
+          token: ${{ secrets.REPO_TOKEN }}
+          commit-message: "ci: Platform base image ${{ needs.build.outputs.dated-tag }}"
+          title: "ci: Platform base image ${{ needs.build.outputs.dated-tag }}"
+          branch: ci/platform-base-image
+          delete-branch: true
+          reviewers: AndrewEhlo
+          body: |
+            Points the `platformBaseImage` defaults of `docker-env` and `docker-env-full` at
+            the base image rebuilt by run ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}.
+
+            - Image: `ghcr.io/virtocommerce/platform-base:${{ needs.build.outputs.dated-tag }}`
+            - Digest: `${{ needs.build.outputs.digest }}`
+            - Base: `${{ needs.build.outputs.aspnet }}`
+            - ASP.NET Core runtime: `${{ needs.build.outputs.runtime }}`
+            - wait-for-it.sh from vc-docker `${{ needs.build.outputs.vc-docker-sha }}`
+
+            The image passed the smoke test (wkhtmltopdf, `/wait-for-it.sh`, ASP.NET runtime).
+            Before merging, run module CI on a module with this branch (the test-workflows
+            skill); modules get the new image with the next release of this repo.
