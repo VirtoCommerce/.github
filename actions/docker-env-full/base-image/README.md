@@ -30,12 +30,14 @@ changes the boilerplate part (the `find`/`cp` logic, `WORKDIR`, etc.), update
 
 `wait-for-it.sh` is not committed here (see `actions/.gitignore`): fetch it from
 `vc-docker`'s `feat/net10` branch right before the build, so the image gets the copy
-`vc-docker` currently ships.
+`vc-docker` currently ships. Fetch it by commit, not by branch name, and record that commit
+in the image label, so `docker inspect` shows which copy is inside.
 
 ```sh
 cd docker-env-full/base-image
-curl -fsSLo wait-for-it.sh https://raw.githubusercontent.com/VirtoCommerce/vc-docker/feat/net10/linux/platform/wait-for-it.sh
-docker build -t ghcr.io/virtocommerce/platform-base:10.0-wkhtmltopdf .
+VC_DOCKER_SHA=$(gh api repos/VirtoCommerce/vc-docker/commits/feat/net10 --jq .sha)
+curl -fsSLo wait-for-it.sh "https://raw.githubusercontent.com/VirtoCommerce/vc-docker/$VC_DOCKER_SHA/linux/platform/wait-for-it.sh"
+docker build --label "com.virtocommerce.vc-docker.revision=$VC_DOCKER_SHA" -t ghcr.io/virtocommerce/platform-base:10.0-wkhtmltopdf .
 docker push ghcr.io/virtocommerce/platform-base:10.0-wkhtmltopdf
 docker inspect --format='{{index .RepoDigests 0}}' ghcr.io/virtocommerce/platform-base:10.0-wkhtmltopdf
 ```
@@ -46,7 +48,9 @@ scheduled or manually-triggered `workflow_dispatch` in this repo) is a reasonabl
 once this approach is confirmed to actually help on a real run.
 Local push from developer's machine can use gh token: `echo $(gh auth token) | docker login ghcr.io -u <your-github-username> --password-stdin`, then change package visibility to `public` at https://github.com/orgs/VirtoCommerce/packages/container/package/platform-base.
 
-After pushing, update every `platformBaseImage` default/usage to the digest printed above
-(`ghcr.io/virtocommerce/platform-base@sha256:...`), not the floating `10.0-wkhtmltopdf` tag —
-the tag can be overwritten by a later push, so consumers should pin to the digest for a
-reproducible build.
+After pushing, update both `platformBaseImage` defaults (`docker-env/action.yml`,
+`docker-env-full/action.yml`, and the `docker-env` README) to the digest printed above
+(`ghcr.io/virtocommerce/platform-base:10.0-wkhtmltopdf@sha256:...`) in a pull request. The
+floating tag alone can be overwritten by a later push, which would change every module's CI
+at once without review or release; with the digest, a new base image reaches modules only
+through that PR and the next release.

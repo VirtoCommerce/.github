@@ -23,7 +23,8 @@ inputs:
       installed. The custom-module platform image builds FROM it with docker-env-full's
       Dockerfile.platform, so no apt-get runs per build.
     required: false
-    default: 'ghcr.io/virtocommerce/platform-base:10.0-wkhtmltopdf'
+    # Pinned by digest: a push to the tag must not change every module's CI at once.
+    default: 'ghcr.io/virtocommerce/platform-base:10.0-wkhtmltopdf@sha256:0a9a6ffcae12055d6c204edec2e352523e813a325a8197e2a9d1d23d04d946be'
   validateSwagger:
     description: 'Enable or disable swagger validation'
     required: false
