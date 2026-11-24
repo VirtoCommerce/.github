@@ -214,7 +214,8 @@ runs:
         # the next one and each gets its own JUnit/JSON report. The step fails at the end.
         # No --grep-invert: it would replace the config's own, which keeps @destructive tests out.
         EXTRA_ARGS=()
-        [ -n "$CONFIG_ARG" ] && EXTRA_ARGS+=("$CONFIG_ARG")
+        # The suite was seeded once, in the step before; --no-deps keeps each project from seeding it again.
+        [ -n "$CONFIG_ARG" ] && EXTRA_ARGS+=("$CONFIG_ARG" --no-deps)
         # --pass-with-no-tests: the pattern applies to every suite, and one with no match is not a failure.
         [ -n "$PW_GREP" ] && EXTRA_ARGS+=(--grep "$PW_GREP" --pass-with-no-tests)
         [ -n "$PW_WORKERS" ] && EXTRA_ARGS+=(--workers "$PW_WORKERS")
