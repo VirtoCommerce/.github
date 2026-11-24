@@ -1,7 +1,8 @@
 # Platform base image
 
 Pre-baked base for the platform image built by `docker-env-full`'s two Dockerfile-build
-branches (`customPackagesJsonUrl` / `installCustomModule`). See the comment at the top of
+branches (`customPackagesJsonUrl` / `installCustomModule`) and by `docker-env`'s
+`installCustomModule` branch. See the comment at the top of
 `Dockerfile` in this directory for why this exists — in short: `vc-docker`'s platform
 Dockerfile installs `wkhtmltopdf` via `apt-get` *after* the always-changing `COPY publish`
 layer, so it can never be a Docker layer-cache hit there. Baking it into its own image,
@@ -27,12 +28,13 @@ changes the boilerplate part (the `find`/`cp` logic, `WORKDIR`, etc.), update
 
 ## Build and publish
 
-`wait-for-it.sh` in this directory is checked into this repo — it's the file that actually
-gets baked into the image, so if `vc-docker`'s copy has changed, update this tracked copy
-deliberately (and re-review it) rather than re-fetching it at build time.
+`wait-for-it.sh` is not committed here (see `actions/.gitignore`): fetch it from
+`vc-docker`'s `feat/net10` branch right before the build, so the image gets the copy
+`vc-docker` currently ships.
 
 ```sh
 cd docker-env-full/base-image
+curl -fsSLo wait-for-it.sh https://raw.githubusercontent.com/VirtoCommerce/vc-docker/feat/net10/linux/platform/wait-for-it.sh
 docker build -t ghcr.io/virtocommerce/platform-base:10.0-wkhtmltopdf .
 docker push ghcr.io/virtocommerce/platform-base:10.0-wkhtmltopdf
 docker inspect --format='{{index .RepoDigests 0}}' ghcr.io/virtocommerce/platform-base:10.0-wkhtmltopdf

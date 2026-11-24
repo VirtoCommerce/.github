@@ -30,6 +30,12 @@ Runs Docker Environment
     description: 'Platform Docker Image'
     required: false
 
+### platformBaseImage:
+
+    description: 'Pre-baked base image with wait-for-it.sh and wkhtmltopdf (see docker-env-full/base-image/). The custom-module platform image builds FROM it with docker-env-full/Dockerfile.platform, so no apt-get runs per build.'
+    required: false
+    default: 'ghcr.io/virtocommerce/platform-base:10.0-wkhtmltopdf'
+
 ### validateSwagger:
 
     description: 'Enable or disable swagger validation'
