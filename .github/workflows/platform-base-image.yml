@@ -3,13 +3,16 @@ name: Platform base image
 
 # Rebuilds ghcr.io/virtocommerce/platform-base (actions/docker-env-full/base-image/), the base
 # of the platform image that docker-env and docker-env-full build for module CI. The rebuild
-# picks up the current aspnet:10.0 patch and Ubuntu security updates. Both actions pin the
-# image by digest, so a new build reaches modules only through the PR this workflow opens
-# and the next release of this repo.
+# picks up the current aspnet:10.0 patch and Ubuntu security updates.
 #
-# Prerequisite for publishing: the platform-base package must grant this repository Write
-# access (package settings > Manage Actions access); it was first pushed by hand and is not
-# linked to a repository.
+# Both actions default to the floating 10.0-wkhtmltopdf tag, so moving it changes every
+# module's CI at once, with no release. That is why a build first goes out under a dated tag
+# only, is smoke-tested and run through the Playwright auto-tests (vc-module-catalog's latest
+# release on the latest bundle, all three databases), and only then gets the floating tag.
+# A failed test leaves the floating tag on the previous image; rerun the failed jobs to retry.
+#
+# Prerequisite: the platform-base package grants this repository Write access (package
+# settings > Manage Actions access).
 
 on:
   schedule:
@@ -20,8 +23,8 @@ on:
       - 'actions/docker-env-full/base-image/**'
   workflow_dispatch:
     inputs:
-      publish:
-        description: 'Push the image and open the digest PR (off: build and smoke-test only)'
+      promote:
+        description: 'Move the floating tag to the new build once the tests pass (off: dated tag and tests only)'
         type: boolean
         default: false
 
@@ -34,10 +37,13 @@ concurrency:
 
 env:
   IMAGE: ghcr.io/virtocommerce/platform-base
+  # The floating tag, and the prefix of the dated ones: <TAG>-<yyyymmdd>-<run>.
   TAG: 10.0-wkhtmltopdf
   ASPNET: mcr.microsoft.com/dotnet/aspnet:10.0
   # vc-docker's platform image is built from this branch; wait-for-it.sh comes from it.
   VC_DOCKER_BRANCH: feat/net10
+  # The module the auto-tests install on top of the latest bundle, from its latest release.
+  TEST_MODULE_REPO: VirtoCommerce/vc-module-catalog
 
 jobs:
   build:
@@ -46,13 +52,10 @@ jobs:
       contents: read
       packages: write
     outputs:
+      image: ${{ steps.push.outputs.image }}
       digest: ${{ steps.push.outputs.digest }}
       dated-tag: ${{ steps.src.outputs.dated-tag }}
-      aspnet: ${{ steps.src.outputs.aspnet }}
-      vc-docker-sha: ${{ steps.src.outputs.vc-docker-sha }}
-      runtime: ${{ steps.smoke.outputs.runtime }}
-    env:
-      PUBLISH: ${{ github.event_name != 'workflow_dispatch' || inputs.publish }}
+      test-module-url: ${{ steps.src.outputs.test-module-url }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -71,14 +74,22 @@ jobs:
           # Current patch of aspnet:10.0, recorded by digest so the build is reproducible.
           docker pull --quiet "$ASPNET"
           aspnet=$(docker inspect --format '{{index .RepoDigests 0}}' "$ASPNET")
+          test_module_url=$(gh api "repos/$TEST_MODULE_REPO/releases/latest" \
+            --jq '[.assets[] | select(.name | endswith(".zip")) | .browser_download_url][0] // empty')
+          if [ -z "$test_module_url" ]; then
+            echo "::error::No .zip asset in the latest release of $TEST_MODULE_REPO"
+            exit 1
+          fi
           dated_tag="$TAG-$(date -u +%Y%m%d)-$GITHUB_RUN_NUMBER"
           {
             echo "vc-docker-sha=$vc_docker_sha"
             echo "aspnet=$aspnet"
             echo "dated-tag=$dated_tag"
+            echo "test-module-url=$test_module_url"
           } >> "$GITHUB_OUTPUT"
           echo "vc-docker $VC_DOCKER_BRANCH: $vc_docker_sha"
           echo "aspnet: $aspnet"
+          echo "test module: $test_module_url"
 
       - name: Build
         env:
@@ -92,41 +103,44 @@ jobs:
             --label "org.opencontainers.image.revision=$GITHUB_SHA" \
             --label "org.opencontainers.image.base.name=$ASPNET_IMAGE" \
             --label "com.virtocommerce.vc-docker.revision=$VC_DOCKER_SHA" \
-            --tag "$IMAGE:$TAG" \
             --tag "$IMAGE:$DATED_TAG" \
             actions/docker-env-full/base-image
 
       - name: Smoke test
         id: smoke
+        env:
+          DATED_TAG: ${{ steps.src.outputs.dated-tag }}
         run: |
           # What Dockerfile.platform and the compose files rely on: wkhtmltopdf for PDF
           # generation, an executable /wait-for-it.sh as the entrypoint, the ASP.NET runtime.
-          docker run --rm --entrypoint sh "$IMAGE:$TAG" -c \
+          docker run --rm --entrypoint sh "$IMAGE:$DATED_TAG" -c \
             'wkhtmltopdf --version && test -x /wait-for-it.sh && dotnet --list-runtimes'
-          runtime=$(docker run --rm --entrypoint sh "$IMAGE:$TAG" -c \
+          runtime=$(docker run --rm --entrypoint sh "$IMAGE:$DATED_TAG" -c \
             'dotnet --list-runtimes | grep Microsoft.AspNetCore.App | cut -d" " -f2')
           echo "runtime=$runtime" >> "$GITHUB_OUTPUT"
           echo "ASP.NET Core runtime: $runtime"
 
       - name: Log in to ghcr.io
-        if: env.PUBLISH == 'true'
         uses: docker/login-action@8aa5831fb8d48d8f76594c7ddde61ae58019f550 # v4.8.0
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ github.token }}
 
-      - name: Push
+      # The dated tag only: nothing uses it until the tests below pass and the floating tag
+      # is moved to it.
+      - name: Push the dated tag
         id: push
-        if: env.PUBLISH == 'true'
         env:
           DATED_TAG: ${{ steps.src.outputs.dated-tag }}
         run: |
           docker push --quiet "$IMAGE:$DATED_TAG"
-          docker push --quiet "$IMAGE:$TAG"
           digest=$(docker inspect --format '{{index .RepoDigests 0}}' "$IMAGE:$DATED_TAG" | cut -d@ -f2)
-          echo "digest=$digest" >> "$GITHUB_OUTPUT"
-          echo "Pushed $IMAGE:$DATED_TAG and :$TAG, digest $digest"
+          {
+            echo "digest=$digest"
+            echo "image=$IMAGE:$DATED_TAG@$digest"
+          } >> "$GITHUB_OUTPUT"
+          echo "Pushed $IMAGE:$DATED_TAG, digest $digest"
 
       - name: Summary
         if: always()
@@ -143,59 +157,58 @@ jobs:
             echo "- ASP.NET Core runtime: \`$RUNTIME\`"
             echo "- wait-for-it.sh from vc-docker \`$VC_DOCKER_SHA\`"
             if [ -n "$DIGEST" ]; then
-              echo "- Pushed \`$IMAGE:$DATED_TAG\` and \`:$TAG\`: \`$DIGEST\`"
+              echo "- Pushed \`$IMAGE:$DATED_TAG\`: \`$DIGEST\`"
             else
-              echo "- Not pushed (publish is off)"
+              echo "- Not pushed"
             fi
           } >> "$GITHUB_STEP_SUMMARY"
 
-  digest-pr:
+  # The same reusable workflow modules run as auto-tests, at this commit, with the new build as
+  # the base: the platform image is built FROM it exactly as in module CI.
+  test:
     needs: build
-    if: needs.build.outputs.digest != ''
+    permissions:
+      contents: read
+      packages: read
+    uses: ./.github/workflows/playwright-tests.yml
+    with:
+      installModules: 'false'
+      installCustomModule: 'true'
+      customModuleId: VirtoCommerce.Catalog
+      customModuleUrl: ${{ needs.build.outputs.test-module-url }}
+      platformBaseImage: ${{ needs.build.outputs.image }}
+    secrets:
+      appInsightsInstrumentationKey: ${{ secrets.E2E_APPINSIGHTSINSTRUMENTATIONKEY }}
+      envPAT: ${{ secrets.REPO_TOKEN }}
+      testSecretEnvFile: ${{ secrets.VC_TESTING_MODULE_ENV_FILE }}
+      sendgridApiKey: ${{ secrets.SENDGRID_APIKEY_4E2E_AUTOTESTS }}
+
+  promote:
+    needs: [build, test]
+    if: github.event_name != 'workflow_dispatch' || inputs.promote
     runs-on: ubuntu-24.04
     permissions:
       contents: read
+      packages: write
     steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Log in to ghcr.io
+        uses: docker/login-action@8aa5831fb8d48d8f76594c7ddde61ae58019f550 # v4.8.0
         with:
-          persist-credentials: false
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ github.token }}
 
-      - name: Point platformBaseImage defaults at the new digest
+      # Points the floating tag at the tested manifest; nothing is rebuilt or re-pushed.
+      - name: Move the floating tag
         env:
           DIGEST: ${{ needs.build.outputs.digest }}
+          DATED_TAG: ${{ needs.build.outputs.dated-tag }}
         run: |
-          pattern="platform-base:$TAG@sha256:[0-9a-f]{64}"
-          files=$(git grep -lE "$pattern" -- actions)
-          if [ -z "$files" ]; then
-            echo "::error::No platformBaseImage default pinned to platform-base:$TAG@sha256 found under actions/"
-            exit 1
-          fi
-          for f in $files; do
-            sed -i -E "s#$pattern#platform-base:$TAG@$DIGEST#g" "$f"
-          done
-          git diff --stat
-
-      - name: Open PR
-        uses: peter-evans/create-pull-request@3ffccacd46053766916f087ce41d627c0b8cf2d1 # v8.1.3
-        with:
-          # REPO_TOKEN, not GITHUB_TOKEN: a PR opened with GITHUB_TOKEN does not run this
-          # repo's checks.
-          token: ${{ secrets.REPO_TOKEN }}
-          commit-message: "ci: Platform base image ${{ needs.build.outputs.dated-tag }}"
-          title: "ci: Platform base image ${{ needs.build.outputs.dated-tag }}"
-          branch: ci/platform-base-image
-          delete-branch: true
-          reviewers: AndrewEhlo
-          body: |
-            Points the `platformBaseImage` defaults of `docker-env` and `docker-env-full` at
-            the base image rebuilt by run ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}.
-
-            - Image: `ghcr.io/virtocommerce/platform-base:${{ needs.build.outputs.dated-tag }}`
-            - Digest: `${{ needs.build.outputs.digest }}`
-            - Base: `${{ needs.build.outputs.aspnet }}`
-            - ASP.NET Core runtime: `${{ needs.build.outputs.runtime }}`
-            - wait-for-it.sh from vc-docker `${{ needs.build.outputs.vc-docker-sha }}`
-
-            The image passed the smoke test (wkhtmltopdf, `/wait-for-it.sh`, ASP.NET runtime).
-            Before merging, run module CI on a module with this branch (the test-workflows
-            skill); modules get the new image with the next release of this repo.
+          previous=$(docker buildx imagetools inspect "$IMAGE:$TAG" --format '{{json .Manifest.Digest}}' | tr -d '"' || true)
+          docker buildx imagetools create --tag "$IMAGE:$TAG" "$IMAGE@$DIGEST"
+          {
+            echo "### Floating tag moved"
+            echo "- \`$IMAGE:$TAG\` → \`$DATED_TAG\` (\`$DIGEST\`)"
+            echo "- Previous: \`${previous:-none}\`; to roll back: \`docker buildx imagetools create --tag $IMAGE:$TAG $IMAGE@${previous:-<digest>}\`"
+          } >> "$GITHUB_STEP_SUMMARY"
+          echo "$IMAGE:$TAG -> $DATED_TAG ($DIGEST), previous $previous"

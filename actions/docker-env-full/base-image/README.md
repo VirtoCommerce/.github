@@ -25,14 +25,23 @@ robust to own a copy of it than to regex-patch someone else's file on every buil
 - on the 1st of every month, to pick up the current `aspnet:10.0` patch and Ubuntu security
   updates (`apt-get upgrade`);
 - on every push to `main` that changes this directory;
-- by hand (`workflow_dispatch`); with `publish` off it only builds and smoke-tests.
+- by hand (`workflow_dispatch`); with `promote` off it stops after the tests and leaves the
+  floating tag where it is.
 
-Each publish pushes `10.0-wkhtmltopdf` and a dated tag (`10.0-wkhtmltopdf-<yyyymmdd>-<run>`),
-then opens a pull request that points both `platformBaseImage` defaults
-(`docker-env/action.yml`, `docker-env-full/action.yml`, and the `docker-env` README) at the
-new digest. The defaults are pinned by digest, so a push to the floating tag does not change
-any module's CI: a new base image reaches modules only through that PR and the next release.
-Run module CI on a module with the PR branch before merging it.
+Both `platformBaseImage` defaults (`docker-env`, `docker-env-full`) use the floating
+`10.0-wkhtmltopdf` tag, so moving it changes every module's CI at once, without a release.
+The workflow therefore:
+
+1. builds the image, smoke-tests it and pushes it under a dated tag only
+   (`10.0-wkhtmltopdf-<yyyymmdd>-<run>`);
+2. runs the Playwright auto-tests (`playwright-tests.yml`, all three databases) with that
+   build as `platformBaseImage`, installing `vc-module-catalog`'s latest release on the latest
+   bundle — the same path module CI takes;
+3. only if they pass, points `10.0-wkhtmltopdf` at the tested manifest.
+
+A failed test leaves the floating tag on the previous image; rerun the failed jobs to retry
+(the SQL Server suite has known flaky deletes). The run summary prints the previous digest
+and the command to move the tag back.
 
 The image records what it was built from: `org.opencontainers.image.base.name` (the
 `aspnet:10.0` digest), `org.opencontainers.image.revision` (this repo's commit) and
@@ -57,7 +66,8 @@ Dockerfile.
 cd docker-env-full/base-image
 VC_DOCKER_SHA=$(gh api repos/VirtoCommerce/vc-docker/commits/feat/net10 --jq .sha)
 curl -fsSLo wait-for-it.sh "https://raw.githubusercontent.com/VirtoCommerce/vc-docker/$VC_DOCKER_SHA/linux/platform/wait-for-it.sh"
-docker build --label "com.virtocommerce.vc-docker.revision=$VC_DOCKER_SHA" -t ghcr.io/virtocommerce/platform-base:10.0-wkhtmltopdf .
+docker build --label "com.virtocommerce.vc-docker.revision=$VC_DOCKER_SHA" -t platform-base:local .
 ```
 
-Prefer the workflow for publishing: it smoke-tests the image and opens the digest PR.
+Publish only through the workflow: pushing `10.0-wkhtmltopdf` by hand skips the tests and
+changes every module's CI at once.

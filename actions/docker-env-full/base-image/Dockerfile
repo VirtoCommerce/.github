@@ -3,9 +3,9 @@
 # platform Dockerfile static prefix (FROM image, wait-for-it.sh, wkhtmltopdf apt-get) so
 # per-run builds only do `COPY publish` + find/cp, skipping the apt-get every time.
 #
-# Rebuilt and published by .github/workflows/platform-base-image.yml (monthly, and on
-# changes here), which passes the current aspnet:10.0 digest as ASPNET_IMAGE. The default
-# below is only for a manual build — see README.md.
+# Rebuilt by .github/workflows/platform-base-image.yml (monthly, and on changes here), which
+# passes the current aspnet:10.0 digest as ASPNET_IMAGE and moves the floating tag only after
+# the auto-tests pass. The default below is only for a manual build — see README.md.
 ARG ASPNET_IMAGE=mcr.microsoft.com/dotnet/aspnet:10.0@sha256:f1126d438ccc359f51cc6d4701a8deae513856cf10f5fe645d29ea6403dcac6b
 FROM ${ASPNET_IMAGE}
 
