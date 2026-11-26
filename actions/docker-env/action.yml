@@ -24,7 +24,7 @@ inputs:
       Dockerfile.platform, so no apt-get runs per build.
     required: false
     # Pinned by digest: a push to the tag must not change every module's CI at once.
-    default: 'ghcr.io/virtocommerce/platform-base:10.0-wkhtmltopdf@sha256:0a9a6ffcae12055d6c204edec2e352523e813a325a8197e2a9d1d23d04d946be'
+    default: 'ghcr.io/virtocommerce/platform-base:10.0-wkhtmltopdf-20261126-3@sha256:d8b2560a180c81476cb6842d6be1b6a4381fb50a3853c628a0acc6eafe71f789'
   validateSwagger:
     description: 'Enable or disable swagger validation'
     required: false
