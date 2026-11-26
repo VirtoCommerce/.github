@@ -27,12 +27,13 @@ robust to own a copy of it than to regex-patch someone else's file on every buil
 - on every push to `main` that changes this directory;
 - by hand (`workflow_dispatch`); with `publish` off it only builds and smoke-tests.
 
-Each publish pushes `10.0-wkhtmltopdf` and a dated tag (`10.0-wkhtmltopdf-<yyyymmdd>-<run>`),
-then opens a pull request that points both `platformBaseImage` defaults
-(`docker-env/action.yml`, `docker-env-full/action.yml`, and the `docker-env` README) at the
-new digest. The defaults are pinned by digest, so a push to the floating tag does not change
-any module's CI: a new base image reaches modules only through that PR and the next release.
-Run module CI on a module with the PR branch before merging it.
+Each publish pushes only a dated tag (`10.0-wkhtmltopdf-<yyyymmdd>-<run>`), then opens a pull
+request that points both `platformBaseImage` defaults (`docker-env/action.yml`,
+`docker-env-full/action.yml`, and the `docker-env` README) at the new tag and digest. The
+floating `10.0-wkhtmltopdf` tag is left alone: releases up to v3.1000.11 use it unpinned, so
+moving it would change their CI without a release. A new base image reaches modules only
+through that PR and the next release. Run module CI on a module with the PR branch before
+merging it.
 
 The image records what it was built from: `org.opencontainers.image.base.name` (the
 `aspnet:10.0` digest), `org.opencontainers.image.revision` (this repo's commit) and

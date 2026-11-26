@@ -3,9 +3,10 @@ name: Platform base image
 
 # Rebuilds ghcr.io/virtocommerce/platform-base (actions/docker-env-full/base-image/), the base
 # of the platform image that docker-env and docker-env-full build for module CI. The rebuild
-# picks up the current aspnet:10.0 patch and Ubuntu security updates. Both actions pin the
-# image by digest, so a new build reaches modules only through the PR this workflow opens
-# and the next release of this repo.
+# picks up the current aspnet:10.0 patch and Ubuntu security updates. Each build gets only a
+# dated tag (never the floating 10.0-wkhtmltopdf, which releases up to v3.1000.11 use), and
+# both actions pin the image by digest, so a new build reaches modules only through the PR
+# this workflow opens and the next release of this repo.
 #
 # Prerequisite for publishing: the platform-base package must grant this repository Write
 # access (package settings > Manage Actions access); it was first pushed by hand and is not
@@ -14,10 +15,8 @@ name: Platform base image
 on:
   schedule:
     - cron: '0 6 1 * *' # 1st of the month, 06:00 UTC
-  push:
-    branches: [main]
-    paths:
-      - 'actions/docker-env-full/base-image/**'
+  push: # TEMPORARY test trigger, not for merge
+    branches: [VCST-6969-test-platform-base-publish]
   workflow_dispatch:
     inputs:
       publish:
@@ -34,6 +33,7 @@ concurrency:
 
 env:
   IMAGE: ghcr.io/virtocommerce/platform-base
+  # Prefix of the dated tags: <TAG>-<yyyymmdd>-<run>.
   TAG: 10.0-wkhtmltopdf
   ASPNET: mcr.microsoft.com/dotnet/aspnet:10.0
   # vc-docker's platform image is built from this branch; wait-for-it.sh comes from it.
@@ -92,18 +92,19 @@ jobs:
             --label "org.opencontainers.image.revision=$GITHUB_SHA" \
             --label "org.opencontainers.image.base.name=$ASPNET_IMAGE" \
             --label "com.virtocommerce.vc-docker.revision=$VC_DOCKER_SHA" \
-            --tag "$IMAGE:$TAG" \
             --tag "$IMAGE:$DATED_TAG" \
             actions/docker-env-full/base-image
 
       - name: Smoke test
         id: smoke
+        env:
+          DATED_TAG: ${{ steps.src.outputs.dated-tag }}
         run: |
           # What Dockerfile.platform and the compose files rely on: wkhtmltopdf for PDF
           # generation, an executable /wait-for-it.sh as the entrypoint, the ASP.NET runtime.
-          docker run --rm --entrypoint sh "$IMAGE:$TAG" -c \
+          docker run --rm --entrypoint sh "$IMAGE:$DATED_TAG" -c \
             'wkhtmltopdf --version && test -x /wait-for-it.sh && dotnet --list-runtimes'
-          runtime=$(docker run --rm --entrypoint sh "$IMAGE:$TAG" -c \
+          runtime=$(docker run --rm --entrypoint sh "$IMAGE:$DATED_TAG" -c \
             'dotnet --list-runtimes | grep Microsoft.AspNetCore.App | cut -d" " -f2')
           echo "runtime=$runtime" >> "$GITHUB_OUTPUT"
           echo "ASP.NET Core runtime: $runtime"
@@ -123,10 +124,9 @@ jobs:
           DATED_TAG: ${{ steps.src.outputs.dated-tag }}
         run: |
           docker push --quiet "$IMAGE:$DATED_TAG"
-          docker push --quiet "$IMAGE:$TAG"
           digest=$(docker inspect --format '{{index .RepoDigests 0}}' "$IMAGE:$DATED_TAG" | cut -d@ -f2)
           echo "digest=$digest" >> "$GITHUB_OUTPUT"
-          echo "Pushed $IMAGE:$DATED_TAG and :$TAG, digest $digest"
+          echo "Pushed $IMAGE:$DATED_TAG, digest $digest"
 
       - name: Summary
         if: always()
@@ -143,7 +143,7 @@ jobs:
             echo "- ASP.NET Core runtime: \`$RUNTIME\`"
             echo "- wait-for-it.sh from vc-docker \`$VC_DOCKER_SHA\`"
             if [ -n "$DIGEST" ]; then
-              echo "- Pushed \`$IMAGE:$DATED_TAG\` and \`:$TAG\`: \`$DIGEST\`"
+              echo "- Pushed \`$IMAGE:$DATED_TAG\`: \`$DIGEST\`"
             else
               echo "- Not pushed (publish is off)"
             fi
@@ -163,15 +163,17 @@ jobs:
       - name: Point platformBaseImage defaults at the new digest
         env:
           DIGEST: ${{ needs.build.outputs.digest }}
+          DATED_TAG: ${{ needs.build.outputs.dated-tag }}
         run: |
-          pattern="platform-base:$TAG@sha256:[0-9a-f]{64}"
+          # Matches the floating tag (the first default) and earlier dated tags.
+          pattern="platform-base:$TAG(-[0-9]{8}-[0-9]+)?@sha256:[0-9a-f]{64}"
           files=$(git grep -lE "$pattern" -- actions)
           if [ -z "$files" ]; then
-            echo "::error::No platformBaseImage default pinned to platform-base:$TAG@sha256 found under actions/"
+            echo "::error::No platformBaseImage default pinned to platform-base:$TAG...@sha256 found under actions/"
             exit 1
           fi
           for f in $files; do
-            sed -i -E "s#$pattern#platform-base:$TAG@$DIGEST#g" "$f"
+            sed -i -E "s#$pattern#platform-base:$DATED_TAG@$DIGEST#g" "$f"
           done
           git diff --stat
 
