@@ -18,9 +18,9 @@
 ## JOIN US NOW
 👉 [Explore Virto Commerce](https://virtocommerce.com/)
 
-👉 [Virto Commerce B2B Marketplace](https://virtocommerce.com/solutions/marketplace)
+👉 [Virto Commerce B2B Marketplace](https://virtocommerce.com/marketplace)
 
-👉 [Explore Virto’s Source-Available .NET ecommerce platform](https://virtocommerce.com/open-source-net-ecommerce-platform)
+👉 [Explore Virto’s Source-Available .NET ecommerce platform](https://virtocommerce.com/net-ecommerce-platform)
 
 👉 [Learn more about B2B features of Virto’s platform](https://virtocommerce.com/b2b-ecommerce-platform)
 
