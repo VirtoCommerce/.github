@@ -162,8 +162,9 @@ jobs:
       packages: read
     uses: ./.github/workflows/playwright-tests.yml
     with:
-      installModules: 'false'
-      installCustomModule: 'true'
+      # String inputs: actionlint reads a quoted 'true'/'false' literal as a bool.
+      installModules: ${{ 'false' }}
+      installCustomModule: ${{ 'true' }}
       customModuleId: VirtoCommerce.Catalog
       customModuleUrl: ${{ needs.build.outputs.test-module-url }}
       platformBaseImage: ${{ needs.build.outputs.image }}
