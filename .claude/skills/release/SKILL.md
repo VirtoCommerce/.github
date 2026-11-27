@@ -3,17 +3,18 @@ name: release
 description: >
   Cut a release of this repo's reusable workflows, templates and actions: pin every
   internal VirtoCommerce/.github ref in the workflows and templates to the new vX.Y.Z tag,
-  bump the version headers and the deploy default, tag the merge commit, and deploy to
-  the module repos. Or roll out a new vc-build version: bump VCBUILD_VERSION in
-  setup-vcbuild and move the floating `stable` tag, with no release of this repo.
+  bump the version headers and the deploy default, tag the merge commit, deploy to
+  the module repos, and write the announcement for the team. Or roll out a new vc-build
+  version: bump VCBUILD_VERSION in setup-vcbuild and move the floating `stable` tag, with
+  no release of this repo.
   Use when the user says "release", "cut a release", "pin to v3.x", "tag the release",
   "release vc-build X", "move stable", or invokes /release with an optional version.
 ---
 
 Release this repo. `$ARGUMENTS` is one of:
 
-- the new version (`v3.1000.2`) and optionally the Jira ticket → a release of this repo, sections 1–3. If the version is missing, propose the next patch of the newest tag (`git tag --sort=-v:refname | head -1`) and confirm it.
-- `vc-build <version>` (`vc-build 3.1002.1`) and optionally the ticket → a new vc-build, section 4 only.
+- the new version (`v3.1000.2`) and optionally the Jira ticket → a release of this repo, sections 1–3, then 5. If the version is missing, propose the next patch of the newest tag (`git tag --sort=-v:refname | head -1`) and confirm it.
+- `vc-build <version>` (`vc-build 3.1002.1`) and optionally the ticket → a new vc-build, section 4, then 5.
 
 The ticket defaults to the one in the branch name (`vcst-6033-...` → `VCST-6033`).
 
@@ -101,8 +102,56 @@ git ls-remote --tags origin 'stable^{}'  # names the merge commit
 
 Rollback: move `stable` back to the noted commit the same way. The message of each `stable` tag names its vc-build version.
 
+## 5. Message for the team (last step)
+
+Write it only when everything is out. For a release: the tag is pushed, the deploy run has finished, and the PRs to vc-platform, vc-frontend, vc-modules and vc-test-automation-framework are open. For vc-build: `stable` has moved and the canary on `main` is green. If a step was skipped or failed, say so in the message rather than leaving it out. Print the message at the end of the report, ready to paste. Never post it anywhere yourself.
+
+Collect, for a release:
+
+- The changes since the previous release: `git log --format='%s' <previous>..<new>` on `main`, without the pin commit. Each squash-merge subject carries the ticket and the PR number (`VCST-6129: ... (#165)`).
+- What each change means for the teams: from `gh pr view <n> --json title,body,url`, what module CI (or the platform/frontend pipelines) now does differently. Write the effect, not the implementation.
+- Links: this repo's PRs, the deploy run, and the composable-workflow PRs from section 3.
+
+Rules for the text:
+
+- One line per ticket, about 20 words or fewer, in plain language: "CI stops at once when modules fail to install, instead of hanging for 17 minutes". No file, input, step or action names unless a team has to type one.
+- Group several PRs of one ticket into one line with all their links.
+- Changes nobody outside this repo notices (refactoring, docs, this repo's own checks) go into one "Internal changes" line with their links, or are left out if there are none worth naming.
+- Always say whether the teams have to do anything. "Action needed: none" when nothing.
+- English unless the user asks for another language.
+
+Release:
+
+```markdown
+**VirtoCommerce/.github <new> is out** and deployed to the module repos.
+
+What changes:
+- VCST-6129: CI stops at once when modules fail to install, instead of hanging for 17 minutes. [#165](<url>)
+- VCST-6969: Swagger validation builds the platform image faster, without reinstalling system packages. [#166](<url>), [#168](<url>)
+- Internal changes: [#170](<url>)
+
+Action needed: none.
+
+Rolled out: module repos ([deploy run](<url>)), [vc-platform](<pr url>), [vc-frontend](<pr url>), [vc-modules](<pr url>), [vc-test-automation-framework](<pr url>).
+```
+
+vc-build:
+
+```markdown
+**vc-build <version> is rolled out**: every module, platform and frontend CI uses it from the next run.
+
+What changes:
+- <one or two lines from the vc-build release notes, in the same plain style>
+
+Action needed: none.
+
+[PR](<url>), [canary on main](<run url>).
+```
+
 ## Report
 
 Release: what was pinned (file count), the tag and its commit, which deploy ran and its run link, and anything skipped.
 
 vc-build: the version, the PR and its canary run, where `stable` points now and where it pointed before, the canary run on `main`.
+
+Both end with the message for the team (section 5).
