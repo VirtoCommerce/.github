@@ -74,6 +74,11 @@ on:
         required: false
         type: string
         default: 'local-latest'
+      platformBaseImage:
+        description: 'Base image the platform image is built FROM when installCustomModule or customPackagesJsonUrl is set (see actions/docker-env-full/base-image/). Override it to test a candidate base image.'
+        required: false
+        type: string
+        default: 'ghcr.io/virtocommerce/platform-base:10.0-wkhtmltopdf'
       prebuiltImageArtifact:
         description: 'Name of a workflow artifact containing a docker save tar of the platform image. When set, the action downloads and loads it instead of building or pulling, and installModules / installCustomModule / customPackagesJsonUrl must be unset.'
         required: false
@@ -306,6 +311,7 @@ jobs:
         installModules: ${{ inputs.installModules }}
         installCustomModule: ${{ inputs.installCustomModule }}
         platformDockerTag: ${{ inputs.platformDockerTag }}
+        platformBaseImage: ${{ inputs.platformBaseImage }}
         requiredModulesListUrl: ${{ inputs.requiredModulesListUrl }}
         testSecretEnvFile: ${{ secrets.testSecretEnvFile }}
         customPackagesJsonUrl: ${{ inputs.customPackagesJsonUrl }}

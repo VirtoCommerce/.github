@@ -34,7 +34,7 @@ Runs Docker Environment
 
     description: 'Pre-baked base image with wait-for-it.sh and wkhtmltopdf (see docker-env-full/base-image/). The custom-module platform image builds FROM it with docker-env-full/Dockerfile.platform, so no apt-get runs per build.'
     required: false
-    default: 'ghcr.io/virtocommerce/platform-base:10.0-wkhtmltopdf@sha256:0a9a6ffcae12055d6c204edec2e352523e813a325a8197e2a9d1d23d04d946be'
+    default: 'ghcr.io/virtocommerce/platform-base:10.0-wkhtmltopdf'
 
 ### validateSwagger:
 
