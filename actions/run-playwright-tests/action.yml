@@ -26,6 +26,10 @@ inputs:
     description: "Node.js version"
     required: false
     default: "22"
+  skipPlatformDefects:
+    description: "Leave out the tests tagged @platform-defect, which fail because of a platform defect that a ticket already tracks, by writing SKIP_PLATFORM_DEFECTS=true into the test repo's .env. The test repository's own CI sets it to false to keep the defects visible"
+    required: false
+    default: "true"
   skipDocCountVerification:
     description: "Comma-separated document types whose post-reindex count check should be skipped (reindex still runs). Use when the seed dataset has 0 records for a type. Any of: Member, Product, Category, CustomerOrder, PickupLocation. Example: 'PickupLocation'."
     required: false
@@ -46,6 +50,10 @@ inputs:
   vctestingRepoBranch:
     description: "UI tests repository branch"
     required: true
+  vctestingSuiteDir:
+    description: "Directory of the test suite in the test repository, with its own playwright.config.ts and .env. Used when that config exists; otherwise the suite is the repository root (the layout before the framework split)"
+    required: false
+    default: "virtocommerce"
   workers:
     description: "Optional Playwright --workers value (number or percentage, e.g. '4' or '50%'). Leave empty for the test repo's default."
     required: false
@@ -66,6 +74,27 @@ runs:
         # No later step runs git against the test repo.
         persist-credentials: false
 
+    # Playwright runs from the repository root, where package.json is, with --config for a suite
+    # in a directory. The output, report and allure-results directories stay at the root.
+    - name: Locate the test suite
+      id: suite
+      shell: bash
+      working-directory: ${{ inputs.vctestingPath }}
+      env:
+        SUITE_DIR_INPUT: ${{ inputs.vctestingSuiteDir }}
+      run: |
+        dir="${SUITE_DIR_INPUT%/}"
+        case "$dir" in
+          /*|*..*) echo "::error title=vctestingSuiteDir::must be a directory inside the test repository: '$dir'"; exit 1 ;;
+        esac
+        if [ -n "$dir" ] && [ -f "$dir/playwright.config.ts" ]; then
+          echo "Test suite: $dir/"
+          { echo "envFile=$dir/.env"; echo "configArg=--config=$dir"; } >> "$GITHUB_OUTPUT"
+        else
+          echo "Test suite: the repository root"
+          { echo "envFile=.env"; echo "configArg="; } >> "$GITHUB_OUTPUT"
+        fi
+
     # After checkout: the npm cache is keyed on the test repo's package-lock.json.
     - name: Set up Node.js
       uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
@@ -83,28 +112,31 @@ runs:
         FRONTEND_BASE_URL: ${{ inputs.baseUrl }}
         ADMIN_USERNAME: ${{ inputs.adminUsername }}
         ADMIN_PASSWORD_INPUT: ${{ inputs.adminPassword }}
+        ENV_FILE: ${{ steps.suite.outputs.envFile }}
+        SKIP_PLATFORM_DEFECTS: ${{ inputs.skipPlatformDefects }}
       # ADMIN_PASSWORD goes to GITHUB_ENV (masked) for the later seed/test steps.
       run: | # zizmor: ignore[github-env]
-        echo "$SECRET_ENV_FILE" > .env
-        chmod 600 .env
+        echo "$SECRET_ENV_FILE" > "$ENV_FILE"
+        chmod 600 "$ENV_FILE"
         set_env_var() {
           local key="$1"
           local val="$2"
           local esc
           esc=$(printf '%s' "$val" | sed -e 's/[\/&|]/\\&/g')
-          if grep -qE "^${key}=" .env; then
-            sed -i "s|^${key}=.*|${key}=${esc}|" .env
+          if grep -qE "^${key}=" "$ENV_FILE"; then
+            sed -i "s|^${key}=.*|${key}=${esc}|" "$ENV_FILE"
           else
-            printf '%s=%s\n' "$key" "$val" >> .env
+            printf '%s=%s\n' "$key" "$val" >> "$ENV_FILE"
           fi
         }
         set_env_var BACKEND_BASE_URL "$BACKEND_BASE_URL"
         set_env_var FRONTEND_BASE_URL "$FRONTEND_BASE_URL"
         set_env_var ADMIN_USERNAME "$ADMIN_USERNAME"
+        set_env_var SKIP_PLATFORM_DEFECTS "$SKIP_PLATFORM_DEFECTS"
         # Resolve ADMIN_PASSWORD precedence: input > value in .env (from SECRET_ENV_FILE) > default
         pw="$ADMIN_PASSWORD_INPUT"
         # || true: under pipefail a grep with no match would fail the step before the default below
-        [ -n "$pw" ] || pw=$({ grep -E '^ADMIN_PASSWORD=' .env || true; } | head -n1 | cut -d= -f2- | tr -d '\r')
+        [ -n "$pw" ] || pw=$({ grep -E '^ADMIN_PASSWORD=' "$ENV_FILE" || true; } | head -n1 | cut -d= -f2- | tr -d '\r')
         # Strip matching surrounding quotes (e.g. ADMIN_PASSWORD="foo" in .env)
         case "$pw" in
           \"*\") pw="${pw#\"}"; pw="${pw%\"}" ;;
@@ -148,11 +180,13 @@ runs:
         BACK_URL_INPUT: ${{ inputs.backUrl }}
         ADMIN_USERNAME_INPUT: ${{ inputs.adminUsername }}
         SKIP_DOC_COUNT_VERIFICATION_INPUT: ${{ inputs.skipDocCountVerification }}
+        CONFIG_ARG: ${{ steps.suite.outputs.configArg }}
         FORCE_COLOR: "1"
       run: |
         Write-Host "::group::Seed dataset"
         # Own --output: every playwright run empties its output dir first (see Run tests).
-        npx playwright test --project=seed --output test-results/seed --reporter=list
+        $configArgs = @(if ($env:CONFIG_ARG) { $env:CONFIG_ARG })
+        npx playwright test @configArgs --project=seed --output test-results/seed --reporter=list
         $seedExitCode = $LASTEXITCODE
         Write-Host "::endgroup::"
         if ($seedExitCode -ne 0) { exit $seedExitCode }
@@ -174,11 +208,14 @@ runs:
         TEST_SUITES: ${{ inputs.testSuites }}
         PW_GREP: ${{ inputs.grep }}
         PW_WORKERS: ${{ inputs.workers }}
+        CONFIG_ARG: ${{ steps.suite.outputs.configArg }}
       run: |
         # One Playwright run per project, in the given order, so a failing suite doesn't stop
         # the next one and each gets its own JUnit/JSON report. The step fails at the end.
         # No --grep-invert: it would replace the config's own, which keeps @destructive tests out.
         EXTRA_ARGS=()
+        # The suite was seeded once, in the step before; --no-deps keeps each project from seeding it again.
+        [ -n "$CONFIG_ARG" ] && EXTRA_ARGS+=("$CONFIG_ARG" --no-deps)
         # --pass-with-no-tests: the pattern applies to every suite, and one with no match is not a failure.
         [ -n "$PW_GREP" ] && EXTRA_ARGS+=(--grep "$PW_GREP" --pass-with-no-tests)
         [ -n "$PW_WORKERS" ] && EXTRA_ARGS+=(--workers "$PW_WORKERS")

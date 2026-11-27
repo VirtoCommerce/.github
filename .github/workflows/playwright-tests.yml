@@ -94,6 +94,11 @@ on:
         required: false
         type: string
         default: '[]'
+      skipPlatformDefects:
+        description: 'Leave out the tests tagged @platform-defect, which fail because of a platform defect that a ticket already tracks, by writing SKIP_PLATFORM_DEFECTS=true into the test repo''s .env. The test repository''s own CI sets it to false to keep the defects visible'
+        required: false
+        type: string
+        default: 'true'
       skipDocCountVerification:
         description: 'Comma-separated document types whose post-reindex count check should be skipped (reindex still runs). Use when the seed dataset has 0 records for a type. Any of: Member, Product, Category, CustomerOrder, PickupLocation. Example: ''PickupLocation''.'
         required: false
@@ -119,6 +124,11 @@ on:
         required: false
         type: string
         default: 'dev'
+      vctestingSuiteDir:
+        description: 'Directory of the test suite in the test repository, with its own playwright.config.ts and .env. Used when that config exists; otherwise the suite is the repository root (the layout before the framework split)'
+        required: false
+        type: string
+        default: 'virtocommerce'
       workers:
         description: 'Optional Playwright --workers value (number or percentage, e.g. ''4'' or ''50%''). Leave empty for the test repo''s default.'
         required: false
@@ -303,7 +313,7 @@ jobs:
         GITHUB_TOKEN: ${{ secrets.envPAT }}
 
     - name: Docker Env Full
-      uses: VirtoCommerce/.github/actions/docker-env-full@v3.1000.11
+      uses: VirtoCommerce/.github/actions/docker-env-full@vcst-6748-suite-dir
       env:
         GITHUB_TOKEN: ${{ secrets.envPAT }}
       with:
@@ -324,7 +334,7 @@ jobs:
         appInsightsInstrumentationKey: ${{ secrets.appInsightsInstrumentationKey }}
 
     - name: Run Playwright Auto Tests
-      uses: VirtoCommerce/.github/actions/run-playwright-tests@v3.1000.11
+      uses: VirtoCommerce/.github/actions/run-playwright-tests@vcst-6748-suite-dir
       with:
         # docker-env-full sets the admin password from testSecretEnvFile only, and the action
         # reads it from there too, so the password is not an input of this workflow.
@@ -339,9 +349,11 @@ jobs:
         vctestingPath: ${{ inputs.vctestingPath }}
         vctestingRepo: ${{ inputs.vctestingRepo }}
         vctestingRepoBranch: ${{ inputs.vctestingRepoBranch }}
+        vctestingSuiteDir: ${{ inputs.vctestingSuiteDir }}
         workers: ${{ inputs.workers }}
         artifactSuffix: -${{ matrix.databaseProvider }}-${{ matrix.searchProvider }}
         skipDocCountVerification: ${{ inputs.skipDocCountVerification }}
+        skipPlatformDefects: ${{ inputs.skipPlatformDefects }}
 
   # Branch protection needs one check name, and the matrix job's own name carries the database
   # and the engine, both of which now vary per caller. always() is required: without it a

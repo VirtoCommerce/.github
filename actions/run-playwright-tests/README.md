@@ -6,6 +6,8 @@ The Node/Playwright counterpart of [run-pytest-tests](../run-pytest-tests/README
 
 Built for the TypeScript [vc-test-automation-framework](https://github.com/VirtoCommerce/vc-test-automation-framework): Playwright projects `seed`, `restapi`, `graphql`, `e2e-frontend` and `e2e-backend`, configuration read from `.env`, `allure-playwright` results and the `allure` (Allure 3) package for the HTML report.
 
+The test suite is the directory `vctestingSuiteDir` (`virtocommerce` by default) when it holds a `playwright.config.ts`: the `.env` is written there, and every `playwright test` runs from the repository root with `--config=<vctestingSuiteDir>`. The seed runs once, before the suites, which then run with `--no-deps` so that no project seeds again. Without that config the suite is the repository root, as before the framework split, so the same version of this action runs either layout.
+
 Tests tagged `@destructive` (platform restart, index drop, ...) are excluded by the test repo's config unless `RUN_DESTRUCTIVE_TESTS=true` is set in `testSecretEnvFile`.
 
 Artifact `playwright-test-results-<run>-<attempt><artifactSuffix>` (zip):
@@ -68,6 +70,12 @@ The report must be served over HTTP: unzip the artifact and run `npx allure open
     description: 'Test secret environment file content'
     required: true
 
+### skipPlatformDefects:
+
+    description: 'Leave out the tests tagged @platform-defect, which fail because of a platform defect that a ticket already tracks, by writing SKIP_PLATFORM_DEFECTS=true into the test repo''s .env. The test repository''s own CI sets it to false to keep the defects visible'
+    required: false
+    default: 'true'
+
 ### testSuites:
 
     description: 'Comma-separated list of suites to run, in order. Any subset of: graphql, restapi, e2e (= e2e-frontend + e2e-backend), e2e-frontend, e2e-backend'
@@ -88,6 +96,12 @@ The report must be served over HTTP: unzip the artifact and run `npx allure open
 
     description: 'UI tests repository branch'
     required: true
+
+### vctestingSuiteDir:
+
+    description: 'Directory of the test suite in the test repository, with its own playwright.config.ts and .env. Used when that config exists; otherwise the suite is the repository root'
+    required: false
+    default: 'virtocommerce'
 
 ### workers:
 
