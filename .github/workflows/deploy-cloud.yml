@@ -1,5 +1,5 @@
-# v3.1000.11
-# https://virtocommerce.atlassian.net/browse/VCST-6129
+# v3.1000.12
+# https://virtocommerce.atlassian.net/browse/VCST-6969
 name: VC cloud deployment
 
 on:
@@ -80,14 +80,14 @@ jobs:
           MATRIX_FORCECOMMIT: ${{ matrix.forceCommit }}
 
       - name: Read deployment config
-        uses: VirtoCommerce/.github/actions/get-deploy-param@v3.1000.11
+        uses: VirtoCommerce/.github/actions/get-deploy-param@v3.1000.12
         id: deployConfig
         with:
           envName: ${{ matrix.envName }}
           deployConfigPath: ${{ matrix.confPath }}
 
       - name: Start deployment
-        uses: VirtoCommerce/.github/actions/gh-deployments@v3.1000.11
+        uses: VirtoCommerce/.github/actions/gh-deployments@v3.1000.12
         id: deployment
         with:
           step: start
@@ -96,7 +96,7 @@ jobs:
           no_override: true
 
       - name: Update deployment-cm
-        uses: VirtoCommerce/.github/actions/cloud-create-deployment@v3.1000.11
+        uses: VirtoCommerce/.github/actions/cloud-create-deployment@v3.1000.12
         with:
           deployRepo: ${{ steps.deployConfig.outputs.deployRepo }}
           deployBranch: ${{ steps.deployConfig.outputs.deployBranch }}
@@ -140,7 +140,7 @@ jobs:
         run: echo "DEPLOY_STATE=failed"  >> $GITHUB_ENV
 
       - name: Update GitHub deployment status
-        uses: VirtoCommerce/.github/actions/gh-deployments@v3.1000.11
+        uses: VirtoCommerce/.github/actions/gh-deployments@v3.1000.12
         if: always()
         with:
           step: finish
