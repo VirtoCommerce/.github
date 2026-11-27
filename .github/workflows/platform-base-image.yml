@@ -162,9 +162,10 @@ jobs:
       packages: read
     uses: ./.github/workflows/playwright-tests.yml
     with:
-      # String inputs: actionlint reads a quoted 'true'/'false' literal as a bool.
-      installModules: ${{ 'false' }}
-      installCustomModule: ${{ 'true' }}
+      # String inputs: actionlint reads a quoted 'true'/'false' literal as a bool, so they go
+      # in as expressions, which zizmor's obfuscation audit would otherwise flag.
+      installModules: ${{ 'false' }} # zizmor: ignore[obfuscation]
+      installCustomModule: ${{ 'true' }} # zizmor: ignore[obfuscation]
       customModuleId: VirtoCommerce.Catalog
       customModuleUrl: ${{ needs.build.outputs.test-module-url }}
       platformBaseImage: ${{ needs.build.outputs.image }}
