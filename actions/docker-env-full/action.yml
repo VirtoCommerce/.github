@@ -60,8 +60,7 @@ inputs:
       Used only by the Dockerfile-build branches (customPackagesJsonUrl / installCustomModule);
       installModules pulls a fully-published image and never touches a Dockerfile.
     required: false
-    # Floating tag: platform-base-image.yml moves it only after the new build passes the
-    # smoke test and the Playwright auto-tests, so a new base needs no release here.
+    # Floating; moved by platform-base-image.yml after the auto-tests pass.
     default: 'ghcr.io/virtocommerce/platform-base:10.0-wkhtmltopdf'
   sendgridApiKey:
     description: 'SendGrid API Key'

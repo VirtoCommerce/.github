@@ -75,7 +75,7 @@ on:
         type: string
         default: 'local-latest'
       platformBaseImage:
-        description: 'Base image the platform image is built FROM when installCustomModule or customPackagesJsonUrl is set (see actions/docker-env-full/base-image/). platform-base-image.yml passes a new build here to test it before moving the floating tag.'
+        description: 'Base image the platform image is built FROM when installCustomModule or customPackagesJsonUrl is set (see actions/docker-env-full/base-image/). Override it to test a candidate base image.'
         required: false
         type: string
         default: 'ghcr.io/virtocommerce/platform-base:10.0-wkhtmltopdf'

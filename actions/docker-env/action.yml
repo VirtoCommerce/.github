@@ -23,8 +23,7 @@ inputs:
       installed. The custom-module platform image builds FROM it with docker-env-full's
       Dockerfile.platform, so no apt-get runs per build.
     required: false
-    # Floating tag: platform-base-image.yml moves it only after the new build passes the
-    # smoke test and the Playwright auto-tests, so a new base needs no release here.
+    # Floating; moved by platform-base-image.yml after the auto-tests pass.
     default: 'ghcr.io/virtocommerce/platform-base:10.0-wkhtmltopdf'
   validateSwagger:
     description: 'Enable or disable swagger validation'
